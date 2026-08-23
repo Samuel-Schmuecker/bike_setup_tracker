@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../models/bike.dart';
 import '../screens/bike_detail/bike_detail_screen.dart';
+import '../../utils/image_helper.dart';
 
 class BikeCard extends StatelessWidget {
   final Bike bike;
@@ -20,6 +21,12 @@ class BikeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final bool hasImage = bike.imagePath != null;
+
+    // --- NEU: Sehr saubere ImageProvider Logik durch unseren Helfer ---
+    ImageProvider? imageProvider;
+    if (hasImage) {
+      imageProvider = ImageHelper.getImageProvider(bike.imagePath!);
+    }
 
     // Dynamische Text- und Chip-Farben (Weiß bei Bildern, Theme-Farben ohne Bild)
     final textColor = hasImage ? Colors.white : colorScheme.onSurface;

@@ -13,6 +13,7 @@ import '../../providers/bike_provider.dart';
 import '../../widgets/setup_card.dart';
 import '../../widgets/add_setup_card.dart';
 import 'setup_detail_screen.dart'; 
+import '../../utils/image_helper.dart';
 
 class BikeDetailScreen extends StatelessWidget {
   final String bikeId;
@@ -241,12 +242,7 @@ class BikeDetailScreen extends StatelessWidget {
                 children: [
                   // 1. Hintergrundbild (NEU: Unterstützt jetzt auch Assets)
                   if (hasImage)
-                    if (bike.imagePath!.startsWith('assets/'))
-                      Image.asset(bike.imagePath!, fit: BoxFit.cover)
-                    else if (kIsWeb)
-                      Image.network(bike.imagePath!, fit: BoxFit.cover)
-                    else
-                      Image.file(File(bike.imagePath!), fit: BoxFit.cover)
+                    ImageHelper.buildImage(bike.imagePath!)
                   else
                     Container(color: colorScheme.primaryContainer),
                   

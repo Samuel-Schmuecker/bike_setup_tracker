@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../models/bike.dart';
 import '../../providers/bike_provider.dart';
+import 'dart:convert';
+import '../../utils/image_helper.dart';
 
 class AddBikeScreen extends StatefulWidget {
   const AddBikeScreen({Key? key}) : super(key: key);
@@ -33,11 +35,23 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    final pickedFile = await picker.pickImage(
+      source: ImageSource.gallery,
+      // WICHTIG FÜR WEB: Komprimierung, damit der LocalStorage nicht platzt!
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70, 
+    );
     
     if (pickedFile != null) {
+      // Bild als Bytes einlesen (funktioniert auf Web und Mobile)
+      final bytes = await pickedFile.readAsBytes();
+      // In Text (Base64) umwandeln
+      final base64Image = base64Encode(bytes);
+      
       setState(() {
-        _selectedImagePath = pickedFile.path;
+        // Speichern mit Daten-Präfix
+        _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
       });
     }
   }
@@ -92,23 +106,18 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                           : null,
                     ),
                     clipBehavior: Clip.antiAlias,
+                    //
                     child: _selectedImagePath == null
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.add_a_photo, size: 32, color: colorScheme.primary),
                               const SizedBox(height: 8),
-                              Text(
-                                'Titelbild hinzufügen',
-                                style: TextStyle(color: colorScheme.onSurfaceVariant),
-                              ),
+                              Text('Titelbild ändern', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                             ],
                           )
-                        : (kIsWeb
-                            // Für Web-Kompatibilität
-                            ? Image.network(_selectedImagePath!, fit: BoxFit.cover)
-                            // Für Android / iOS
-                            : Image.file(File(_selectedImagePath!), fit: BoxFit.cover)),
+                        : ImageHelper.buildImage(_selectedImagePath!),
+                        //
                   ),
                 ),
                 const SizedBox(height: 24),
