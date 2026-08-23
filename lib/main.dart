@@ -31,8 +31,8 @@ class MyApp extends StatelessWidget {
         //Aktiviert die Back-Swipe-Geste für iOS und Android
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
-            TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android:  CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS:  CupertinoPageTransitionsBuilder(),
           },
         ),
       ),
