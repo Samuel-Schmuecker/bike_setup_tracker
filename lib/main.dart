@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart'; // <--- WICHTIG: Fehlt oft beim Web-Build!
 import 'package:provider/provider.dart';
 
 import 'providers/bike_provider.dart';
@@ -32,9 +33,15 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
         
-        // Den problematischen "pageTransitionsTheme"-Block haben wir hier 
-        // komplett entfernt. Flutter erledigt das jetzt automatisch und 
-        // 100% kompatibel für das Web!
+        // HIER IST DER FIX: 
+        // Erzwingt die iOS-Wischgeste (Zurück-Wischen) auf allen Geräten!
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          },
+        ),
       ),
       home: const HomeScreen(),
     );
