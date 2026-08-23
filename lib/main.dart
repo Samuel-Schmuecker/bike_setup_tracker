@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         
         // Hier lag der Fehler! Die saubere Einbindung der PageTransitions:
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: <TargetPlatform, PageTransitionsBuilder>{
             TargetPlatform.android: CupertinoPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
