@@ -59,15 +59,9 @@ class BikeCard extends StatelessWidget {
         child: Stack(
           children: [
             // 1. Hintergrundbild (ganz unten im Stack)
-            if (hasImage)
+             if (hasImage)
               Positioned.fill(
-                child: bike.imagePath!.startsWith('assets/')
-                    // Wenn es ein Testbild aus unseren Ordnern ist:
-                    ? Image.asset(bike.imagePath!, fit: BoxFit.cover) 
-                    // Sonst wie gewohnt Web oder lokales Handy-File:
-                    : (kIsWeb
-                        ? Image.network(bike.imagePath!, fit: BoxFit.cover)
-                        : Image.file(File(bike.imagePath!), fit: BoxFit.cover)),
+                child: ImageHelper.buildImage(bike.imagePath!),
               ),
 
             // 2. Dunkles Gradient-Overlay (Links nach Rechts)

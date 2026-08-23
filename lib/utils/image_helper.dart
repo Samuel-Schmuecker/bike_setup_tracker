@@ -6,25 +6,36 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class ImageHelper {
-  // Gibt das fertige Image-Widget zurück
+  // Das Fallback-Widget, falls ein Bild nicht geladen werden kann
+  static Widget _errorFallback(BuildContext context, Object error, StackTrace? stackTrace) {
+    return Container(
+      color: Colors.grey[900], // Dunkler Hintergrund
+      child: const Center(
+        child: Icon(Icons.broken_image, color: Colors.white38, size: 40),
+      ),
+    );
+  }
+
+  // Gibt das fertige Image-Widget zurück (inklusive Fehlerbehandlung!)
   static Widget buildImage(String path, {BoxFit fit = BoxFit.cover}) {
-    if (path.startsWith('data:image')) {
-      // Base64 codiertes Bild (Unser neuer Web-Standard)
-      final base64Str = path.split(',').last;
-      return Image.memory(base64Decode(base64Str), fit: fit);
-    } else if (path.startsWith('assets/')) {
-      // Lokales Test-Asset (wie das Commencal)
-      return Image.asset(path, fit: fit);
-    } else if (kIsWeb) {
-      // Fallback für Web
-      return Image.network(path, fit: fit);
-    } else {
-      // Fallback für native Apps (falls doch alte Dateipfade existieren)
-      return Image.file(File(path), fit: fit);
+    try {
+      if (path.startsWith('data:image')) {
+        final base64Str = path.split(',').last;
+        return Image.memory(base64Decode(base64Str), fit: fit, errorBuilder: _errorFallback);
+      } else if (path.startsWith('assets/')) {
+        return Image.asset(path, fit: fit, errorBuilder: _errorFallback);
+      } else if (kIsWeb) {
+        return Image.network(path, fit: fit, errorBuilder: _errorFallback);
+      } else {
+        return Image.file(File(path), fit: fit, errorBuilder: _errorFallback);
+      }
+    } catch (e) {
+      // Falls z.B. das Base64 Decoding fehlschlägt
+      return _errorFallback(null as dynamic, e, null); 
     }
   }
 
-  // Gibt den ImageProvider zurück (wird für Hintergrundbilder/DecorationImage benötigt)
+  // Gibt den ImageProvider zurück
   static ImageProvider getImageProvider(String path) {
     if (path.startsWith('data:image')) {
       final base64Str = path.split(',').last;
