@@ -1,14 +1,20 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+// Importiere deinen Provider und den HomeScreen
 import 'providers/bike_provider.dart';
 import 'screens/home/home_screen.dart';
 
 void main() {
+  // Wichtig für Web und SharedPreferences, bevor die App startet
+  WidgetsFlutterBinding.ensureInitialized(); 
+
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => BikeProvider()),
-      ],
+    // Provider an der obersten Stelle der App registrieren
+    ChangeNotifierProvider(
+      create: (context) => BikeProvider(),
       child: const MyApp(),
     ),
   );
@@ -20,23 +26,29 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'MTB Setup',
+      title: 'Bike Setup Tracker',
+      debugShowCheckedModeBanner: false, // Entfernt das rote Debug-Banner
       theme: ThemeData(
+        // Wir haben die App optisch eher dunkel/hochwertig gestaltet,
+        // daher setzen wir das Grund-Theme auf dunkel.
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal, // Deine Hauptfarbe
-          brightness: Brightness.dark, // Dark Mode für die MTB-App
+          seedColor: Colors.teal, // Deine Akzentfarbe (kannst du anpassen)
+          brightness: Brightness.dark, 
         ),
         useMaterial3: true,
-
-        //Aktiviert die Back-Swipe-Geste für iOS und Android
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: {
-            TargetPlatform.android:  CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS:  CupertinoPageTransitionsBuilder(),
+        
+        // Hier lag der Fehler! Die saubere Einbindung der PageTransitions:
+        pageTransitionsTheme: const PageTransitionsTheme(
+          builders: <TargetPlatform, PageTransitionsBuilder>{
+            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+            TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
           },
         ),
       ),
-      home: const HomeScreen(), // Startet den Home Screen, den wir jetzt bauen
+      home: const HomeScreen(),
     );
   }
 }
