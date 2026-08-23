@@ -7,6 +7,8 @@ import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart'; // NEU: Import hinzugefügt
 import '../edit_bike/edit_bike_screen.dart';
+import '../add_bike/preset_list_screen.dart'; // NEU
+import '../add_bike/add_bike_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -26,12 +28,43 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // NEU: Navigation zum AddBikeScreen
-  void _onAddBikeTap() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const AddBikeScreen(),
-      ),
+void _onAddBikeTap() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('Neues Bike hinzufügen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+              ListTile(
+                leading: const Icon(Icons.list_alt, size: 28),
+                title: const Text('Aus Datenbank wählen'),
+                subtitle: const Text('Vorkonfigurierte Top-Modelle inkl. Fahrwerks-Specs'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PresetListScreen()));
+                },
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.build, size: 28),
+                title: const Text('Manuell erstellen'),
+                subtitle: const Text('Marke, Modell und Federweg selbst eintragen'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const AddBikeScreen()));
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 

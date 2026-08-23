@@ -113,7 +113,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                             children: [
                               Icon(Icons.add_a_photo, size: 32, color: colorScheme.primary),
                               const SizedBox(height: 8),
-                              Text('Titelbild ändern', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                              Text('Titelbild hinzufügen', style: TextStyle(color: colorScheme.onSurfaceVariant)),
                             ],
                           )
                         : ImageHelper.buildImage(_selectedImagePath!),
