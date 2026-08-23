@@ -1,0 +1,36 @@
+name: Deploy Flutter PWA to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # Oder 'master', je nachdem wie dein Haupt-Branch heißt
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Dependencies installieren
+        run: flutter pub get
+
+      - name: Web App bauen
+        run: flutter build web --release --base-href "/bike_setup_tracker/"
+
+      - name: Deploy auf GitHub Pages
+        uses: Peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
