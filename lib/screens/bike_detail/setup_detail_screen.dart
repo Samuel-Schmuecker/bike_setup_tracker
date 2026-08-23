@@ -13,10 +13,10 @@ class SetupDetailScreen extends StatefulWidget {
   final String setupId;
 
   const SetupDetailScreen({
-    Key? key,
+    super.key,
     required this.bikeId,
     required this.setupId,
-  }) : super(key: key);
+  });
 
   @override
   State<SetupDetailScreen> createState() => _SetupDetailScreenState();

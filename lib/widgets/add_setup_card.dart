@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class AddSetupCard extends StatelessWidget {
   final VoidCallback onTap;
-  const AddSetupCard({Key? key, required this.onTap}) : super(key: key);
+  const AddSetupCard({super.key, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

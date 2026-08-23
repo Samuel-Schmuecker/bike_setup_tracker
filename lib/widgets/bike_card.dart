@@ -1,50 +1,35 @@
 // lib/widgets/bike_card.dart
 
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import '../models/bike.dart';
+import '../utils/image_helper.dart';
 import '../screens/bike_detail/bike_detail_screen.dart';
-import '../../utils/image_helper.dart';
+import '../screens/edit_bike/edit_bike_screen.dart';
 
 class BikeCard extends StatelessWidget {
   final Bike bike;
-  final VoidCallback? onLongPress; // NEU: Optionale Callback-Funktion
+  final VoidCallback? onLongPress;
 
   const BikeCard({
-    Key? key,
+    super.key,
     required this.bike,
-    this.onLongPress, // NEU
-  }) : super(key: key);
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final bool hasImage = bike.imagePath != null;
+    // Holt IMMER einen Bildpfad (Nutzer oder Kategorie-Fallback)
+    final displayPath = ImageHelper.getDisplayImagePath(bike.imagePath, bike.category);
 
-    // --- NEU: Sehr saubere ImageProvider Logik durch unseren Helfer ---
-    ImageProvider? imageProvider;
-    if (hasImage) {
-      imageProvider = ImageHelper.getImageProvider(bike.imagePath!);
-    }
-
-    // Dynamische Text- und Chip-Farben (Weiß bei Bildern, Theme-Farben ohne Bild)
-    final textColor = hasImage ? Colors.white : colorScheme.onSurface;
-    final subtitleColor = hasImage ? Colors.white70 : colorScheme.onSurfaceVariant;
-    final chipBgColor = hasImage 
-        ? Colors.black54 
-        : colorScheme.surfaceContainerHighest.withOpacity(0.6);
-    final chipTextColor = hasImage ? Colors.white : colorScheme.onSurfaceVariant;
-
-    // Hilfs-Widget für die nebeneinanderliegenden Chips
+    // Hilfs-Widget für die nebeneinanderliegenden Chips (jetzt immer im dunklen Look)
     Widget buildChip(Widget child) {
       return Container(
         margin: const EdgeInsets.only(right: 8.0, top: 8.0),
         padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
         decoration: BoxDecoration(
-          color: chipBgColor,
+          color: Colors.black54, // Halbtransparenter, dunkler Hintergrund
           borderRadius: BorderRadius.circular(12.0),
-          border: hasImage ? Border.all(color: Colors.white24, width: 0.5) : null,
+          border: Border.all(color: Colors.white24, width: 0.5), // Feiner Rand
         ),
         child: child,
       );
@@ -53,33 +38,31 @@ class BikeCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       clipBehavior: Clip.antiAlias, // Wichtig für abgerundete Ecken trotz Stack/Bild
-      elevation: hasImage ? 3 : 1,
+      elevation: 3, // Schatten, da es ein Bild ist
       child: SizedBox(
-        height: 140, // Feste Höhe wie gefordert
+        height: 140, // Feste Höhe
         child: Stack(
           children: [
-            // 1. Hintergrundbild (ganz unten im Stack)
-             if (hasImage)
-              Positioned.fill(
-                child: ImageHelper.buildImage(bike.imagePath!),
-              ),
+            // 1. Hintergrundbild (es gibt jetzt IMMER eins)
+            Positioned.fill(
+              child: ImageHelper.buildImage(displayPath),
+            ),
 
-            // 2. Dunkles Gradient-Overlay (Links nach Rechts)
-            if (hasImage)
-              Positioned.fill(
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                      colors: [
-                        Colors.black87, // Sehr dunkel links (für Text)
-                        Colors.transparent, // Transparent rechts (Bild bleibt sichtbar)
-                      ],
-                    ),
+            // 2. Dunkles Gradient-Overlay (Links nach Rechts) für Lesbarkeit
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Colors.black87, // Sehr dunkel links (für Text)
+                      Colors.transparent, // Transparent rechts (Bild bleibt sichtbar)
+                    ],
                   ),
                 ),
               ),
+            ),
 
             // 3. Klickbarer Bereich und Text (liegt ganz oben)
             Positioned.fill(
@@ -94,24 +77,20 @@ class BikeCard extends StatelessWidget {
                       ),
                     );
                   },
-                  onLongPress: onLongPress,
+                  onLongPress: onLongPress ?? () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditBikeScreen(bike: bike),
+                      ),
+                    );
+                  },
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // 4. Fall-Back Icon (nur wenn KEIN Bild existiert)
-                        if (!hasImage) ...[
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundColor: colorScheme.primaryContainer,
-                            foregroundColor: colorScheme.onPrimaryContainer,
-                            child: const Icon(Icons.directions_bike, size: 30),
-                          ),
-                          const SizedBox(width: 16),
-                        ],
-
-                        // 5. Texte und Chips (Marke, Modell, Reihe mit Chips)
+                        // Texte und Chips
                         Expanded(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -120,11 +99,11 @@ class BikeCard extends StatelessWidget {
                               // Marke
                               Text(
                                 bike.brand.toUpperCase(),
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 1.2,
-                                  color: subtitleColor,
+                                  color: Colors.white70, // Fest auf hellgrau
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -133,10 +112,10 @@ class BikeCard extends StatelessWidget {
                               // Modell
                               Text(
                                 bike.model,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 22,
                                   fontWeight: FontWeight.bold,
-                                  color: textColor,
+                                  color: Colors.white, // Fest auf weiß
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -147,10 +126,10 @@ class BikeCard extends StatelessWidget {
                                   buildChip(
                                     Text(
                                       bike.category,
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: chipTextColor,
+                                        color: Colors.white,
                                       ),
                                     ),
                                   ),
@@ -158,18 +137,18 @@ class BikeCard extends StatelessWidget {
                                     Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.tune,
                                           size: 14,
-                                          color: chipTextColor,
+                                          color: Colors.white,
                                         ),
                                         const SizedBox(width: 4),
                                         Text(
                                           '${bike.setups.length}',
-                                          style: TextStyle(
+                                          style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: chipTextColor,
+                                            color: Colors.white,
                                           ),
                                         ),
                                       ],

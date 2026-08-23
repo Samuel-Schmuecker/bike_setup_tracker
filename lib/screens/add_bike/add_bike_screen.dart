@@ -1,7 +1,5 @@
 // lib/screens/add_bike/add_bike_screen.dart
 
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +9,7 @@ import 'dart:convert';
 import '../../utils/image_helper.dart';
 
 class AddBikeScreen extends StatefulWidget {
-  const AddBikeScreen({Key? key}) : super(key: key);
+  const AddBikeScreen({super.key});
 
   @override
   State<AddBikeScreen> createState() => _AddBikeScreenState();
@@ -145,7 +143,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                 const SizedBox(height: 16),
                 
                 DropdownButtonFormField<String>(
-                  value: _category,
+                  initialValue: _category,
                   decoration: const InputDecoration(
                     labelText: 'Kategorie',
                     border: OutlineInputBorder(),

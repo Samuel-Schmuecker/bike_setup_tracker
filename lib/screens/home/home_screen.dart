@@ -8,10 +8,10 @@ import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart'; // NEU: Import hinzugefügt
 import '../edit_bike/edit_bike_screen.dart';
 import '../add_bike/preset_list_screen.dart'; // NEU
-import '../add_bike/add_bike_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

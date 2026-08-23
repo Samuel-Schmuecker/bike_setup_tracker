@@ -11,10 +11,10 @@ class SetupConfiguratorScreen extends StatefulWidget {
   final bool isEditing; // NEU: Unterscheidet zwischen Neuanlage und Bearbeitung
 
   const SetupConfiguratorScreen({
-    Key? key, 
+    super.key, 
     required this.bikeId, 
     this.isEditing = false,
-  }) : super(key: key);
+  });
 
   @override
   State<SetupConfiguratorScreen> createState() => _SetupConfiguratorScreenState();

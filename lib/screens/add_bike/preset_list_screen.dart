@@ -7,7 +7,7 @@ import '../../models/bike.dart';
 import '../../data/bike_presets.dart';
 
 class PresetListScreen extends StatefulWidget {
-  const PresetListScreen({Key? key}) : super(key: key);
+  const PresetListScreen({super.key});
 
   @override
   State<PresetListScreen> createState() => _PresetListScreenState();

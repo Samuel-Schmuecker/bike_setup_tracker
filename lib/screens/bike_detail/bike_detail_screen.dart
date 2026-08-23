@@ -1,11 +1,9 @@
 // lib/screens/bike_detail/bike_detail_screen.dart
 
-import 'dart:io';
 import 'package:bike_setup_tracker/models/bike.dart';
 import 'package:bike_setup_tracker/models/trail_setup.dart';
 import 'package:bike_setup_tracker/screens/bike_detail/add_setup_screen.dart';
 import 'package:bike_setup_tracker/screens/bike_detail/setup_cpnfigurator_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // NEU: Svg-Paket importiert
@@ -18,7 +16,7 @@ import '../../utils/image_helper.dart';
 class BikeDetailScreen extends StatelessWidget {
   final String bikeId;
 
-  const BikeDetailScreen({Key? key, required this.bikeId}) : super(key: key);
+  const BikeDetailScreen({super.key, required this.bikeId});
 
   void _onAddSetupTap(BuildContext context, Bike bike) {
     if (bike.availableParameters == null) {
@@ -34,12 +32,6 @@ class BikeDetailScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => AddSetupScreen(bikeId: bike.id)),
       );
     }
-  }
-
-  void _onSetupTap(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Setup Details öffnen sich bald!')),
-    );
   }
 
   // 1. Zeigt das BottomSheet mit den 3 Optionen an
@@ -147,8 +139,6 @@ class BikeDetailScreen extends StatelessWidget {
           orElse: () => throw Exception('Bike nicht gefunden'),
         );
 
-    final bool hasImage = bike.imagePath != null;
-    final colorScheme = Theme.of(context).colorScheme;
 
     // ANGEPASST: Nimmt nun einen svgPath statt IconData
     Widget buildTravelChip(String svgPath, String text) {
@@ -240,11 +230,8 @@ class BikeDetailScreen extends StatelessWidget {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // 1. Hintergrundbild (NEU: Unterstützt jetzt auch Assets)
-                  if (hasImage)
-                    ImageHelper.buildImage(bike.imagePath!)
-                  else
-                    Container(color: colorScheme.primaryContainer),
+                  // 1. Hintergrundbild (NEU: Greift den DisplayPath ab)
+                  ImageHelper.buildImage(ImageHelper.getDisplayImagePath(bike.imagePath, bike.category)),
                   
                   // 2. Abdunkelndes Overlay
                   const DecoratedBox(
@@ -252,7 +239,7 @@ class BikeDetailScreen extends StatelessWidget {
                       gradient: LinearGradient(
                         begin: Alignment.bottomCenter,
                         end: Alignment.topCenter,
-                        colors: [Colors.black87,Colors.transparent],
+                        colors: [Colors.black87, Colors.transparent],
                       ),
                     ),
                   ),

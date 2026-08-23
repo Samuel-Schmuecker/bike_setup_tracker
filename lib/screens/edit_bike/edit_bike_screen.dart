@@ -1,7 +1,5 @@
 // lib/screens/edit_bike/edit_bike_screen.dart
 
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +11,7 @@ import '../../utils/image_helper.dart';
 class EditBikeScreen extends StatefulWidget {
   final Bike bike;
 
-  const EditBikeScreen({Key? key, required this.bike}) : super(key: key);
+  const EditBikeScreen({super.key, required this.bike});
 
   @override
   State<EditBikeScreen> createState() => _EditBikeScreenState();
@@ -196,7 +194,7 @@ class _EditBikeScreenState extends State<EditBikeScreen> {
                 const SizedBox(height: 16),
                 
                 DropdownButtonFormField<String>(
-                  value: _category,
+                  initialValue: _category,
                   decoration: const InputDecoration(labelText: 'Kategorie', border: OutlineInputBorder()),
                   items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (val) { if (val != null) setState(() => _category = val); },

@@ -8,7 +8,7 @@ import 'setup_detail_screen.dart';
 
 class AddSetupScreen extends StatefulWidget {
   final String bikeId;
-  const AddSetupScreen({Key? key, required this.bikeId}) : super(key: key);
+  const AddSetupScreen({super.key, required this.bikeId});
 
   @override
   State<AddSetupScreen> createState() => _AddSetupScreenState();

@@ -13,13 +13,13 @@ class SetupCard extends StatelessWidget {
   final VoidCallback onFavoriteToggle;
 
   const SetupCard({
-    Key? key,
+    super.key,
     required this.setup,
     required this.bike, // NEU
     required this.onTap,
     this.onLongPress,
     required this.onFavoriteToggle,
-  }) : super(key: key);
+  });
 
   // Verhindert .0 bei runden Zahlen und gibt '-' bei null zurück
   String _formatNum(num? value) {
