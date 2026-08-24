@@ -389,7 +389,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                   ],
 
                   // --- LOG ---
-                  buildSectionHeader('Verlauf', icon: Icons.history),
+                  // --- LOG ---
+              buildSectionHeader('Änderungsverlauf', icon: Icons.history),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: setup.logs.isEmpty 
@@ -398,8 +399,6 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       child: Text('Bisher keine Anpassungen vorgenommen.', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5))),
                     )
                   : ConstrainedBox(
-                      // NEU: Begrenzt die Höhe auf max. ~3,5 Einträge (ca. 240px), 
-                      // schrumpft aber zusammen, wenn es weniger Einträge sind.
                       constraints: const BoxConstraints(maxHeight: 240),
                       child: ShaderMask(
                         shaderCallback: (Rect bounds) {
@@ -407,12 +406,11 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [Colors.white, Colors.white, Colors.transparent],
-                            stops: [0.0, 0.75, 1.0], // Fade-Out etwas später ansetzen
+                            stops: [0.0, 0.75, 1.0],
                           ).createShader(bounds);
                         },
                         blendMode: BlendMode.dstIn,
                         child: ListView.builder(
-                          // NEU: Zieht sich zusammen und scrollt "bouncy" (iOS-Style)
                           shrinkWrap: true,
                           physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.zero,
@@ -430,62 +428,78 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                               diffBadge = match.group(2) ?? '';
                             }
 
-                            return IntrinsicHeight(
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Column(
-                                    children: [
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 4),
-                                        width: 10, height: 10,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: colorScheme.primary, width: 2),
-                                          color: Theme.of(context).scaffoldBackgroundColor,
-                                        ),
-                                      ),
-                                      if (!isLast)
-                                        Expanded(
-                                          child: Container(
-                                            width: 1.5,
-                                            color: Colors.white.withOpacity(0.1),
-                                          ),
-                                        )
-                                      else
-                                        // BUGFIX: Unsichtbarer Platzhalter verhindert den 1-Pixel Overflow
-                                        const Expanded(child: SizedBox()),
-                                    ],
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(bottom: 20.0),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            crossAxisAlignment: CrossAxisAlignment.center,
-                                            children: [
-                                              Expanded(child: Text(mainText, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.white))),
-                                              if (diffBadge.isNotEmpty)
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                  decoration: BoxDecoration(color: colorScheme.primaryContainer.withOpacity(0.8), borderRadius: BorderRadius.circular(12)),
-                                                  child: Text(diffBadge, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onPrimaryContainer)),
-                                                ),
-                                            ],
-                                          ),
-                                          if (log.note.isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(log.note, style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5), fontSize: 13)),
-                                          ],
-                                        ],
+                            // --- NEUER FEHLERFREIER TIMELINE-EINTRAG ---
+                            return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Die linke Spalte (Timeline Linie)
+                                Column(
+                                  children: [
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 6), // Leicht eingerückt für visuelle Zentrierung zur ersten Textzeile
+                                      width: 10, height: 10,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: colorScheme.primary, width: 2),
+                                        color: Theme.of(context).scaffoldBackgroundColor,
                                       ),
                                     ),
+                                    if (!isLast)
+                                      // Die Linie bekommt nun eine feste Mindesthöhe (z.B. 40), 
+                                      // aber kein Expanded/IntrinsicHeight mehr, was den Container sprengt.
+                                      Container(
+                                        width: 1.5,
+                                        height: 50, // Deckt den Abstand zum nächsten Punkt ab
+                                        color: Colors.white.withOpacity(0.1),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(width: 16),
+                                
+                                // Die rechte Spalte (Text)
+                                Expanded(
+                                  child: Padding(
+                                    // Flexibles Padding statt fester Container-Höhe
+                                    padding: const EdgeInsets.only(bottom: 24.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min, // Elementar: Nimmt nur nötigen Platz
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.center,
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                mainText, 
+                                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Colors.white),
+                                              ),
+                                            ),
+                                            if (diffBadge.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: colorScheme.primaryContainer.withOpacity(0.8), 
+                                                  borderRadius: BorderRadius.circular(12)
+                                                ),
+                                                child: Text(
+                                                  diffBadge, 
+                                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: colorScheme.onPrimaryContainer)
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        if (log.note.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            log.note, 
+                                            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5), fontSize: 13),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             );
                           },
                         ),
