@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; // <--- WICHTIG: Fehlt oft beim Web-Build!
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart'; // <--- NEU HINZUFÜGEN
 
 import 'providers/bike_provider.dart';
 import 'screens/home/home_screen.dart';
@@ -35,11 +36,16 @@ class MyApp extends StatelessWidget {
         
         // HIER IST DER FIX: 
         // Erzwingt die iOS-Wischgeste (Zurück-Wischen) auf allen Geräten!
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: <TargetPlatform, PageTransitionsBuilder>{
-            TargetPlatform.android: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
+            
+            // HIER IST DER FIX FÜR DAS IPHONE WEB-PROBLEM:
+            TargetPlatform.iOS: kIsWeb 
+                ? const FadeUpwardsPageTransitionsBuilder() // Im Web übernimmt Apple das Wischen nativ
+                : const CupertinoPageTransitionsBuilder(),  // Als echte App nutzt Flutter den Swipe
+                
+            TargetPlatform.macOS: const CupertinoPageTransitionsBuilder(),
           },
         ),
       ),
