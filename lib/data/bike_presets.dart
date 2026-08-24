@@ -358,6 +358,120 @@ final List<Bike> presetBikes = [
    Bike(id: 'yt_decoy', brand: 'YT', model: 'Decoy Core 4', category: 'E-Bike', travelFront: 170, travelRear: 165, imagePath: null),
    Bike(id: 'orbea_wild', brand: 'Orbea', model: 'Wild M-LTD', category: 'E-Bike', travelFront: 170, travelRear: 160, imagePath: null),
    Bike(id: 'norco_sight_vlt', brand: 'Norco', model: 'Sight VLT C1', category: 'E-Bike', travelFront: 150, travelRear: 140, imagePath: null),
+
+   // 3. Erweiterung
+  
+  // ================= Enduro (22) =================
+  Bike(id: 'yeti_sb165', brand: 'Yeti', model: 'SB165', category: 'Enduro', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'yeti_sb160', brand: 'Yeti', model: 'SB160', category: 'Enduro', travelFront: 160, travelRear: 160, imagePath: null),
+  Bike(id: 'gt_force', brand: 'GT', model: 'Force Carbon Pro', category: 'Enduro', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'norco_range_2022', brand: 'Norco', model: 'Range C2 (2022)', category: 'Enduro', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'specialized_enduro_2021', brand: 'Specialized', model: 'S-Works Enduro 29 (2021)', category: 'Enduro', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'santacruz_megatower_2020', brand: 'Santa Cruz', model: 'Megatower CC (2020)', category: 'Enduro', travelFront: 160, travelRear: 160, imagePath: null),
+  Bike(id: 'trek_slash_2023', brand: 'Trek', model: 'Slash 9.9 Gen 5 (2023)', category: 'Enduro', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'canyon_strive_2022', brand: 'Canyon', model: 'Strive CFR (2022)', category: 'Enduro', travelFront: 170, travelRear: 150, imagePath: null),
+  Bike(id: 'commencal_meta_am_2023', brand: 'Commencal', model: 'Meta AM 29 (2023)', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'nicolai_g1', brand: 'Nicolai', model: 'G1', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'nicolai_saturn14', brand: 'Nicolai', model: 'Saturn14', category: 'Enduro', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'last_tarvis', brand: 'Last', model: 'Tarvis', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'polygon_collosus_n9', brand: 'Polygon', model: 'Collosus N9', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'norco_shore', brand: 'Norco', model: 'Shore', category: 'Enduro', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'canfield_jedi', brand: 'Canfield', model: 'Jedi', category: 'Enduro', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'geometron_g16', brand: 'Geometron', model: 'G16', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'pole_evolink', brand: 'POLE', model: 'Evolink 176', category: 'Enduro', travelFront: 176, travelRear: 170, imagePath: null),
+  Bike(id: 'stanton_slackline', brand: 'Stanton', model: 'Slackline', category: 'Enduro', travelFront: 160, travelRear: 160, imagePath: null),
+  Bike(id: 'saracen_kiliflyer', brand: 'Saracen', model: 'Kili Flyer', category: 'Enduro', travelFront: 170, travelRear: 165, imagePath: null),
+  Bike(id: 'yt_capra_2022', brand: 'YT', model: 'Capra (2022)', category: 'Enduro', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'propain_hugene', brand: 'Propain', model: 'Hugene', category: 'Enduro', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'giant_reign_2023', brand: 'Giant', model: 'Reign Advanced (2023)', category: 'Enduro', travelFront: 160, travelRear: 146, imagePath: null),
+
+  // ================= Trail (22) =================
+  Bike(id: 'rockymountain_instinct', brand: 'Rocky Mountain', model: 'Instinct C70', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'vitus_escarpe', brand: 'Vitus', model: 'Escarpe 29 CRX', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'santacruz_5010', brand: 'Santa Cruz', model: '5010 CC X0 AXS', category: 'Trail', travelFront: 130, travelRear: 130, imagePath: null),
+  Bike(id: 'santacruz_tallboy', brand: 'Santa Cruz', model: 'Tallboy CC X0 AXS', category: 'Trail', travelFront: 130, travelRear: 120, imagePath: null),
+  Bike(id: 'pivot_switchblade', brand: 'Pivot', model: 'Switchblade Pro XT/XTR', category: 'Trail', travelFront: 160, travelRear: 142, imagePath: null),
+  Bike(id: 'transition_scout', brand: 'Transition', model: 'Scout X01 AXS', category: 'Trail', travelFront: 140, travelRear: 130, imagePath: null),
+  Bike(id: 'norco_optic', brand: 'Norco', model: 'Optic C1', category: 'Trail', travelFront: 130, travelRear: 120, imagePath: null),
+  Bike(id: 'norco_fluid', brand: 'Norco', model: 'Fluid FS C1', category: 'Trail', travelFront: 140, travelRear: 130, imagePath: null),
+  Bike(id: 'marin_rift_zone', brand: 'Marin', model: 'Rift Zone XR', category: 'Trail', travelFront: 130, travelRear: 125, imagePath: null),
+  Bike(id: 'marin_wolf_ridge', brand: 'Marin', model: 'Wolf Ridge XR', category: 'Trail', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'radon_skeen', brand: 'Radon', model: 'Skeen Trail 10.0', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'merida_ninety_six', brand: 'Merida', model: 'Ninety-Six 10K', category: 'Trail', travelFront: 120, travelRear: 100, imagePath: null),
+  Bike(id: 'commencal_meta_tr', brand: 'Commencal', model: 'Meta TR 29', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'cube_stereo_150', brand: 'Cube', model: 'Stereo 150 C:68X', category: 'Trail', travelFront: 150, travelRear: 150, imagePath: null),
+  Bike(id: 'scott_genius', brand: 'Scott', model: 'Genius ST Tuned', category: 'Trail', travelFront: 150, travelRear: 150, imagePath: null),
+  Bike(id: 'polygon_siskiu', brand: 'Polygon', model: 'Siskiu T8', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'whyte_t130', brand: 'Whyte', model: 'T-130 RS', category: 'Trail', travelFront: 140, travelRear: 130, imagePath: null),
+  Bike(id: 'lapierre_zesty', brand: 'Lapierre', model: 'Zesty AM', category: 'Trail', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'ghost_kato', brand: 'Ghost', model: 'Kato FS', category: 'Trail', travelFront: 140, travelRear: 130, imagePath: null),
+  Bike(id: 'bold_linkin', brand: 'Bold', model: 'Linkin', category: 'Trail', travelFront: 150, travelRear: 145, imagePath: null),
+  Bike(id: 'propain_yuma', brand: 'Propain', model: 'Yuma', category: 'Trail', travelFront: 130, travelRear: 125, imagePath: null),
+  Bike(id: 'liteville_601', brand: 'Liteville', model: '601 MK6', category: 'Trail', travelFront: 155, travelRear: 150, imagePath: null),
+
+  // ================= Downhill (12) =================
+  Bike(id: 'santacruz_v10_2019', brand: 'Santa Cruz', model: 'V10 CC (2019)', category: 'Downhill', travelFront: 200, travelRear: 216, imagePath: null),
+  Bike(id: 'specialized_demo_2016', brand: 'Specialized', model: 'Demo 8 (2016)', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'propain_rage', brand: 'Propain', model: 'Rage', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'intense_m279', brand: 'Intense', model: 'M279', category: 'Downhill', travelFront: 200, travelRear: 210, imagePath: null),
+  Bike(id: 'foes_mixer', brand: 'Foes', model: 'Mixer', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'last_herb', brand: 'Last', model: 'Herb', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'nicolai_ion16', brand: 'Nicolai', model: 'Ion16', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'polygon_collosus_dh', brand: 'Polygon', model: 'Collosus DH9', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'trek_session_2022', brand: 'Trek', model: 'Session 9 (2022)', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'yt_tues_2021', brand: 'YT', model: 'Tues CF (2021)', category: 'Downhill', travelFront: 200, travelRear: 210, imagePath: null),
+  Bike(id: 'commencal_supreme_dh_2020', brand: 'Commencal', model: 'Supreme DH V4.2 (2020)', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+  Bike(id: 'devinci_wilson_2023', brand: 'Devinci', model: 'Wilson Carbon (2023)', category: 'Downhill', travelFront: 200, travelRear: 200, imagePath: null),
+
+  // ================= All Mountain (14) =================
+  Bike(id: 'transition_spire_alloy', brand: 'Transition', model: 'Spire Alloy GX', category: 'All Mountain', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'specialized_stumpjumper_alloy', brand: 'Specialized', model: 'Stumpjumper Alloy', category: 'All Mountain', travelFront: 150, travelRear: 145, imagePath: null),
+  Bike(id: 'ibis_ripley', brand: 'Ibis', model: 'Ripley V4S', category: 'All Mountain', travelFront: 120, travelRear: 120, imagePath: null),
+  Bike(id: 'rockymountain_pipeline', brand: 'Rocky Mountain', model: 'Pipeline C50', category: 'All Mountain', travelFront: 150, travelRear: 150, imagePath: null),
+  Bike(id: 'kona_heihei', brand: 'Kona', model: 'Hei Hei CR/DL', category: 'All Mountain', travelFront: 130, travelRear: 120, imagePath: null),
+  Bike(id: 'evil_following', brand: 'Evil', model: 'Following MB', category: 'All Mountain', travelFront: 130, travelRear: 120, imagePath: null),
+  Bike(id: 'privateer_161', brand: 'Privateer', model: '161', category: 'All Mountain', travelFront: 170, travelRear: 161, imagePath: null),
+  Bike(id: 'deviate_claymore', brand: 'Deviate', model: 'Claymore', category: 'All Mountain', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'cotic_rocketmax', brand: 'Cotic', model: 'RocketMAX', category: 'All Mountain', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'antidote_darkmatter', brand: 'Antidote', model: 'Darkmatter', category: 'All Mountain', travelFront: 150, travelRear: 145, imagePath: null),
+  Bike(id: 'banshee_titan', brand: 'Banshee', model: 'Titan', category: 'All Mountain', travelFront: 160, travelRear: 160, imagePath: null),
+  Bike(id: 'knolly_chilcotin', brand: 'Knolly', model: 'Chilcotin 159', category: 'All Mountain', travelFront: 170, travelRear: 159, imagePath: null),
+  Bike(id: 'guerrillagravity_smash', brand: 'Guerrilla Gravity', model: 'Smash', category: 'All Mountain', travelFront: 165, travelRear: 160, imagePath: null),
+  Bike(id: 'yeti_sb130', brand: 'Yeti', model: 'SB130', category: 'All Mountain', travelFront: 130, travelRear: 130, imagePath: null),
+
+  // ================= Cross Country (16) =================
+  Bike(id: 'trek_top_fuel', brand: 'Trek', model: 'Top Fuel 9.9', category: 'Cross Country', travelFront: 110, travelRear: 110, imagePath: null),
+  Bike(id: 'specialized_epic_evo', brand: 'Specialized', model: 'Epic Evo Pro', category: 'Cross Country', travelFront: 130, travelRear: 120, imagePath: null),
+  Bike(id: 'canyon_lux', brand: 'Canyon', model: 'Lux CFR', category: 'Cross Country', travelFront: 100, travelRear: 100, imagePath: null),
+  Bike(id: 'yt_izzo', brand: 'YT', model: 'Izzo Core 4', category: 'Cross Country', travelFront: 120, travelRear: 120, imagePath: null),
+  Bike(id: 'orbea_oiz', brand: 'Orbea', model: 'Oiz M-LTD', category: 'Cross Country', travelFront: 110, travelRear: 110, imagePath: null),
+  Bike(id: 'pivot_mach4sl', brand: 'Pivot', model: 'Mach 4 SL Pro XT/XTR', category: 'Cross Country', travelFront: 115, travelRear: 100, imagePath: null),
+  Bike(id: 'bmc_fourstroke', brand: 'BMC', model: 'Fourstroke 01', category: 'Cross Country', travelFront: 120, travelRear: 120, imagePath: null),
+  Bike(id: 'vitus_sentier', brand: 'Vitus', model: 'Sentier 29', category: 'Cross Country', travelFront: 120, travelRear: 120, imagePath: null),
+  Bike(id: 'stevens_jura', brand: 'Stevens', model: 'Jura', category: 'Cross Country', travelFront: 100, travelRear: 100, imagePath: null),
+  Bike(id: 'simplon_kamerad', brand: 'Simplon', model: 'Kamerad Pmax', category: 'Cross Country', travelFront: 100, travelRear: 100, imagePath: null),
+  Bike(id: 'ghost_lector', brand: 'Ghost', model: 'Lector FS SF', category: 'Cross Country', travelFront: 120, travelRear: 115, imagePath: null),
+  Bike(id: 'norco_revolver', brand: 'Norco', model: 'Revolver FS C1', category: 'Cross Country', travelFront: 100, travelRear: 100, imagePath: null),
+  Bike(id: 'rockymountain_element', brand: 'Rocky Mountain', model: 'Element C70', category: 'Cross Country', travelFront: 120, travelRear: 120, imagePath: null),
+  Bike(id: 'intense_sniper', brand: 'Intense', model: 'Sniper XC Pro', category: 'Cross Country', travelFront: 110, travelRear: 100, imagePath: null),
+  Bike(id: 'cube_ams_100', brand: 'Cube', model: 'AMS 100 C:68X SLT', category: 'Cross Country', travelFront: 100, travelRear: 100, imagePath: null),
+  Bike(id: 'scott_spark_2021', brand: 'Scott', model: 'Spark RC (2021)', category: 'Cross Country', travelFront: 120, travelRear: 120, imagePath: null),
+
+  // ================= E-Bike (14) =================
+  Bike(id: 'trek_fuel_exe', brand: 'Trek', model: 'Fuel EXe 9.9', category: 'E-Bike', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'specialized_kenevo', brand: 'Specialized', model: 'Turbo Kenevo Expert', category: 'E-Bike', travelFront: 180, travelRear: 170, imagePath: null),
+  Bike(id: 'cannondale_moterra', brand: 'Cannondale', model: 'Moterra SL 1', category: 'E-Bike', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'transition_relay', brand: 'Transition', model: 'Relay X01 AXS', category: 'E-Bike', travelFront: 150, travelRear: 140, imagePath: null),
+  Bike(id: 'pivot_shuttle_am', brand: 'Pivot', model: 'Shuttle AM Pro XT/XTR', category: 'E-Bike', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'merida_eonesixty', brand: 'Merida', model: 'eOne-Sixty 10K', category: 'E-Bike', travelFront: 170, travelRear: 160, imagePath: null),
+  Bike(id: 'whyte_e180', brand: 'Whyte', model: 'E-180 RSX', category: 'E-Bike', travelFront: 180, travelRear: 170, imagePath: null),
+  Bike(id: 'lapierre_overvolt', brand: 'Lapierre', model: 'Overvolt AM', category: 'E-Bike', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'ghost_hybride_riot', brand: 'Ghost', model: 'Hybride Riot AM', category: 'E-Bike', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'focus_thron', brand: 'Focus', model: 'Thron² SL', category: 'E-Bike', travelFront: 160, travelRear: 150, imagePath: null),
+  Bike(id: 'norco_range_vlt', brand: 'Norco', model: 'Range VLT C1', category: 'E-Bike', travelFront: 170, travelRear: 170, imagePath: null),
+  Bike(id: 'canyon_neuron_on', brand: 'Canyon', model: 'Neuron:ON CF', category: 'E-Bike', travelFront: 140, travelRear: 130, imagePath: null),
+  Bike(id: 'rockymountain_altitude_powerplay', brand: 'Rocky Mountain', model: 'Altitude Powerplay C70', category: 'E-Bike', travelFront: 160, travelRear: 160, imagePath: null),
+  Bike(id: 'kona_remote', brand: 'Kona', model: 'Remote CTRL', category: 'E-Bike', travelFront: 150, travelRear: 140, imagePath: null),
 ];
 
 // ============================================================
@@ -480,4 +594,116 @@ final Map<String, BikeParameters> presetBikeParameters = {
   'yt_decoy': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
   'orbea_wild': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
   'norco_sight_vlt': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+
+  // ================= Enduro =================
+  'yeti_sb165': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'yeti_sb160': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'gt_force': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'norco_range_2022': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'specialized_enduro_2021': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'santacruz_megatower_2020': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 (36 statt 38 in Gen1) / Fox X2 Factory
+  'trek_slash_2023': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox ZEB Ultimate / Super Deluxe Ultimate Air
+  'canyon_strive_2022': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'commencal_meta_am_2023': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'nicolai_g1': _params(forkOhlinsRXF, shockRockshoxSuperDeluxeUltimateAir), // Öhlins RXF38 m.2 / RockShox Super Deluxe Ultimate Air (typische Custom-Kombination)
+  'nicolai_saturn14': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'last_tarvis': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'polygon_collosus_n9': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'norco_shore': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'canfield_jedi': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'geometron_g16': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'pole_evolink': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'stanton_slackline': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox ZEB Ultimate / Super Deluxe Ultimate Air
+  'saracen_kiliflyer': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'yt_capra_2022': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'propain_hugene': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'giant_reign_2023': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox ZEB Ultimate / Super Deluxe Ultimate Air
+
+  // ================= Trail =================
+  'rockymountain_instinct': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'vitus_escarpe': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'santacruz_5010': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34/36 Factory GRIP2 / Fox Float X Factory
+  'santacruz_tallboy': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34 Factory GRIP2 / Fox Float X Factory
+  'pivot_switchblade': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'transition_scout': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Pike/Lyrik Ultimate / Super Deluxe Ultimate Air
+  'norco_optic': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Pike Ultimate / Super Deluxe Ultimate Air
+  'norco_fluid': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'marin_rift_zone': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Pike Ultimate / Super Deluxe Ultimate Air
+  'marin_wolf_ridge': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'radon_skeen': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'merida_ninety_six': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34 Factory GRIP2 / Fox Float X Factory
+  'commencal_meta_tr': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'cube_stereo_150': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'scott_genius': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory (TwinLoc)
+  'polygon_siskiu': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'whyte_t130': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Pike Ultimate / Super Deluxe Ultimate Air
+  'lapierre_zesty': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'ghost_kato': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34/36 Factory GRIP2 / Fox Float X Factory
+  'bold_linkin': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'propain_yuma': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34 Factory GRIP2 / Fox Float X Factory
+  'liteville_601': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+
+  // ================= Downhill =================
+  'santacruz_v10_2019': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'specialized_demo_2016': _params(forkRockshoxChargerRC2, shockRockshoxVividCoilUltimate), // RockShox BoXXer World Cup / Vivid Coil (ältere Generation)
+  'propain_rage': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'intense_m279': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'foes_mixer': _params(forkRockshoxChargerRC2, shockRockshoxVividCoilUltimate), // RockShox BoXXer Ultimate / Vivid Coil Ultimate
+  'last_herb': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'nicolai_ion16': _params(forkOhlinsRXF, shockFoxDHX2FactoryCoil), // Öhlins DH38 m.2 (RXF-Profil als Näherung) / Fox DHX2 Factory Coil
+  'polygon_collosus_dh': _params(forkRockshoxChargerRC2, shockRockshoxVividCoilUltimate), // RockShox BoXXer Ultimate / Vivid Coil Ultimate
+  'trek_session_2022': _params(forkRockshoxChargerRC2, shockRockshoxVividCoilUltimate), // RockShox BoXXer Ultimate / Vivid Coil Ultimate
+  'yt_tues_2021': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'commencal_supreme_dh_2020': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 40 Factory GRIP2 / Fox DHX2 Factory Coil
+  'devinci_wilson_2023': _params(forkRockshoxChargerRC2, shockRockshoxVividCoilUltimate), // RockShox BoXXer Ultimate / Vivid Coil Ultimate
+
+  // ================= All Mountain =================
+  'transition_spire_alloy': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'specialized_stumpjumper_alloy': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Select+ / Super Deluxe Select+ (vereinfacht Ultimate-Profil)
+  'ibis_ripley': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34 Factory GRIP2 / Fox Float X Factory
+  'rockymountain_pipeline': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'kona_heihei': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Pike Ultimate / Super Deluxe Ultimate Air
+  'evil_following': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34 Factory GRIP2 / Fox Float X Factory
+  'privateer_161': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'deviate_claymore': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'cotic_rocketmax': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'antidote_darkmatter': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 36 Factory GRIP2 / Fox Float X Factory
+  'banshee_titan': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'knolly_chilcotin': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'guerrillagravity_smash': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'yeti_sb130': _params(forkFoxFactoryGrip2, shockFoxFloatXFactory), // Fox 34/36 Factory GRIP2 / Fox Float X Factory
+
+  // ================= Cross Country =================
+  'trek_top_fuel': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory
+  'specialized_epic_evo': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory
+  'canyon_lux': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'yt_izzo': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory
+  'orbea_oiz': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'pivot_mach4sl': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 32 SC Factory / Fox Float SL Factory
+  'bmc_fourstroke': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'vitus_sentier': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'stevens_jura': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'simplon_kamerad': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 32 SC Factory / Fox Float SL Factory
+  'ghost_lector': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory
+  'norco_revolver': _params(forkRockshoxSIDUltimate, shockRockshoxSIDLuxeUltimate), // RockShox SID Ultimate / SIDLuxe Ultimate
+  'rockymountain_element': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory
+  'intense_sniper': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 32 SC Factory / Fox Float SL Factory
+  'cube_ams_100': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 32 SC Factory / Fox Float SL Factory
+  'scott_spark_2021': _params(forkFoxFactorySL, shockFoxFloatSLFactory), // Fox 34 SC Factory / Fox Float SL Factory (TwinLoc, ältere Generation)
+
+  // ================= E-Bike =================
+  'trek_fuel_exe': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'specialized_kenevo': _params(forkFoxFactoryGrip2, shockFoxDHX2FactoryCoil), // Fox 38 Factory GRIP2 / Fox DHX2 Factory Coil
+  'cannondale_moterra': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox ZEB Ultimate / Super Deluxe Ultimate Air
+  'transition_relay': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'pivot_shuttle_am': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'merida_eonesixty': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'whyte_e180': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'lapierre_overvolt': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox ZEB Ultimate / Super Deluxe Ultimate Air
+  'ghost_hybride_riot': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 38 Factory GRIP2 / Fox X2 Factory
+  'focus_thron': _params(forkFoxFactoryGrip2, shockFoxFloatX2Factory), // Fox 36 Factory GRIP2 / Fox X2 Factory
+  'norco_range_vlt': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'canyon_neuron_on': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
+  'rockymountain_altitude_powerplay': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeCoilUltimate), // RockShox ZEB Ultimate / Super Deluxe Coil Ultimate
+  'kona_remote': _params(forkRockshoxChargerRC2, shockRockshoxSuperDeluxeUltimateAir), // RockShox Lyrik Ultimate / Super Deluxe Ultimate Air
 };

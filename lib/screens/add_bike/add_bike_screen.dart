@@ -9,6 +9,9 @@ import '../../models/bike.dart';
 import '../../models/bike_parameters.dart';
 import '../../utils/image_helper.dart';
 import '../../data/bike_presets.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AddBikeScreen extends StatefulWidget {
   const AddBikeScreen({Key? key}) : super(key: key);
@@ -20,7 +23,10 @@ class AddBikeScreen extends StatefulWidget {
 class _AddBikeScreenState extends State<AddBikeScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _modelController = TextEditingController();
+  // Wir haben den _modelController komplett entfernt, da das Autocomplete-Textfeld 
+  // seinen Zustand über "onSaved" automatisch an die Variable _modelName übergibt!
+  String _modelName = ''; 
+
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _travelFrontController = TextEditingController();
   final TextEditingController _travelRearController = TextEditingController();
@@ -36,7 +42,6 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
 
   @override
   void dispose() {
-    _modelController.dispose();
     _brandController.dispose();
     _travelFrontController.dispose();
     _travelRearController.dispose();
@@ -53,11 +58,31 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
     );
     
     if (pickedFile != null) {
-      final bytes = await pickedFile.readAsBytes();
-      final base64Image = base64Encode(bytes);
-      setState(() {
-        _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
-      });
+      if (kIsWeb) {
+        // --- WEB-MODUS (GitHub Testing) ---
+        // Nutzt weiterhin Base64, da Web kein Dateisystem hat
+        final bytes = await pickedFile.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        setState(() {
+          _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
+        });
+      } else {
+        // --- NATIVE APP (App Store / Echtes Handy) ---
+        // 1. Hole den sicheren, dauerhaften App-Ordner des Handys
+        final directory = await getApplicationDocumentsDirectory();
+        
+        // 2. Erstelle einen einzigartigen Dateinamen (z. B. 1623456789.jpg)
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImagePath = '${directory.path}/$fileName';
+        
+        // 3. Kopiere das Bild vom temporären Cache in unseren App-Ordner
+        await File(pickedFile.path).copy(savedImagePath);
+        
+        // 4. Speichere NUR den Pfad (z.B. "/data/user/0/com.app/app_flutter/123.jpg")
+        setState(() {
+          _selectedImagePath = savedImagePath;
+        });
+      }
     }
   }
 
@@ -68,7 +93,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
       final newBike = Bike(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         brand: _brandController.text.trim(),
-        model: _modelController.text.trim(),
+        model: _modelName.trim(), // Zieht sich den Namen jetzt aus der String-Variable
         category: _category,
         travelFront: int.tryParse(_travelFrontController.text) ?? 0,
         travelRear: int.tryParse(_travelRearController.text) ?? 0,
@@ -131,24 +156,21 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                       return const Iterable<Bike>.empty();
                     }
                     final query = textEditingValue.text.toLowerCase();
-                    // Sucht nach Modell ODER Marke
                     return presetBikes.where((bike) => 
                       bike.model.toLowerCase().contains(query) || 
                       bike.brand.toLowerCase().contains(query)
                     );
                   },
-                  // Das soll im Textfeld stehen, nachdem man etwas ausgewählt hat
                   displayStringForOption: (Bike option) => option.model,
                   onSelected: (Bike selection) {
                     setState(() {
-                      _modelController.text = selection.model;
-                      _brandController.text = selection.brand; // Auto-Fill Marke
-                      _travelFrontController.text = selection.travelFront.toString(); // Auto-Fill Federweg
+                      _brandController.text = selection.brand; 
+                      _travelFrontController.text = selection.travelFront.toString(); 
                       _travelRearController.text = selection.travelRear.toString();
                       if (_categories.contains(selection.category)) {
-                        _category = selection.category; // Auto-Fill Kategorie
+                        _category = selection.category; 
                       }
-                      _selectedParams = presetBikeParameters[selection.id]; // Parameter übernehmen
+                      _selectedParams = presetBikeParameters[selection.id]; 
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -158,19 +180,14 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-                    FocusScope.of(context).unfocus(); // Tastatur schließen
+                    FocusScope.of(context).unfocus(); 
                   },
                   fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                    // Synchronisiert den internen Autocomplete-Controller mit unserem Formular-Controller
-                    _modelController.text = textEditingController.text;
-                    textEditingController.addListener(() {
-                      _modelController.text = textEditingController.text;
-                    });
-
+                    // FIX: Alle Controller-Listener-Hacks wurden entfernt!
+                    // Stattdessen nutzen wir onSaved, was beim Klick auf "Speichern" ausgelöst wird.
                     return TextFormField(
                       controller: textEditingController,
                       focusNode: focusNode,
-                      // "Suchen"-Button auf der Tastatur erlaubt
                       textInputAction: TextInputAction.next, 
                       decoration: const InputDecoration(
                         labelText: 'Modell (Tippen für Datenbank-Suche)', 
@@ -179,6 +196,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                         suffixIcon: Icon(Icons.auto_awesome, size: 18),
                       ),
                       validator: (val) => (val == null || val.trim().isEmpty) ? 'Pflichtfeld' : null,
+                      onSaved: (val) => _modelName = val ?? '', // Schreibt den fertigen Text in die Variable
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
@@ -201,7 +219,6 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                               final option = options.elementAt(index);
                               return ListTile(
                                 leading: const Icon(Icons.directions_bike, size: 20),
-                                // Zeigt "[Marke] [Modell]" als Titel, wie gewünscht
                                 title: Text('${option.brand} ${option.model}', style: const TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text('${option.travelFront}V / ${option.travelRear}H mm'),
                                 onTap: () => onSelected(option),

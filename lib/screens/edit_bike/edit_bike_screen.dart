@@ -7,6 +7,9 @@ import '../../models/bike.dart';
 import '../../providers/bike_provider.dart';
 import 'dart:convert';
 import '../../utils/image_helper.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 class EditBikeScreen extends StatefulWidget {
   final Bike bike;
@@ -53,22 +56,37 @@ class _EditBikeScreenState extends State<EditBikeScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       source: ImageSource.gallery,
-      // WICHTIG FÜR WEB: Komprimierung, damit der LocalStorage nicht platzt!
       maxWidth: 800,
       maxHeight: 800,
       imageQuality: 70, 
     );
     
     if (pickedFile != null) {
-      // Bild als Bytes einlesen (funktioniert auf Web und Mobile)
-      final bytes = await pickedFile.readAsBytes();
-      // In Text (Base64) umwandeln
-      final base64Image = base64Encode(bytes);
-      
-      setState(() {
-        // Speichern mit Daten-Präfix
-        _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
-      });
+      if (kIsWeb) {
+        // --- WEB-MODUS (GitHub Testing) ---
+        // Nutzt weiterhin Base64, da Web kein Dateisystem hat
+        final bytes = await pickedFile.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        setState(() {
+          _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
+        });
+      } else {
+        // --- NATIVE APP (App Store / Echtes Handy) ---
+        // 1. Hole den sicheren, dauerhaften App-Ordner des Handys
+        final directory = await getApplicationDocumentsDirectory();
+        
+        // 2. Erstelle einen einzigartigen Dateinamen (z. B. 1623456789.jpg)
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImagePath = '${directory.path}/$fileName';
+        
+        // 3. Kopiere das Bild vom temporären Cache in unseren App-Ordner
+        await File(pickedFile.path).copy(savedImagePath);
+        
+        // 4. Speichere NUR den Pfad (z.B. "/data/user/0/com.app/app_flutter/123.jpg")
+        setState(() {
+          _selectedImagePath = savedImagePath;
+        });
+      }
     }
   }
 
@@ -85,6 +103,7 @@ class _EditBikeScreenState extends State<EditBikeScreen> {
         travelRear: _travelRear,
         imagePath: _selectedImagePath,
         setups: widget.bike.setups, // Wichtig: Die Setups übernehmen!
+        availableParameters: widget.bike.availableParameters,
       );
 
       context.read<BikeProvider>().updateBike(updatedBike);

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 
 class ImageHelper {
   
-  // --- NEU: Zuweisung des Standard-Bildes basierend auf der Kategorie ---
   static String getDefaultImageForCategory(String category) {
     final cat = category.toLowerCase();
     
@@ -22,14 +21,12 @@ class ImageHelper {
     } else if (cat.contains('cross country') || cat.contains('xc')) {
       return 'assets/images/xc.png';
     } else if (cat.contains('e-bike')) {
-      return 'assets/images/e_bike.png';
+      return 'assets/images/ebike.png';
     }
     
-    // Fallback für alle anderen Kategorien
     return 'assets/images/default.png';
   }
 
-  // --- NEU: Entscheidet, ob Nutzerbild oder Fallback genutzt wird ---
   static String getDisplayImagePath(String? customPath, String category) {
     if (customPath != null && customPath.isNotEmpty) {
       return customPath;
@@ -37,8 +34,10 @@ class ImageHelper {
     return getDefaultImageForCategory(category);
   }
 
-  // Fallback-Widget bei Ladefehlern
-  static Widget _errorFallback(BuildContext context, Object error, StackTrace? stackTrace) {
+  // --- SAUBERE FEHLER-WIDGET LÖSUNG ---
+  
+  // 1. Die reine UI-Komponente (braucht gar keinen Context)
+  static Widget _buildErrorPlaceholder() {
     return Container(
       color: Colors.grey[900],
       child: const Center(
@@ -47,25 +46,31 @@ class ImageHelper {
     );
   }
 
+  // 2. Der Wrapper, der von Flutters Image.* errorBuilder erwartet wird
+  static Widget _flutterErrorBuilder(BuildContext context, Object error, StackTrace? stackTrace) {
+    return _buildErrorPlaceholder();
+  }
+
   // Gibt das fertige Image-Widget zurück
   static Widget buildImage(String path, {BoxFit fit = BoxFit.cover}) {
     try {
       if (path.startsWith('data:image')) {
         final base64Str = path.split(',').last;
-        return Image.memory(base64Decode(base64Str), fit: fit, errorBuilder: _errorFallback);
+        return Image.memory(base64Decode(base64Str), fit: fit, errorBuilder: _flutterErrorBuilder);
       } else if (path.startsWith('assets/')) {
-        return Image.asset(path, fit: fit, errorBuilder: _errorFallback);
+        return Image.asset(path, fit: fit, errorBuilder: _flutterErrorBuilder);
       } else if (kIsWeb) {
-        return Image.network(path, fit: fit, errorBuilder: _errorFallback);
+        return Image.network(path, fit: fit, errorBuilder: _flutterErrorBuilder);
       } else {
-        return Image.file(File(path), fit: fit, errorBuilder: _errorFallback);
+        return Image.file(File(path), fit: fit, errorBuilder: _flutterErrorBuilder);
       }
     } catch (e) {
-      return _errorFallback(null as dynamic, e, null); 
+      // Wenn das Parsen (z.B. Base64 Decode) fehlschlägt, rufen wir einfach direkt das UI-Widget auf!
+      return _buildErrorPlaceholder(); 
     }
   }
 
-  // Gibt den ImageProvider zurück (für Hintergrundbilder)
+  // Gibt den ImageProvider zurück
   static ImageProvider getImageProvider(String path) {
     if (path.startsWith('data:image')) {
       final base64Str = path.split(',').last;
