@@ -6,6 +6,9 @@ import '../../providers/bike_provider.dart';
 import '../../models/trail_setup.dart';
 import 'setup_detail_screen.dart';
 
+import 'package:bike_setup_tracker/providers/language_provider.dart';
+import '../../utils/translations.dart';
+
 class AddSetupScreen extends StatefulWidget {
   final String bikeId;
   const AddSetupScreen({super.key, required this.bikeId});
@@ -46,8 +49,11 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Neues Setup')),
+      appBar: AppBar(title: Text(Translations.get(lang, 'newSetup'))),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -56,19 +62,19 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
-                decoration: const InputDecoration(
-                  labelText: 'Name des Setups',
-                  hintText: 'z.B. Bikepark Schladming',
+                decoration: InputDecoration(
+                  labelText: Translations.get(lang, 'newSetup'),
+                  hintText: Translations.get(lang, 'setupNameHint'),
                   border: OutlineInputBorder(),
                 ),
-                validator: (val) => val == null || val.isEmpty ? 'Bitte Namen eingeben' : null,
+                validator: (val) => val == null || val.isEmpty ? Translations.get(lang, 'noSetupName') : null,
                 onSaved: (val) => _name = val!,
                 autofocus: true,
               ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: _createEmptySetup,
-                child: const Text('Setup erstellen'),
+                child: Text(Translations.get(lang, 'createSetup')),
               )
             ],
           ),

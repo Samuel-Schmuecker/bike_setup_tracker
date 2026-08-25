@@ -1,5 +1,8 @@
 // lib/screens/bike_detail/setup_detail_screen.dart
 
+import 'package:bike_setup_tracker/providers/language_provider.dart';
+import '../../utils/translations.dart'; 
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -89,6 +92,9 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
     final setup = bike.setups.firstWhere((s) => s.id == widget.setupId);
     final params = bike.availableParameters ?? BikeParameters();
     final colorScheme = Theme.of(context).colorScheme;
+
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
 
     void handleSave(String label, String? oldValStr, String newValStr, String note, TrailSetup updatedSetup) {
       if (oldValStr == null || oldValStr.trim().isEmpty || oldValStr == '-') {
@@ -239,10 +245,10 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center, // Vertikal zentriert
                     children: [
-                      Text('$position Model', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
+                      Text('$position ${Translations.get(lang, 'modelEdit')}', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
                       const SizedBox(height: 4),
                       Text(
-                        hasModel ? model : 'Nicht gesetzt', 
+                        hasModel ? model : Translations.get(lang, 'notSet'), 
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: hasModel ? Colors.white : Colors.white38),
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                       ),
@@ -265,7 +271,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.center, // Vertikal zentriert
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text('Air', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
+                      Text(Translations.get(lang, 'air'), style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6))),
                       const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -329,7 +335,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // --- FORK ---
-                  buildSectionHeader('Gabel', svgPath: 'assets/icons/fork.svg'),
+                  buildSectionHeader(Translations.get(lang, 'fork'), svgPath: 'assets/icons/fork.svg'),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Wrap(spacing: 12.0, runSpacing: 12.0, children: [
@@ -345,7 +351,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                   ),
 
                   // --- SHOCK ---
-                  buildSectionHeader('Dämpfer', svgPath: 'assets/icons/shock.svg'),
+                  buildSectionHeader(Translations.get(lang, 'shock'), svgPath: 'assets/icons/shock.svg'),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Wrap(spacing: 12.0, runSpacing: 12.0, children: [
@@ -366,22 +372,22 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 
                   // --- TIRES (EDLE HORIZONTALE KARTEN) ---
                   if (params.tires) ...[
-                    buildSectionHeader('Reifen', svgPath: 'assets/icons/tire.svg'),
+                    buildSectionHeader(Translations.get(lang, 'tires'), svgPath: 'assets/icons/tire.svg'),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Column(
                         children: [
                           buildTireCard(
-                            'Front', setup.frontTire, _formatNum(setup.frontPressure),
-                            () => showStepperModal('Vorderreifen Model', '', setup.frontTire, true, 1, (v, n) => handleSave('Front Model', setup.frontTire, v, n, setup.copyWith(frontTire: v))),
+                            Translations.get(lang, 'front'), setup.frontTire, _formatNum(setup.frontPressure),
+                            () => showStepperModal(Translations.get(lang, 'frontTireModel'), '', setup.frontTire, true, 1, (v, n) => handleSave(Translations.get(lang, 'frontTireModel'), setup.frontTire, v, n, setup.copyWith(frontTire: v))),
                             // Änderung: 'bar/psi' statt nur 'bar' übergeben
-                            () => showStepperModal('Vorderreifen Druck', 'bar/psi', _formatNum(setup.frontPressure), false, 0.1, (v, n) => handleSave('Front Pressure', _formatNum(setup.frontPressure), v, n, setup.copyWith(frontPressure: _parseDouble(v)))),
+                            () => showStepperModal(Translations.get(lang, 'frontTirePresure'), 'bar/psi', _formatNum(setup.frontPressure), false, 0.1, (v, n) => handleSave(Translations.get(lang, 'frontTirePresure'), _formatNum(setup.frontPressure), v, n, setup.copyWith(frontPressure: _parseDouble(v)))),
                           ),
                           buildTireCard(
-                            'Rear', setup.rearTire, _formatNum(setup.rearPressure),
-                            () => showStepperModal('Hinterreifen Model', '', setup.rearTire, true, 1, (v, n) => handleSave('Rear Model', setup.rearTire, v, n, setup.copyWith(rearTire: v))),
+                            Translations.get(lang, 'rear'), setup.rearTire, _formatNum(setup.rearPressure),
+                            () => showStepperModal(Translations.get(lang, 'rearTireModel'), '', setup.rearTire, true, 1, (v, n) => handleSave(Translations.get(lang, 'rearTireModel'), setup.rearTire, v, n, setup.copyWith(rearTire: v))),
                             // Änderung: 'bar/psi' statt nur 'bar' übergeben
-                            () => showStepperModal('Hinterreifen Druck', 'bar/psi', _formatNum(setup.rearPressure), false, 0.1, (v, n) => handleSave('Rear Pressure', _formatNum(setup.rearPressure), v, n, setup.copyWith(rearPressure: _parseDouble(v)))),
+                            () => showStepperModal(Translations.get(lang, 'rearTirePresure'), 'bar/psi', _formatNum(setup.rearPressure), false, 0.1, (v, n) => handleSave(Translations.get(lang, 'rearTirePresure'), _formatNum(setup.rearPressure), v, n, setup.copyWith(rearPressure: _parseDouble(v)))),
                           ),
                         ],
                       ),
@@ -390,13 +396,13 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 
                   // --- LOG ---
                   // --- LOG ---
-              buildSectionHeader('Änderungsverlauf', icon: Icons.history),
+              buildSectionHeader(Translations.get(lang, 'history'), icon: Icons.history),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: setup.logs.isEmpty 
                   ? Padding(
                       padding: const EdgeInsets.all(8.0),
-                      child: Text('Bisher keine Anpassungen vorgenommen.', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5))),
+                      child: Text(Translations.get(lang, 'noHistory'), style: TextStyle(fontStyle: FontStyle.italic, color: Colors.white.withOpacity(0.5))),
                     )
                   : ConstrainedBox(
                       constraints: const BoxConstraints(maxHeight: 240),
@@ -508,7 +514,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
               ),
 
                   // --- NOTIZEN ---
-                  buildSectionHeader('Notizen', icon: Icons.edit_note),
+                  buildSectionHeader(Translations.get(lang, 'notes'), icon: Icons.edit_note),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: TextField(
@@ -517,7 +523,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       maxLines: 4,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: 'Allgemeine Bemerkungen...',
+                        hintText: Translations.get(lang, 'notesHint'),
                         hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -595,10 +601,12 @@ class _EditValueDialogState extends State<_EditValueDialog> {
 
  @override
   Widget build(BuildContext context) {
+    
+    final lang = context.watch<LanguageProvider>().currentLanguage;
     final titleString = widget.unit.isNotEmpty ? '${widget.title} (${widget.unit})' : widget.title;
     
     // Wir suchen die passende Beschreibung anhand des Titels
-    final description = SuspensionDictionary.getDescription(widget.title);
+    final description = SuspensionDictionary.getDescription(widget.title, lang);
 
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -640,14 +648,14 @@ class _EditValueDialogState extends State<_EditValueDialog> {
                       children: [
                         Icon(Icons.lightbulb_outline, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
-                        const Text('Was ist das?', style: TextStyle(fontSize: 18)),
+                        Text(Translations.get(lang, 'whatIsThis'), style: const TextStyle(fontSize: 18)),
                       ],
                     ),
                     content: Text(description, style: const TextStyle(height: 1.5)),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Verstanden'),
+                        child: Text(Translations.get(lang, 'understood')),
                       ),
                     ],
                   ),
@@ -667,7 +675,7 @@ class _EditValueDialogState extends State<_EditValueDialog> {
             if (widget.isText) 
               TextField(
                 controller: _valCtrl, 
-                decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Wert'), 
+                decoration:  InputDecoration(border: const OutlineInputBorder(), labelText: Translations.get(lang, 'newValue')), 
                 autofocus: true,
               )
             else
@@ -707,20 +715,20 @@ class _EditValueDialogState extends State<_EditValueDialog> {
             const SizedBox(height: 24),
             TextField(
               controller: _noteCtrl, 
-              decoration: const InputDecoration(labelText: 'Grund (Optional)', hintText: 'z.B. Mehr Gegenhalt...', border: OutlineInputBorder(), isDense: true),
+              decoration: InputDecoration(labelText: Translations.get(lang, 'reasonOpt'), hintText: Translations.get(lang, 'reasonOptHint'), border: const OutlineInputBorder(), isDense: true),
             ),
           ],
         ),
       ),
       actionsAlignment: MainAxisAlignment.spaceBetween,
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(Translations.get(lang, 'cancel'))),
         FilledButton(
           onPressed: () {
             Navigator.pop(context);
             if (_valCtrl.text.isNotEmpty) widget.onSave(_valCtrl.text, _noteCtrl.text);
           },
-          child: const Text('Speichern'),
+          child: Text(Translations.get(lang, 'save')),
         ),
       ],
     );

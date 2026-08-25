@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../models/trail_setup.dart';
 import '../models/bike.dart'; // NEU
+import 'package:provider/provider.dart';
+import '../../utils/translations.dart'; 
+import 'package:bike_setup_tracker/providers/language_provider.dart';
 
 class SetupCard extends StatelessWidget {
   final TrailSetup setup;
@@ -30,6 +33,7 @@ class SetupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final lang = context.watch<LanguageProvider>().currentLanguage;
 
     Widget buildValueBox(String svgPath, String label, String value, String unit) {
       return Container(
@@ -115,7 +119,7 @@ class SetupCard extends StatelessWidget {
                   const Spacer(),
                   Row(
                     children: [
-                      Text('Details', style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w500)),
+                      Text(Translations.get(lang, 'details'), style: TextStyle(color: colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w500)),
                       Icon(Icons.chevron_right, color: colorScheme.primary, size: 20),
                     ],
                   ),

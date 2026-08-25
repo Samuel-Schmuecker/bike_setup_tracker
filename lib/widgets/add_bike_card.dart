@@ -1,6 +1,9 @@
 // lib/widgets/add_bike_card.dart
 
+import 'package:bike_setup_tracker/providers/language_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../utils/translations.dart';    
 
 class AddBikeCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -13,6 +16,8 @@ class AddBikeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -43,7 +48,7 @@ class AddBikeCard extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'add bike',
+                Translations.get(lang, 'addBike'),
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,

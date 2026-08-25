@@ -1,6 +1,10 @@
 // lib/widgets/add_setup_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../utils/translations.dart'; 
+import 'package:bike_setup_tracker/providers/language_provider.dart';
+
 
 class AddSetupCard extends StatelessWidget {
   final VoidCallback onTap;
@@ -9,6 +13,8 @@ class AddSetupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       elevation: 0,
@@ -28,7 +34,7 @@ class AddSetupCard extends StatelessWidget {
               children: [
                 Icon(Icons.add_circle_outline, color: colorScheme.secondary),
                 const SizedBox(width: 8),
-                Text('Neues Setup hinzufügen', style: TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+                Text(Translations.get(lang, 'addnewSetup'), style: TextStyle(color: colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
               ],
             ),
           ),

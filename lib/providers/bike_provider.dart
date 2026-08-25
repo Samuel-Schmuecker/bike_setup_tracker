@@ -177,14 +177,14 @@ class BikeProvider extends ChangeNotifier {
     }
   }
 
-  void duplicateSetup(String bikeId, String setupId) {
+  void duplicateSetup(String bikeId, String setupId, String copySuffix) {
     final bikeIndex = _bikes.indexWhere((b) => b.id == bikeId);
     if (bikeIndex != -1) {
       final bike = _bikes[bikeIndex];
       final originalSetup = bike.setups.firstWhere((s) => s.id == setupId);
       final duplicatedSetup = originalSetup.copyWith(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: '${originalSetup.name} (Kopie)',
+        name: '${originalSetup.name} $copySuffix',
         isFavorite: false,
       );
       final updatedSetups = List<TrailSetup>.from(bike.setups)..add(duplicatedSetup);

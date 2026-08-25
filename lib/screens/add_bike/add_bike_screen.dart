@@ -1,17 +1,20 @@
 // lib/screens/add_bike/add_bike_screen.dart
 
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+
 import '../../providers/bike_provider.dart';
+import '../../providers/language_provider.dart'; 
+import '../../utils/translations.dart';  
 import '../../models/bike.dart';
 import '../../models/bike_parameters.dart';
 import '../../utils/image_helper.dart';
 import '../../data/bike_presets.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 
 class AddBikeScreen extends StatefulWidget {
   const AddBikeScreen({Key? key}) : super(key: key);
@@ -23,8 +26,6 @@ class AddBikeScreen extends StatefulWidget {
 class _AddBikeScreenState extends State<AddBikeScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Wir haben den _modelController komplett entfernt, da das Autocomplete-Textfeld 
-  // seinen Zustand über "onSaved" automatisch an die Variable _modelName übergibt!
   String _modelName = ''; 
 
   final TextEditingController _brandController = TextEditingController();
@@ -59,26 +60,16 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
     
     if (pickedFile != null) {
       if (kIsWeb) {
-        // --- WEB-MODUS (GitHub Testing) ---
-        // Nutzt weiterhin Base64, da Web kein Dateisystem hat
         final bytes = await pickedFile.readAsBytes();
         final base64Image = base64Encode(bytes);
         setState(() {
           _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
         });
       } else {
-        // --- NATIVE APP (App Store / Echtes Handy) ---
-        // 1. Hole den sicheren, dauerhaften App-Ordner des Handys
         final directory = await getApplicationDocumentsDirectory();
-        
-        // 2. Erstelle einen einzigartigen Dateinamen (z. B. 1623456789.jpg)
         final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
         final savedImagePath = '${directory.path}/$fileName';
-        
-        // 3. Kopiere das Bild vom temporären Cache in unseren App-Ordner
         await File(pickedFile.path).copy(savedImagePath);
-        
-        // 4. Speichere NUR den Pfad (z.B. "/data/user/0/com.app/app_flutter/123.jpg")
         setState(() {
           _selectedImagePath = savedImagePath;
         });
@@ -93,7 +84,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
       final newBike = Bike(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         brand: _brandController.text.trim(),
-        model: _modelName.trim(), // Zieht sich den Namen jetzt aus der String-Variable
+        model: _modelName.trim(), 
         category: _category,
         travelFront: int.tryParse(_travelFrontController.text) ?? 0,
         travelRear: int.tryParse(_travelRearController.text) ?? 0,
@@ -109,9 +100,11 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final lang = context.watch<LanguageProvider>().currentLanguage;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Neues Bike')),
+      // FIX 1: AppBar Titel übersetzt
+      appBar: AppBar(title: Text(Translations.get(lang, 'newBike'))),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: SingleChildScrollView(
@@ -141,7 +134,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                             children: [
                               Icon(Icons.add_a_photo, size: 32, color: colorScheme.primary),
                               const SizedBox(height: 8),
-                              Text('Titelbild hinzufügen', style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                              Text(Translations.get(lang, 'addPhoto'), style: TextStyle(color: colorScheme.onSurfaceVariant)),
                             ],
                           )
                         : ImageHelper.buildImage(_selectedImagePath!),
@@ -175,7 +168,8 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Specs für ${selection.brand} ${selection.model} übernommen!'),
+                        // FIX 2: Korrekten Suffix-Key für das Ausrufezeichen verwendet
+                        content: Text('${Translations.get(lang, 'specsApplied')} ${selection.brand} ${selection.model} ${Translations.get(lang, 'specsAppliedSuffix')}'),
                         backgroundColor: Colors.teal,
                         behavior: SnackBarBehavior.floating,
                       ),
@@ -183,20 +177,18 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                     FocusScope.of(context).unfocus(); 
                   },
                   fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                    // FIX: Alle Controller-Listener-Hacks wurden entfernt!
-                    // Stattdessen nutzen wir onSaved, was beim Klick auf "Speichern" ausgelöst wird.
                     return TextFormField(
                       controller: textEditingController,
                       focusNode: focusNode,
                       textInputAction: TextInputAction.next, 
-                      decoration: const InputDecoration(
-                        labelText: 'Modell (Tippen für Datenbank-Suche)', 
-                        hintText: 'z.B. Megatower',
-                        border: OutlineInputBorder(),
-                        suffixIcon: Icon(Icons.auto_awesome, size: 18),
+                      decoration: InputDecoration(
+                        labelText: Translations.get(lang, 'model'), 
+                        hintText: Translations.get(lang, 'modelHint'),
+                        border: const OutlineInputBorder(),
+                        suffixIcon: const Icon(Icons.auto_awesome, size: 18),
                       ),
-                      validator: (val) => (val == null || val.trim().isEmpty) ? 'Pflichtfeld' : null,
-                      onSaved: (val) => _modelName = val ?? '', // Schreibt den fertigen Text in die Variable
+                      validator: (val) => (val == null || val.trim().isEmpty) ? Translations.get(lang, 'required') : null,
+                      onSaved: (val) => _modelName = val ?? '',
                     );
                   },
                   optionsViewBuilder: (context, onSelected, options) {
@@ -235,8 +227,8 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                 // --- MARKE ---
                 TextFormField(
                   controller: _brandController,
-                  decoration: const InputDecoration(labelText: 'Marke', border: OutlineInputBorder()),
-                  validator: (val) => (val == null || val.trim().isEmpty) ? 'Pflichtfeld' : null,
+                  decoration: InputDecoration(labelText: Translations.get(lang, 'brand'), border: const OutlineInputBorder()),
+                  validator: (val) => (val == null || val.trim().isEmpty) ? Translations.get(lang, 'required') : null,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
@@ -244,7 +236,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                 // --- KATEGORIE ---
                 DropdownButtonFormField<String>(
                   value: _category,
-                  decoration: const InputDecoration(labelText: 'Kategorie', border: OutlineInputBorder()),
+                  decoration: InputDecoration(labelText: Translations.get(lang, 'category'), border: const OutlineInputBorder()),
                   items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                   onChanged: (val) { if (val != null) setState(() => _category = val); },
                 ),
@@ -256,20 +248,21 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                     Expanded(
                       child: TextFormField(
                         controller: _travelFrontController,
-                        decoration: const InputDecoration(labelText: 'Federweg V (mm)', border: OutlineInputBorder()),
+                        decoration: InputDecoration(labelText: Translations.get(lang, 'travelFront'), border: const OutlineInputBorder()),
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
-                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? 'Fehler' : null,
+                        // FIX 3: Übersetzung für 'Fehler' eingefügt
+                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? Translations.get(lang, 'error') : null,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: TextFormField(
                         controller: _travelRearController,
-                        decoration: const InputDecoration(labelText: 'Federweg H (mm)', border: OutlineInputBorder()),
+                        decoration: InputDecoration(labelText: Translations.get(lang, 'travelRear'), border: const OutlineInputBorder()),
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done,
-                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? 'Fehler' : null,
+                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? Translations.get(lang, 'error') : null,
                       ),
                     ),
                   ],
@@ -279,9 +272,9 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                 FilledButton.icon(
                   onPressed: _saveBike,
                   icon: const Icon(Icons.save),
-                  label: const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: Text('Bike speichern', style: TextStyle(fontSize: 16)),
+                  label: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Text(Translations.get(lang, 'saveBike'), style: const TextStyle(fontSize: 16)),
                   ),
                 ),
                 const SizedBox(height: 40),

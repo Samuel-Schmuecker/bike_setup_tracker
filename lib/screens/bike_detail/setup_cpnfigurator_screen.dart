@@ -3,25 +3,26 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/bike_provider.dart';
+import '../../providers/language_provider.dart'; // NEU
+import '../../utils/translations.dart';          // NEU
 import '../../models/bike_parameters.dart';
 import 'add_setup_screen.dart';
 
 class SetupConfiguratorScreen extends StatefulWidget {
   final String bikeId;
-  final bool isEditing; // NEU: Unterscheidet zwischen Neuanlage und Bearbeitung
+  final bool isEditing; 
 
   const SetupConfiguratorScreen({
-    super.key, 
+    Key? key, 
     required this.bikeId, 
     this.isEditing = false,
-  });
+  }) : super(key: key);
 
   @override
   State<SetupConfiguratorScreen> createState() => _SetupConfiguratorScreenState();
 }
 
 class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
-  // Lokale Variablen mit Standardwerten
   bool _forkPsi = true, _forkOtt = false, _forkHsc = false, _forkLsc = true;
   bool _forkHsr = false, _forkLsr = true, _forkTokens = false, _forkHbo = false;
   bool _shockIsCoil = false;
@@ -32,7 +33,6 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   @override
   void initState() {
     super.initState();
-    // Vorhandene Parameter laden, falls das Bike schon konfiguriert wurde
     final bike = context.read<BikeProvider>().bikes.firstWhere((b) => b.id == widget.bikeId);
     final p = bike.availableParameters;
     
@@ -58,9 +58,8 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
 
     context.read<BikeProvider>().updateBikeParameters(widget.bikeId, params);
 
-    // NEU: Navigation abhängig vom Modus
     if (widget.isEditing) {
-      Navigator.pop(context); // Einfach zurück zur Detailansicht
+      Navigator.pop(context); 
     } else {
       Navigator.pushReplacement(
         context, 
@@ -79,27 +78,30 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sprache aus dem Provider holen
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Fahrwerk Konfigurieren')),
+      appBar: AppBar(title: Text(Translations.get(lang, 'configSuspension'))),
       body: ListView(
         children: [
-          buildHeader('GABEL (FORK)'),
-          SwitchListTile(title: const Text('Haupt-Luftdruck (PSI)'), value: _forkPsi, onChanged: (v) => setState(() => _forkPsi = v)),
-          SwitchListTile(title: const Text('2. Kammer / OTT (PSI/Klicks)'), value: _forkOtt, onChanged: (v) => setState(() => _forkOtt = v)),
-          SwitchListTile(title: const Text('High-Speed Comp. (HSC)'), value: _forkHsc, onChanged: (v) => setState(() => _forkHsc = v)),
-          SwitchListTile(title: const Text('Low-Speed Comp. (LSC)'), value: _forkLsc, onChanged: (v) => setState(() => _forkLsc = v)),
-          SwitchListTile(title: const Text('High-Speed Rebound (HSR)'), value: _forkHsr, onChanged: (v) => setState(() => _forkHsr = v)),
-          SwitchListTile(title: const Text('Low-Speed Rebound (LSR)'), value: _forkLsr, onChanged: (v) => setState(() => _forkLsr = v)),
-          SwitchListTile(title: const Text('Tokens (Spacers)'), value: _forkTokens, onChanged: (v) => setState(() => _forkTokens = v)),
-          SwitchListTile(title: const Text('Hydraulic Bottom-Out (HBO)'), value: _forkHbo, onChanged: (v) => setState(() => _forkHbo = v)),
+          buildHeader(Translations.get(lang, 'forkSettings')),
+          SwitchListTile(title: Text(Translations.get(lang, 'mainAir')), value: _forkPsi, onChanged: (v) => setState(() => _forkPsi = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'ottNeg')), value: _forkOtt, onChanged: (v) => setState(() => _forkOtt = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hsc')), value: _forkHsc, onChanged: (v) => setState(() => _forkHsc = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'lsc')), value: _forkLsc, onChanged: (v) => setState(() => _forkLsc = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hsr')), value: _forkHsr, onChanged: (v) => setState(() => _forkHsr = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'lsr')), value: _forkLsr, onChanged: (v) => setState(() => _forkLsr = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'tokens')), value: _forkTokens, onChanged: (v) => setState(() => _forkTokens = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hbo')), value: _forkHbo, onChanged: (v) => setState(() => _forkHbo = v)),
 
-          buildHeader('DÄMPFER TYP'),
+          buildHeader(Translations.get(lang, 'shockType')),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Air (Luft)')),
-                ButtonSegment(value: true, label: Text('Coil (Stahlfeder)')),
+              segments: [
+                ButtonSegment(value: false, label: Text(Translations.get(lang, 'airShock'))),
+                ButtonSegment(value: true, label: Text(Translations.get(lang, 'coilShock'))),
               ],
               selected: {_shockIsCoil},
               onSelectionChanged: (Set<bool> newSelection) {
@@ -108,28 +110,28 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
             ),
           ),
 
-          buildHeader('DÄMPFER (SHOCK) EINSTELLUNGEN'),
+          buildHeader(Translations.get(lang, 'shockSettings')),
           if (!_shockIsCoil) ...[
-            SwitchListTile(title: const Text('Luftdruck (PSI)'), value: _shockPsi, onChanged: (v) => setState(() => _shockPsi = v)),
-            SwitchListTile(title: const Text('Tokens (Spacers)'), value: _shockTokens, onChanged: (v) => setState(() => _shockTokens = v)),
+            SwitchListTile(title: Text(Translations.get(lang, 'shockAir')), value: _shockPsi, onChanged: (v) => setState(() => _shockPsi = v)),
+            SwitchListTile(title: Text(Translations.get(lang, 'tokens')), value: _shockTokens, onChanged: (v) => setState(() => _shockTokens = v)),
           ] else ...[
-            SwitchListTile(title: const Text('Federrate (lbs/in)'), value: _shockRate, onChanged: (v) => setState(() => _shockRate = v)),
-            SwitchListTile(title: const Text('Vorspannung (Preload)'), value: _shockPreload, onChanged: (v) => setState(() => _shockPreload = v)),
+            SwitchListTile(title: Text(Translations.get(lang, 'springRate')), value: _shockRate, onChanged: (v) => setState(() => _shockRate = v)),
+            SwitchListTile(title: Text(Translations.get(lang, 'preload')), value: _shockPreload, onChanged: (v) => setState(() => _shockPreload = v)),
           ],
-          SwitchListTile(title: const Text('High-Speed Comp. (HSC)'), value: _shockHsc, onChanged: (v) => setState(() => _shockHsc = v)),
-          SwitchListTile(title: const Text('Low-Speed Comp. (LSC)'), value: _shockLsc, onChanged: (v) => setState(() => _shockLsc = v)),
-          SwitchListTile(title: const Text('High-Speed Rebound (HSR)'), value: _shockHsr, onChanged: (v) => setState(() => _shockHsr = v)),
-          SwitchListTile(title: const Text('Low-Speed Rebound (LSR)'), value: _shockLsr, onChanged: (v) => setState(() => _shockLsr = v)),
-          SwitchListTile(title: const Text('Hydraulic Bottom-Out (HBO)'), value: _shockHbo, onChanged: (v) => setState(() => _shockHbo = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hsc')), value: _shockHsc, onChanged: (v) => setState(() => _shockHsc = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'lsc')), value: _shockLsc, onChanged: (v) => setState(() => _shockLsc = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hsr')), value: _shockHsr, onChanged: (v) => setState(() => _shockHsr = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'lsr')), value: _shockLsr, onChanged: (v) => setState(() => _shockLsr = v)),
+          SwitchListTile(title: Text(Translations.get(lang, 'hbo')), value: _shockHbo, onChanged: (v) => setState(() => _shockHbo = v)),
 
-          buildHeader('REIFEN (TIRES)'),
-          SwitchListTile(title: const Text('Reifen & Druck tracken'), value: _tires, onChanged: (v) => setState(() => _tires = v)),
+          buildHeader(Translations.get(lang, 'tireSettings')),
+          SwitchListTile(title: Text(Translations.get(lang, 'trackTires')), value: _tires, onChanged: (v) => setState(() => _tires = v)),
           
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: FilledButton(
               onPressed: _saveAndContinue, 
-              child: Text(widget.isEditing ? 'Änderungen speichern' : 'Konfiguration speichern')
+              child: Text(widget.isEditing ? Translations.get(lang, 'saveChanges') : Translations.get(lang, 'saveConfig'))
             ),
           ),
         ],

@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/bike_provider.dart';
+import '../../providers/language_provider.dart'; // NEU
+import '../../utils/translations.dart';  
 import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart'; // NEU: Import hinzugefügt
@@ -39,6 +41,8 @@ void _onAddBikeTap() {
 
   @override
   Widget build(BuildContext context) {
+        // Holt die aktuelle Sprache
+    final lang = context.watch<LanguageProvider>().currentLanguage;
     final allBikes = context.watch<BikeProvider>().bikes;
 
     final filteredBikes = allBikes.where((bike) {
@@ -50,12 +54,23 @@ void _onAddBikeTap() {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Meine Bikes'),
+        title: Text(Translations.get(lang, 'myBikes')),
         actions: [
+// Nicht sicher ob hier richtig!!!!
+          TextButton(
+            onPressed: () {
+              final newLang = lang == 'de' ? 'en' : 'de';
+              context.read<LanguageProvider>().setLanguage(newLang);
+            },
+            child: Text(
+              lang.toUpperCase(),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.add),
             onPressed: _onAddBikeTap,
-            tooltip: 'Neues Bike',
+            tooltip: Translations.get(lang, 'tt_newBike'),
           ),
         ],
       ),
@@ -66,7 +81,7 @@ void _onAddBikeTap() {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Nach Marke oder Modell suchen...',
+                hintText: Translations.get(lang, 'searchHint'),
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(

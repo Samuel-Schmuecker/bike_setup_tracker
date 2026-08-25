@@ -6,6 +6,8 @@ import 'package:bike_setup_tracker/screens/bike_detail/add_setup_screen.dart';
 import 'package:bike_setup_tracker/screens/bike_detail/setup_cpnfigurator_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../providers/language_provider.dart';
+import '../../utils/translations.dart';
 import 'package:flutter_svg/flutter_svg.dart'; // NEU: Svg-Paket importiert
 import '../../providers/bike_provider.dart';
 import '../../widgets/setup_card.dart';
@@ -35,7 +37,9 @@ class BikeDetailScreen extends StatelessWidget {
   }
 
   // 1. Zeigt das BottomSheet mit den 3 Optionen an
-  void _showSetupOptions(BuildContext context, Bike bike, TrailSetup setup) {
+  void _showSetupOptions(BuildContext context, Bike bike, TrailSetup setup, String lang) {
+  
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
@@ -50,26 +54,30 @@ class BikeDetailScreen extends StatelessWidget {
               ),
               ListTile(
                 leading: const Icon(Icons.edit_note),
-                title: const Text('Umbenennen'),
+                title: Text(Translations.get(lang, 'rename')),
                 onTap: () {
                   Navigator.pop(ctx); // BottomSheet schließen
-                  _showRenameDialog(context, bike, setup);
+                  _showRenameDialog(context, bike, setup, lang);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.content_copy),
-                title: const Text('Duplizieren'),
+                title: Text(Translations.get(lang, 'duplicate')),
                 onTap: () {
-                  context.read<BikeProvider>().duplicateSetup(bike.id, setup.id);
+                  context.read<BikeProvider>().duplicateSetup(
+                    bike.id,
+                    setup.id,
+                    Translations.get(lang, 'copySuffix'),
+                  );
                   Navigator.pop(ctx);
                 },
               ),
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                title: const Text('Löschen', style: TextStyle(color: Colors.redAccent)),
+                title: Text(Translations.get(lang, 'delete'), style: TextStyle(color: Colors.redAccent)),
                 onTap: () {
                   Navigator.pop(ctx);
-                  _showDeleteConfirmDialog(context, bike, setup);
+                  _showDeleteConfirmDialog(context, bike, setup, lang);
                 },
               ),
               const SizedBox(height: 8),
@@ -81,20 +89,20 @@ class BikeDetailScreen extends StatelessWidget {
   }
 
   // 2. Dialog zum Umbenennen
-  void _showRenameDialog(BuildContext context, Bike bike, TrailSetup setup) {
+  void _showRenameDialog(BuildContext context, Bike bike, TrailSetup setup, String lang) {
     final nameController = TextEditingController(text: setup.name);
     
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Setup umbenennen'),
+        title: Text(Translations.get(lang, 'rename')),
         content: TextField(
           controller: nameController,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Neuer Name', border: OutlineInputBorder()),
+          decoration: InputDecoration(labelText: Translations.get(lang, 'newName'), border: OutlineInputBorder()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(Translations.get(lang, 'cancel'))),
           FilledButton(
             onPressed: () {
               if (nameController.text.trim().isNotEmpty) {
@@ -104,7 +112,7 @@ class BikeDetailScreen extends StatelessWidget {
                 Navigator.pop(ctx);
               }
             },
-            child: const Text('Speichern'),
+            child: Text(Translations.get(lang, 'save')),
           ),
         ],
       ),
@@ -112,20 +120,20 @@ class BikeDetailScreen extends StatelessWidget {
   }
 
   // 3. Sicherheits-Dialog vor dem Löschen
-  void _showDeleteConfirmDialog(BuildContext context, Bike bike, TrailSetup setup) {
+  void _showDeleteConfirmDialog(BuildContext context, Bike bike, TrailSetup setup, String lang) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Setup löschen?'),
-        content: Text('Möchtest du das Setup "${setup.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.'),
+        title: Text(Translations.get(lang, 'deleteSetupTitle')),
+        content: Text('${Translations.get(lang, 'deleteSetupBody1')} "${setup.name}" ${Translations.get(lang, 'deleteSetupBody2')}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(Translations.get(lang, 'cancel'))),
           TextButton(
             onPressed: () {
               context.read<BikeProvider>().deleteSetup(bike.id, setup.id);
               Navigator.pop(ctx);
             },
-            child: const Text('Löschen', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: Text(Translations.get(lang, 'delete'), style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -134,11 +142,15 @@ class BikeDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final lang = context.watch<LanguageProvider>().currentLanguage;
+
     final bike = context.watch<BikeProvider>().bikes.firstWhere(
           (b) => b.id == bikeId,
-          orElse: () => throw Exception('Bike nicht gefunden'),
+          orElse: () => throw Exception(Translations.get(lang, 'bikeNotFound')),
         );
 
+    
 
     // ANGEPASST: Nimmt nun einen svgPath statt IconData
     Widget buildTravelChip(String svgPath, String text) {
@@ -184,7 +196,7 @@ class BikeDetailScreen extends StatelessWidget {
             actions: [
                 IconButton(
                 icon: const Icon(Icons.tune),
-                tooltip: 'Fahrwerk konfigurieren',
+                tooltip: Translations.get(lang, 'configSuspension'),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -198,7 +210,7 @@ class BikeDetailScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.add),
                 onPressed: () => _onAddSetupTap(context, bike),
-                tooltip: 'Neues Setup',
+                tooltip: Translations.get(lang, 'newSetup'),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -221,8 +233,8 @@ class BikeDetailScreen extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // ANGEPASST: Pfade zu den SVGs übergeben
-                      buildTravelChip('assets/icons/fork.svg', '${bike.travelFront} mm Front'),
-                      buildTravelChip('assets/icons/shock.svg', '${bike.travelRear} mm Rear'),
+                      buildTravelChip('assets/icons/fork.svg', '${bike.travelFront} mm ${Translations.get(lang, 'front')}'),
+                      buildTravelChip('assets/icons/shock.svg', '${bike.travelRear} mm ${Translations.get(lang, 'rear')}'),
                     ],
                   ),
                 ],
@@ -273,7 +285,7 @@ class BikeDetailScreen extends StatelessWidget {
                         ),
                       );
                     },
-                    onLongPress: () => _showSetupOptions(context, bike, setup),
+                    onLongPress: () => _showSetupOptions(context, bike, setup, lang),
                     onFavoriteToggle: () {
                       context.read<BikeProvider>().toggleSetupFavorite(bike.id, setup.id);
                     },
