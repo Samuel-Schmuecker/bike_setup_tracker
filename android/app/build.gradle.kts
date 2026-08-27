@@ -20,14 +20,14 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.bike_setup_tracker"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        applicationId "com.example.bike_setup_tracker"
+        // HIER SIND DIE FIXES:
+        minSdkVersion 24  // Mindestens Android 5.0 (Viel sicherer für moderne Apps)
+        targetSdkVersion 34 // Aktuelles Android 14 (Sagt Google Play Protect: Wir sind aktuell!)
+        compileSdkVersion 34 // Manchmal auch compileSdk 34 genannt
+        
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
     }
 
     buildTypes {
