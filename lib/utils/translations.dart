@@ -107,6 +107,12 @@ class Translations {
       'save': 'Speichern',
       'delete': 'Löschen',
 
+      // Erster start / info
+      'welcomeTitle': 'Willkommen beim Bike Setup Tracker! 🚲',
+      'welcomeText1': 'Ich habe dir ein Beispiel-Fahrrad angelegt, damit du die Funktionen direkt ausprobieren kannst.',
+      'welcomeText2': 'WICHTIG: Du kannst dieses Beispiel (und jedes andere Rad) jederzeit bearbeiten oder löschen, indem du auf der Startseite LANGE auf die Kachel gedrückt hältst!',
+      'gotIt': 'Los geht\'s!',
+
 
     },
     'en': {
@@ -213,6 +219,14 @@ class Translations {
       'cancel': 'Cancel',
       'save': 'Save',
       'delete': 'Delete',
+
+
+      // First start / info
+      'welcomeTitle': 'Welcome to Bike Setup Tracker! 🚲',
+      'welcomeText1': 'I have created a demo bike for you so you can try out the features right away.',
+      'welcomeText2': 'IMPORTANT: You can edit or delete this demo (and any other bike) at any time by LONG-PRESSING the bike card on the home screen!',
+      'gotIt': 'Let\'s go!',
+
     },
   };
 
