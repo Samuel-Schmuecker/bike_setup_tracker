@@ -1,6 +1,6 @@
 {
-    "name": "bike_setup_tracker",
-    "short_name": "bike_setup_tracker",
+    "name": "Bike Setup Tracker",
+    "short_name": "Bike Tracker",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#121212",
