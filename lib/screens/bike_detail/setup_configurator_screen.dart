@@ -2,6 +2,7 @@
 
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,17 @@ import '../../providers/language_provider.dart';
 import '../../utils/translations.dart';
 import '../../models/bike_parameters.dart';
 import 'add_setup_screen.dart';
+
+Widget _webKeyboardSafeDialog(BuildContext context, Widget dialog) {
+  if (!kIsWeb) return dialog;
+
+  // Mobile browsers already resize their visual viewport for the keyboard.
+  // Removing Flutter's additional inset prevents dialogs from moving twice.
+  return MediaQuery(
+    data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+    child: dialog,
+  );
+}
 
 class SetupConfiguratorScreen extends StatefulWidget {
   final String bikeId;
@@ -904,7 +916,7 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
   @override
   Widget build(BuildContext context) {
     final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return AlertDialog(
+    final dialog = AlertDialog(
       alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
@@ -930,6 +942,7 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
         ),
       ],
     );
+    return _webKeyboardSafeDialog(context, dialog);
   }
 }
 
@@ -960,7 +973,7 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
   @override
   Widget build(BuildContext context) {
     final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return AlertDialog(
+    final dialog = AlertDialog(
       alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
@@ -985,6 +998,7 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
         ),
       ],
     );
+    return _webKeyboardSafeDialog(context, dialog);
   }
 }
 
@@ -1063,7 +1077,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
   @override
   Widget build(BuildContext context) {
     final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return AlertDialog(
+    final dialog = AlertDialog(
       alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       title: Text(
@@ -1159,5 +1173,6 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
         ),
       ],
     );
+    return _webKeyboardSafeDialog(context, dialog);
   }
 }
