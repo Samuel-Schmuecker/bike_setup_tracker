@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -15,19 +17,15 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-
     defaultConfig {
-        applicationId "com.example.bike_setup_tracker"
+        applicationId = "com.example.bike_setup_tracker"
         // HIER SIND DIE FIXES:
-        minSdkVersion 24  // Mindestens Android 5.0 (Viel sicherer für moderne Apps)
-        targetSdkVersion 34 // Aktuelles Android 14 (Sagt Google Play Protect: Wir sind aktuell!)
-        compileSdkVersion 34 // Manchmal auch compileSdk 34 genannt
+        minSdk = 24  // Mindestens Android 5.0 (Viel sicherer für moderne Apps)
+        targetSdk = 34 // Aktuelles Android 14 (Sagt Google Play Protect: Wir sind aktuell!)
+        // compileSdkVersion = 34 // Manchmal auch compileSdk 34 genannt
         
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
+        versionCode = flutter.versionCode
+        versionName =flutter.versionName
     }
 
     buildTypes {
@@ -36,6 +34,12 @@ android {
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 

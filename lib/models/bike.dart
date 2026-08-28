@@ -40,8 +40,13 @@ class Bike {
     return Bike(
       id: map['id'] ?? '', brand: map['brand'] ?? '', model: map['model'] ?? '', category: map['category'] ?? '',
       travelFront: map['travelFront'] ?? 0, travelRear: map['travelRear'] ?? 0, imagePath: map['imagePath'],
-      availableParameters: map['availableParameters'] != null ? BikeParameters.fromMap(map['availableParameters']) : null,
-      setups: List<TrailSetup>.from(map['setups']?.map((x) => TrailSetup.fromMap(x)) ?? []),
+      availableParameters: map['availableParameters'] is Map
+          ? BikeParameters.fromMap(Map<String, dynamic>.from(map['availableParameters']))
+          : null,
+      setups: (map['setups'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((x) => TrailSetup.fromMap(Map<String, dynamic>.from(x)))
+          .toList(),
     );
   }
 }

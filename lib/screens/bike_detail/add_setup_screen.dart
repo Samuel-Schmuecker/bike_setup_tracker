@@ -25,10 +25,15 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
+      final bike = context.read<BikeProvider>().bikes.firstWhere(
+        (bike) => bike.id == widget.bikeId,
+      );
+
       // Neues Setup erstellen (alles außer Name ist null/-)
       final newSetup = TrailSetup(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name.trim(),
+        customParameters: bike.availableParameters,
       );
 
       // Speichern
@@ -38,10 +43,8 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => SetupDetailScreen(
-            bikeId: widget.bikeId, 
-            setupId: newSetup.id,
-          ),
+          builder: (context) =>
+              SetupDetailScreen(bikeId: widget.bikeId, setupId: newSetup.id),
         ),
       );
     }
@@ -49,7 +52,6 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-
     final lang = context.watch<LanguageProvider>().currentLanguage;
 
     return Scaffold(
@@ -67,7 +69,9 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
                   hintText: Translations.get(lang, 'setupNameHint'),
                   border: OutlineInputBorder(),
                 ),
-                validator: (val) => val == null || val.isEmpty ? Translations.get(lang, 'noSetupName') : null,
+                validator: (val) => val == null || val.isEmpty
+                    ? Translations.get(lang, 'noSetupName')
+                    : null,
                 onSaved: (val) => _name = val!,
                 autofocus: true,
               ),
@@ -75,7 +79,7 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
               FilledButton(
                 onPressed: _createEmptySetup,
                 child: Text(Translations.get(lang, 'createSetup')),
-              )
+              ),
             ],
           ),
         ),

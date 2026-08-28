@@ -3,7 +3,7 @@
 import 'package:bike_setup_tracker/models/bike.dart';
 import 'package:bike_setup_tracker/models/trail_setup.dart';
 import 'package:bike_setup_tracker/screens/bike_detail/add_setup_screen.dart';
-import 'package:bike_setup_tracker/screens/bike_detail/setup_cpnfigurator_screen.dart';
+import 'package:bike_setup_tracker/screens/bike_detail/setup_configurator_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/language_provider.dart';

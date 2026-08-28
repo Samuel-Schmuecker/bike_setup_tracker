@@ -1,4 +1,5 @@
 // lib/models/trail_setup.dart
+import 'bike_parameters.dart';
 
 class SetupLog {
   final String parameters;
@@ -16,13 +17,15 @@ class SetupLog {
   factory SetupLog.fromMap(Map<String, dynamic> map) => SetupLog(
     parameters: map['parameters'] ?? '',
     note: map['note'] ?? '',
-    timestamp: DateTime.parse(map['timestamp']),
+    timestamp: DateTime.tryParse(map['timestamp']?.toString() ?? '') ?? DateTime.now(),
   );
 }
 
 class TrailSetup {
   final String id;
   final String name;
+  final BikeParameters? customParameters;
+
   
   // Fork
   final double? forkPsi;
@@ -56,7 +59,7 @@ class TrailSetup {
   final List<SetupLog> logs;
 
   TrailSetup({
-    required this.id, required this.name,
+    required this.id, required this.name, this.customParameters,
     this.forkPsi, this.forkOtt, this.forkHsc, this.forkLsc, this.forkHsr, this.forkLsr, this.forkTokens, this.forkHbo,
     this.shockPsi, this.shockTokens, this.shockRate, this.shockPreload, this.shockHsc, this.shockLsc, this.shockHsr, this.shockLsr, this.shockHbo,
     this.frontTire, this.frontPressure, this.rearTire, this.rearPressure,
@@ -66,6 +69,7 @@ class TrailSetup {
   TrailSetup copyWith({
     String? id, 
     String? name,
+    BikeParameters? customParameters,
     double? forkPsi, double? forkOtt, int? forkHsc, int? forkLsc, int? forkHsr, int? forkLsr, int? forkTokens, int? forkHbo,
     double? shockPsi, int? shockTokens, double? shockRate, double? shockPreload, int? shockHsc, int? shockLsc, int? shockHsr, int? shockLsr, int? shockHbo,
     String? frontTire, double? frontPressure, String? rearTire, double? rearPressure,
@@ -74,6 +78,7 @@ class TrailSetup {
     return TrailSetup(
       id: id ?? this.id, 
       name: name ?? this.name, 
+      customParameters: customParameters ?? this.customParameters,
       forkPsi: forkPsi ?? this.forkPsi, forkOtt: forkOtt ?? this.forkOtt,
       forkHsc: forkHsc ?? this.forkHsc, forkLsc: forkLsc ?? this.forkLsc,
       forkHsr: forkHsr ?? this.forkHsr, forkLsr: forkLsr ?? this.forkLsr,
@@ -93,6 +98,7 @@ class TrailSetup {
   Map<String, dynamic> toMap() {
     return {
       'id': id, 'name': name,
+      'customParameters': customParameters?.toMap(),
       'forkPsi': forkPsi, 'forkOtt': forkOtt, 'forkHsc': forkHsc, 'forkLsc': forkLsc,
       'forkHsr': forkHsr, 'forkLsr': forkLsr, 'forkTokens': forkTokens, 'forkHbo': forkHbo,
       'shockPsi': shockPsi, 'shockTokens': shockTokens, 'shockRate': shockRate, 'shockPreload': shockPreload,
@@ -107,20 +113,26 @@ class TrailSetup {
   factory TrailSetup.fromMap(Map<String, dynamic> map) {
     return TrailSetup(
       id: map['id'] ?? '', name: map['name'] ?? '',
+      customParameters: map['customParameters'] is Map
+          ? BikeParameters.fromMap(Map<String, dynamic>.from(map['customParameters']))
+          : null,
       // Safe Parsing für Zahlen:
       forkPsi: (map['forkPsi'] as num?)?.toDouble(), forkOtt: (map['forkOtt'] as num?)?.toDouble(),
-      forkHsc: map['forkHsc'] as int?, forkLsc: map['forkLsc'] as int?,
-      forkHsr: map['forkHsr'] as int?, forkLsr: map['forkLsr'] as int?,
-      forkTokens: map['forkTokens'] as int?, forkHbo: map['forkHbo'] as int?,
-      shockPsi: (map['shockPsi'] as num?)?.toDouble(), shockTokens: map['shockTokens'] as int?,
+      forkHsc: (map['forkHsc'] as num?)?.toInt(), forkLsc: (map['forkLsc'] as num?)?.toInt(),
+      forkHsr: (map['forkHsr'] as num?)?.toInt(), forkLsr: (map['forkLsr'] as num?)?.toInt(),
+      forkTokens: (map['forkTokens'] as num?)?.toInt(), forkHbo: (map['forkHbo'] as num?)?.toInt(),
+      shockPsi: (map['shockPsi'] as num?)?.toDouble(), shockTokens: (map['shockTokens'] as num?)?.toInt(),
       shockRate: (map['shockRate'] as num?)?.toDouble(), shockPreload: (map['shockPreload'] as num?)?.toDouble(),
-      shockHsc: map['shockHsc'] as int?, shockLsc: map['shockLsc'] as int?,
-      shockHsr: map['shockHsr'] as int?, shockLsr: map['shockLsr'] as int?,
-      shockHbo: map['shockHbo'] as int?,
+      shockHsc: (map['shockHsc'] as num?)?.toInt(), shockLsc: (map['shockLsc'] as num?)?.toInt(),
+      shockHsr: (map['shockHsr'] as num?)?.toInt(), shockLsr: (map['shockLsr'] as num?)?.toInt(),
+      shockHbo: (map['shockHbo'] as num?)?.toInt(),
       frontTire: map['frontTire'] as String?, frontPressure: (map['frontPressure'] as num?)?.toDouble(),
       rearTire: map['rearTire'] as String?, rearPressure: (map['rearPressure'] as num?)?.toDouble(),
       notes: map['notes'] ?? '', isFavorite: map['isFavorite'] ?? false,
-      logs: List<SetupLog>.from(map['logs']?.map((x) => SetupLog.fromMap(x)) ?? []),
+      logs: (map['logs'] as List<dynamic>? ?? const [])
+          .whereType<Map>()
+          .map((x) => SetupLog.fromMap(Map<String, dynamic>.from(x)))
+          .toList(),
     );
   }
 }
