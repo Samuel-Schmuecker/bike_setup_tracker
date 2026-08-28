@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       // Verhindert, dass der User beim ersten Start aus Versehen daneben klickt
-      barrierDismissible: !isFirstStart, 
+      barrierDismissible: !isFirstStart,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
@@ -71,19 +71,29 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+                color: Theme.of(
+                  context,
+                ).colorScheme.primaryContainer.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.5)),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.touch_app, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.touch_app,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       Translations.get(lang, 'welcomeText2'),
-                      style: const TextStyle(fontWeight: FontWeight.w500, height: 1.4),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
                     ),
                   ),
                 ],
@@ -102,8 +112,14 @@ class _HomeScreenState extends State<HomeScreen> {
               }
             },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Text(Translations.get(lang, 'gotIt'), style: const TextStyle(fontSize: 16)),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Text(
+                Translations.get(lang, 'gotIt'),
+                style: const TextStyle(fontSize: 16),
+              ),
             ),
           ),
         ],
@@ -114,9 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onAddBikeTap() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddBikeScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddBikeScreen()),
     );
   }
 
@@ -127,7 +141,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final filteredBikes = allBikes.where((bike) {
       final query = _searchQuery.toLowerCase();
-      return bike.brand.toLowerCase().contains(query) || bike.model.toLowerCase().contains(query);
+      return bike.brand.toLowerCase().contains(query) ||
+          bike.model.toLowerCase().contains(query);
     }).toList();
 
     return Scaffold(
@@ -137,30 +152,33 @@ class _HomeScreenState extends State<HomeScreen> {
           // NEU: Info-Button, um das Tutorial manuell aufzurufen
           IconButton(
             icon: const Icon(Icons.info_outline),
-            tooltip: 'Tutorial / Info',
+            tooltip: Translations.get(lang, 'tutorialInfo'),
             onPressed: () => _showOnboardingDialog(isFirstStart: false),
           ),
           // SPRACH-UMSCHALTER
           TextButton(
             onPressed: () {
-              final newLang = lang == 'de' ? 'en' : 'de';
+              final newLang = Translations.nextLanguageCode(lang);
               context.read<LanguageProvider>().setLanguage(newLang);
             },
             child: Text(
               lang.toUpperCase(),
-              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _onAddBikeTap,
-          ),
+          IconButton(icon: const Icon(Icons.add), onPressed: _onAddBikeTap),
         ],
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -168,14 +186,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
-                        icon: const Icon(Icons.clear), 
+                        icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _searchQuery = '');
-                        })
+                        },
+                      )
                     : null,
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16.0), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16.0),
+                  borderSide: BorderSide.none,
+                ),
               ),
               onChanged: (value) => setState(() => _searchQuery = value),
             ),

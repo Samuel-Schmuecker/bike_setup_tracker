@@ -58,18 +58,29 @@ class CustomSetupCategory {
   final String id;
   final String name;
   final List<CustomSetupField> fields;
+  final bool notesEnabled;
+  final String notes;
 
   const CustomSetupCategory({
     required this.id,
     required this.name,
     this.fields = const [],
+    this.notesEnabled = false,
+    this.notes = '',
   });
 
-  CustomSetupCategory copyWith({String? name, List<CustomSetupField>? fields}) {
+  CustomSetupCategory copyWith({
+    String? name,
+    List<CustomSetupField>? fields,
+    bool? notesEnabled,
+    String? notes,
+  }) {
     return CustomSetupCategory(
       id: id,
       name: name ?? this.name,
       fields: fields ?? this.fields,
+      notesEnabled: notesEnabled ?? this.notesEnabled,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -77,6 +88,8 @@ class CustomSetupCategory {
     'id': id,
     'name': name,
     'fields': fields.map((field) => field.toMap()).toList(),
+    'notesEnabled': notesEnabled,
+    'notes': notes,
   };
 
   factory CustomSetupCategory.fromMap(Map<String, dynamic> map) {
@@ -90,6 +103,8 @@ class CustomSetupCategory {
                 CustomSetupField.fromMap(Map<String, dynamic>.from(field)),
           )
           .toList(),
+      notesEnabled: map['notesEnabled'] == true,
+      notes: map['notes']?.toString() ?? '',
     );
   }
 }

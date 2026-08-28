@@ -124,7 +124,14 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
     if (setupIndex == -1) {
       return Scaffold(
         appBar: AppBar(),
-        body: const Center(child: Text('Setup nicht gefunden')),
+        body: Center(
+          child: Text(
+            Translations.get(
+              context.watch<LanguageProvider>().currentLanguage,
+              'setupNotFound',
+            ),
+          ),
+        ),
       );
     }
     final setup = bike.setups[setupIndex];
@@ -137,6 +144,12 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 
     final colorScheme = Theme.of(context).colorScheme;
     final lang = context.watch<LanguageProvider>().currentLanguage;
+    String componentField(String componentKey, String fieldKey) {
+      return Translations.format(lang, 'componentField', {
+        'component': Translations.get(lang, componentKey),
+        'field': Translations.get(lang, fieldKey),
+      });
+    }
 
     // FIX 1: Extrem robuster Speichervorgang, der leere Strings und "-" sicher verarbeitet!
     void handleSave(
@@ -357,7 +370,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '$position ${Translations.get(lang, 'modelEdit') ?? "Model"}',
+                        '$position ${Translations.get(lang, 'modelEdit')}',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withOpacity(0.6),
@@ -365,9 +378,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        hasModel
-                            ? model
-                            : Translations.get(lang, 'notSet') ?? 'Not set',
+                        hasModel ? model : Translations.get(lang, 'notSet'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -400,7 +411,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Text(
-                        Translations.get(lang, 'air') ?? 'Air',
+                        Translations.get(lang, 'air'),
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withOpacity(0.6),
@@ -487,8 +498,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
               value: enabled,
               onChanged: (value) => handleSave(
                 field.name,
-                enabled ? 'Ja' : 'Nein',
-                value ? 'Ja' : 'Nein',
+                Translations.get(lang, enabled ? 'booleanYes' : 'booleanNo'),
+                Translations.get(lang, value ? 'booleanYes' : 'booleanNo'),
                 '',
                 setupWithCustomValue(category.id, field.id, value.toString()),
               ),
@@ -535,6 +546,50 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         (category) => category.id == id,
       );
       return index == -1 ? null : params.customCategories[index];
+    }
+
+    void saveCategoryNotes(String categoryId, String notes) {
+      final provider = context.read<BikeProvider>();
+      final currentBike = provider.bikes.firstWhere(
+        (bike) => bike.id == widget.bikeId,
+      );
+      final currentSetup = currentBike.setups.firstWhere(
+        (setup) => setup.id == widget.setupId,
+      );
+      final currentParameters =
+          currentSetup.customParameters ??
+          currentBike.availableParameters ??
+          BikeParameters();
+      final categories = currentParameters.customCategories.map((category) {
+        return category.id == categoryId
+            ? category.copyWith(notes: notes)
+            : category;
+      }).toList();
+      provider.updateSetup(
+        widget.bikeId,
+        currentSetup.copyWith(
+          customParameters: currentParameters.copyWith(
+            customCategories: categories,
+          ),
+        ),
+      );
+    }
+
+    Widget buildCategoryNotes(CustomSetupCategory? category) {
+      if (category == null || !category.notesEnabled) {
+        return const SizedBox.shrink();
+      }
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        child: _CategoryNotesField(
+          key: ValueKey('category-notes-${setup.id}-${category.id}'),
+          initialValue: category.notes,
+          hintText: Translations.format(lang, 'categoryNotesHint', {
+            'category': category.name,
+          }),
+          onSave: (notes) => saveCategoryNotes(category.id, notes),
+        ),
+      );
     }
 
     return Scaffold(
@@ -604,17 +659,17 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       children: [
                         if (params.forkPsi)
                           buildTile(
-                            'Main',
+                            Translations.get(lang, 'mainShort'),
                             _formatNum(setup.forkPsi),
                             unitFor('forkPsi', 'PSI'),
                             () => showStepperModal(
-                              'Fork Main',
+                              componentField('fork', 'mainShort'),
                               unitFor('forkPsi', 'PSI'),
                               _formatNum(setup.forkPsi),
                               false,
                               5,
                               (v, n) => handleSave(
-                                'Fork PSI',
+                                componentField('fork', 'mainShort'),
                                 _formatNum(setup.forkPsi),
                                 v,
                                 n,
@@ -624,17 +679,23 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkOtt)
                           buildTile(
-                            'Neg/OTT',
+                            Translations.get(lang, 'negativeChamberShort'),
                             _formatNum(setup.forkOtt),
-                            unitFor('forkOtt', 'PSI/Klicks'),
+                            unitFor(
+                              'forkOtt',
+                              Translations.get(lang, 'unitPsiClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork OTT/Negative',
-                              unitFor('forkOtt', 'PSI/Klicks'),
+                              componentField('fork', 'negativeChamberShort'),
+                              unitFor(
+                                'forkOtt',
+                                Translations.get(lang, 'unitPsiClicks'),
+                              ),
                               _formatNum(setup.forkOtt),
                               false,
                               5,
                               (v, n) => handleSave(
-                                'Fork OTT',
+                                componentField('fork', 'negativeChamberShort'),
                                 _formatNum(setup.forkOtt),
                                 v,
                                 n,
@@ -646,15 +707,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HSC',
                             _formatNum(setup.forkHsc),
-                            unitFor('forkHsc', 'Klicks'),
+                            unitFor(
+                              'forkHsc',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork HSC',
-                              unitFor('forkHsc', 'Klicks'),
+                              componentField('fork', 'hsc'),
+                              unitFor(
+                                'forkHsc',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.forkHsc),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork HSC',
+                                componentField('fork', 'hsc'),
                                 _formatNum(setup.forkHsc),
                                 v,
                                 n,
@@ -666,15 +733,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'LSC',
                             _formatNum(setup.forkLsc),
-                            unitFor('forkLsc', 'Klicks'),
+                            unitFor(
+                              'forkLsc',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork LSC',
-                              unitFor('forkLsc', 'Klicks'),
+                              componentField('fork', 'lsc'),
+                              unitFor(
+                                'forkLsc',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.forkLsc),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork LSC',
+                                componentField('fork', 'lsc'),
                                 _formatNum(setup.forkLsc),
                                 v,
                                 n,
@@ -686,15 +759,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HSR',
                             _formatNum(setup.forkHsr),
-                            unitFor('forkHsr', 'Klicks'),
+                            unitFor(
+                              'forkHsr',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork HSR',
-                              unitFor('forkHsr', 'Klicks'),
+                              componentField('fork', 'hsr'),
+                              unitFor(
+                                'forkHsr',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.forkHsr),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork HSR',
+                                componentField('fork', 'hsr'),
                                 _formatNum(setup.forkHsr),
                                 v,
                                 n,
@@ -706,15 +785,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'LSR',
                             _formatNum(setup.forkLsr),
-                            unitFor('forkLsr', 'Klicks'),
+                            unitFor(
+                              'forkLsr',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork LSR',
-                              unitFor('forkLsr', 'Klicks'),
+                              componentField('fork', 'lsr'),
+                              unitFor(
+                                'forkLsr',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.forkLsr),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork LSR',
+                                componentField('fork', 'lsr'),
                                 _formatNum(setup.forkLsr),
                                 v,
                                 n,
@@ -724,17 +809,23 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkTokens)
                           buildTile(
-                            'Tokens',
+                            Translations.get(lang, 'tokensShort'),
                             _formatNum(setup.forkTokens),
-                            unitFor('forkTokens', 'Stück'),
+                            unitFor(
+                              'forkTokens',
+                              Translations.get(lang, 'unitPieces'),
+                            ),
                             () => showStepperModal(
-                              'Fork Tokens',
-                              unitFor('forkTokens', 'Stück'),
+                              componentField('fork', 'tokensShort'),
+                              unitFor(
+                                'forkTokens',
+                                Translations.get(lang, 'unitPieces'),
+                              ),
                               _formatNum(setup.forkTokens),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork Tokens',
+                                componentField('fork', 'tokensShort'),
                                 _formatNum(setup.forkTokens),
                                 v,
                                 n,
@@ -746,15 +837,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HBO',
                             _formatNum(setup.forkHbo),
-                            unitFor('forkHbo', 'Klicks'),
+                            unitFor(
+                              'forkHbo',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Fork HBO',
-                              unitFor('forkHbo', 'Klicks'),
+                              componentField('fork', 'hbo'),
+                              unitFor(
+                                'forkHbo',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.forkHbo),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Fork HBO',
+                                componentField('fork', 'hbo'),
                                 _formatNum(setup.forkHbo),
                                 v,
                                 n,
@@ -766,6 +863,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       ],
                     ),
                   ),
+                  buildCategoryNotes(customCategory('fork')),
 
                   // --- SHOCK ---
                   buildSectionHeader(
@@ -781,17 +879,17 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                         if (!params.shockIsCoil) ...[
                           if (params.shockPsi)
                             buildTile(
-                              'Air',
+                              Translations.get(lang, 'airShock'),
                               _formatNum(setup.shockPsi),
                               unitFor('shockPsi', 'PSI'),
                               () => showStepperModal(
-                                'Shock Air Pressure',
+                                Translations.get(lang, 'shockAir'),
                                 unitFor('shockPsi', 'PSI'),
                                 _formatNum(setup.shockPsi),
                                 false,
                                 5,
                                 (v, n) => handleSave(
-                                  'Shock Air',
+                                  Translations.get(lang, 'shockAir'),
                                   _formatNum(setup.shockPsi),
                                   v,
                                   n,
@@ -801,17 +899,23 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           if (params.shockTokens)
                             buildTile(
-                              'Tokens',
+                              Translations.get(lang, 'tokensShort'),
                               _formatNum(setup.shockTokens),
-                              unitFor('shockTokens', 'Stück'),
+                              unitFor(
+                                'shockTokens',
+                                Translations.get(lang, 'unitPieces'),
+                              ),
                               () => showStepperModal(
-                                'Shock Tokens',
-                                unitFor('shockTokens', 'Stück'),
+                                componentField('shock', 'tokensShort'),
+                                unitFor(
+                                  'shockTokens',
+                                  Translations.get(lang, 'unitPieces'),
+                                ),
                                 _formatNum(setup.shockTokens),
                                 false,
                                 1,
                                 (v, n) => handleSave(
-                                  'Shock Tokens',
+                                  componentField('shock', 'tokensShort'),
                                   _formatNum(setup.shockTokens),
                                   v,
                                   n,
@@ -822,17 +926,17 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                         ] else ...[
                           if (params.shockRate)
                             buildTile(
-                              'Spring',
+                              Translations.get(lang, 'springShort'),
                               _formatNum(setup.shockRate),
                               unitFor('shockRate', 'lbs/in'),
                               () => showStepperModal(
-                                'Shock Spring Rate',
+                                componentField('shock', 'springRate'),
                                 unitFor('shockRate', 'lbs/in'),
                                 _formatNum(setup.shockRate),
                                 false,
                                 25,
                                 (v, n) => handleSave(
-                                  'Shock Rate',
+                                  componentField('shock', 'springRate'),
                                   _formatNum(setup.shockRate),
                                   v,
                                   n,
@@ -842,17 +946,23 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           if (params.shockPreload)
                             buildTile(
-                              'Preload',
+                              Translations.get(lang, 'preloadShort'),
                               _formatNum(setup.shockPreload),
-                              unitFor('shockPreload', 'Umdr.'),
+                              unitFor(
+                                'shockPreload',
+                                Translations.get(lang, 'unitTurns'),
+                              ),
                               () => showStepperModal(
-                                'Shock Preload',
-                                unitFor('shockPreload', 'Umdr.'),
+                                componentField('shock', 'preload'),
+                                unitFor(
+                                  'shockPreload',
+                                  Translations.get(lang, 'unitTurns'),
+                                ),
                                 _formatNum(setup.shockPreload),
                                 false,
                                 0.25,
                                 (v, n) => handleSave(
-                                  'Shock Preload',
+                                  componentField('shock', 'preload'),
                                   _formatNum(setup.shockPreload),
                                   v,
                                   n,
@@ -865,15 +975,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HSC',
                             _formatNum(setup.shockHsc),
-                            unitFor('shockHsc', 'Klicks'),
+                            unitFor(
+                              'shockHsc',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Shock HSC',
-                              unitFor('shockHsc', 'Klicks'),
+                              componentField('shock', 'hsc'),
+                              unitFor(
+                                'shockHsc',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.shockHsc),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Shock HSC',
+                                componentField('shock', 'hsc'),
                                 _formatNum(setup.shockHsc),
                                 v,
                                 n,
@@ -885,15 +1001,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'LSC',
                             _formatNum(setup.shockLsc),
-                            unitFor('shockLsc', 'Klicks'),
+                            unitFor(
+                              'shockLsc',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Shock LSC',
-                              unitFor('shockLsc', 'Klicks'),
+                              componentField('shock', 'lsc'),
+                              unitFor(
+                                'shockLsc',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.shockLsc),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Shock LSC',
+                                componentField('shock', 'lsc'),
                                 _formatNum(setup.shockLsc),
                                 v,
                                 n,
@@ -905,15 +1027,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HSR',
                             _formatNum(setup.shockHsr),
-                            unitFor('shockHsr', 'Klicks'),
+                            unitFor(
+                              'shockHsr',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Shock HSR',
-                              unitFor('shockHsr', 'Klicks'),
+                              componentField('shock', 'hsr'),
+                              unitFor(
+                                'shockHsr',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.shockHsr),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Shock HSR',
+                                componentField('shock', 'hsr'),
                                 _formatNum(setup.shockHsr),
                                 v,
                                 n,
@@ -925,15 +1053,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'LSR',
                             _formatNum(setup.shockLsr),
-                            unitFor('shockLsr', 'Klicks'),
+                            unitFor(
+                              'shockLsr',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Shock LSR',
-                              unitFor('shockLsr', 'Klicks'),
+                              componentField('shock', 'lsr'),
+                              unitFor(
+                                'shockLsr',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.shockLsr),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Shock LSR',
+                                componentField('shock', 'lsr'),
                                 _formatNum(setup.shockLsr),
                                 v,
                                 n,
@@ -945,15 +1079,21 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           buildTile(
                             'HBO',
                             _formatNum(setup.shockHbo),
-                            unitFor('shockHbo', 'Klicks'),
+                            unitFor(
+                              'shockHbo',
+                              Translations.get(lang, 'unitClicks'),
+                            ),
                             () => showStepperModal(
-                              'Shock HBO',
-                              unitFor('shockHbo', 'Klicks'),
+                              componentField('shock', 'hbo'),
+                              unitFor(
+                                'shockHbo',
+                                Translations.get(lang, 'unitClicks'),
+                              ),
                               _formatNum(setup.shockHbo),
                               false,
                               1,
                               (v, n) => handleSave(
-                                'Shock HBO',
+                                componentField('shock', 'hbo'),
                                 _formatNum(setup.shockHbo),
                                 v,
                                 n,
@@ -965,103 +1105,112 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                       ],
                     ),
                   ),
+                  buildCategoryNotes(customCategory('shock')),
 
                   // --- TIRES ---
-                  if (params.tires) ...[
+                  if (params.tires ||
+                      (customCategory('tires')?.fields.isNotEmpty ?? false) ||
+                      (customCategory('tires')?.notesEnabled ?? false)) ...[
                     buildSectionHeader(
                       Translations.get(lang, 'tires'),
                       svgPath: 'assets/icons/tire.svg',
                     ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Column(
-                        children: [
-                          buildTireCard(
-                            Translations.get(lang, 'front'),
-                            setup.frontTire,
-                            _formatNum(setup.frontPressure),
-                            () => showStepperModal(
-                              Translations.get(lang, 'frontTireModel') ??
-                                  'Front Model',
-                              '',
+                    if (params.tires)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Column(
+                          children: [
+                            buildTireCard(
+                              Translations.get(lang, 'front'),
                               setup.frontTire,
-                              true,
-                              1,
-                              (v, n) => handleSave(
-                                'Front Model',
-                                setup.frontTire,
-                                v,
-                                n,
-                                setup.copyWith(frontTire: v),
-                              ),
-                            ),
-                            () => showStepperModal(
-                              Translations.get(lang, 'frontTirePressure') ??
-                                  'Front Pressure',
-                              unitFor('tirePressure', 'bar/PSI'),
                               _formatNum(setup.frontPressure),
-                              false,
-                              0.1,
-                              (v, n) => handleSave(
-                                'Front Pressure',
+                              () => showStepperModal(
+                                Translations.get(lang, 'frontTireModel'),
+                                '',
+                                setup.frontTire,
+                                true,
+                                1,
+                                (v, n) => handleSave(
+                                  Translations.get(lang, 'frontTireModel'),
+                                  setup.frontTire,
+                                  v,
+                                  n,
+                                  setup.copyWith(frontTire: v),
+                                ),
+                              ),
+                              () => showStepperModal(
+                                Translations.get(lang, 'frontTirePressure'),
+                                unitFor('tirePressure', 'bar/PSI'),
                                 _formatNum(setup.frontPressure),
-                                v,
-                                n,
-                                setup.copyWith(frontPressure: _parseDouble(v)),
+                                false,
+                                0.1,
+                                (v, n) => handleSave(
+                                  Translations.get(lang, 'frontTirePressure'),
+                                  _formatNum(setup.frontPressure),
+                                  v,
+                                  n,
+                                  setup.copyWith(
+                                    frontPressure: _parseDouble(v),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                          buildTireCard(
-                            Translations.get(lang, 'rear'),
-                            setup.rearTire,
-                            _formatNum(setup.rearPressure),
-                            () => showStepperModal(
-                              Translations.get(lang, 'rearTireModel') ??
-                                  'Rear Model',
-                              '',
+                            buildTireCard(
+                              Translations.get(lang, 'rear'),
                               setup.rearTire,
-                              true,
-                              1,
-                              (v, n) => handleSave(
-                                'Rear Model',
-                                setup.rearTire,
-                                v,
-                                n,
-                                setup.copyWith(rearTire: v),
-                              ),
-                            ),
-                            () => showStepperModal(
-                              Translations.get(lang, 'rearTirePressure') ??
-                                  'Rear Pressure',
-                              unitFor('tirePressure', 'bar/PSI'),
                               _formatNum(setup.rearPressure),
-                              false,
-                              0.1,
-                              (v, n) => handleSave(
-                                'Rear Pressure',
+                              () => showStepperModal(
+                                Translations.get(lang, 'rearTireModel'),
+                                '',
+                                setup.rearTire,
+                                true,
+                                1,
+                                (v, n) => handleSave(
+                                  Translations.get(lang, 'rearTireModel'),
+                                  setup.rearTire,
+                                  v,
+                                  n,
+                                  setup.copyWith(rearTire: v),
+                                ),
+                              ),
+                              () => showStepperModal(
+                                Translations.get(lang, 'rearTirePressure'),
+                                unitFor('tirePressure', 'bar/PSI'),
                                 _formatNum(setup.rearPressure),
-                                v,
-                                n,
-                                setup.copyWith(rearPressure: _parseDouble(v)),
+                                false,
+                                0.1,
+                                (v, n) => handleSave(
+                                  Translations.get(lang, 'rearTirePressure'),
+                                  _formatNum(setup.rearPressure),
+                                  v,
+                                  n,
+                                  setup.copyWith(rearPressure: _parseDouble(v)),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
                     if (customCategory('tires') case final category?)
                       buildCustomFields(category),
+                    buildCategoryNotes(customCategory('tires')),
                   ],
 
                   for (final category in params.customCategories.where(
                     (category) =>
-                        !const {'fork', 'shock', 'tires'}.contains(category.id),
+                        !const {
+                          'fork',
+                          'shock',
+                          'tires',
+                        }.contains(category.id) &&
+                        (category.fields.isNotEmpty || category.notesEnabled),
                   )) ...[
                     buildSectionHeader(
                       category.name,
                       icon: Icons.category_outlined,
                     ),
                     buildCustomFields(category),
+                    buildCategoryNotes(category),
                   ],
 
                   // --- LOG ---
@@ -1271,6 +1420,93 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 }
 
 // --- ZENTRALER DIALOG MIT STEPPER ---
+class _CategoryNotesField extends StatefulWidget {
+  const _CategoryNotesField({
+    super.key,
+    required this.initialValue,
+    required this.hintText,
+    required this.onSave,
+  });
+
+  final String initialValue;
+  final String hintText;
+  final ValueChanged<String> onSave;
+
+  @override
+  State<_CategoryNotesField> createState() => _CategoryNotesFieldState();
+}
+
+class _CategoryNotesFieldState extends State<_CategoryNotesField> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  late String _lastSavedValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+    _focusNode = FocusNode()..addListener(_handleFocusChange);
+    _lastSavedValue = widget.initialValue;
+  }
+
+  @override
+  void didUpdateWidget(covariant _CategoryNotesField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_focusNode.hasFocus && widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+      _lastSavedValue = widget.initialValue;
+    }
+  }
+
+  void _handleFocusChange() {
+    if (!_focusNode.hasFocus) _save();
+  }
+
+  void _save() {
+    final value = _controller.text;
+    if (value == _lastSavedValue) return;
+    _lastSavedValue = value;
+    widget.onSave(value);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    _focusNode.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: _controller,
+      focusNode: _focusNode,
+      minLines: 2,
+      maxLines: 4,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        prefixIcon: const Icon(Icons.notes_outlined),
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.35)),
+        ),
+      ),
+    );
+  }
+}
+
 class _EditValueDialog extends StatefulWidget {
   final String title;
   final String unit;
@@ -1503,8 +1739,9 @@ class _EditValueDialogState extends State<_EditValueDialog> {
         FilledButton(
           onPressed: () {
             Navigator.pop(context);
-            if (_valCtrl.text.isNotEmpty)
+            if (_valCtrl.text.isNotEmpty) {
               widget.onSave(_valCtrl.text, _noteCtrl.text);
+            }
           },
           child: Text(Translations.get(lang, 'save')),
         ),

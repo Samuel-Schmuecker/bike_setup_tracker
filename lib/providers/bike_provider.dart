@@ -115,6 +115,8 @@ class BikeProvider extends ChangeNotifier {
             fields: category.fields
                 .map((field) => field.copyWith(value: ''))
                 .toList(),
+            notesEnabled: false,
+            notes: '',
           ),
         );
         continue;
@@ -254,14 +256,7 @@ class BikeProvider extends ChangeNotifier {
             ? setup
             : setup.copyWith(customParameters: transform(parameters));
       }).toList();
-      return Bike(
-        id: bike.id,
-        brand: bike.brand,
-        model: bike.model,
-        category: bike.category,
-        travelFront: bike.travelFront,
-        travelRear: bike.travelRear,
-        imagePath: bike.imagePath,
+      return bike.copyWith(
         availableParameters: bike.availableParameters == null
             ? null
             : transform(bike.availableParameters!),
@@ -373,17 +368,7 @@ class BikeProvider extends ChangeNotifier {
     final index = _bikes.indexWhere((bike) => bike.id == bikeId);
     if (index != -1) {
       final bike = _bikes[index];
-      _bikes[index] = Bike(
-        id: bike.id,
-        brand: bike.brand,
-        model: bike.model,
-        category: bike.category,
-        travelFront: bike.travelFront,
-        travelRear: bike.travelRear,
-        imagePath: bike.imagePath,
-        setups: bike.setups,
-        availableParameters: parameters,
-      );
+      _bikes[index] = bike.copyWith(availableParameters: parameters);
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }
@@ -394,17 +379,7 @@ class BikeProvider extends ChangeNotifier {
     if (bikeIndex != -1) {
       final bike = _bikes[bikeIndex];
       final updatedSetups = List<TrailSetup>.from(bike.setups)..add(setup);
-      _bikes[bikeIndex] = Bike(
-        id: bike.id,
-        brand: bike.brand,
-        model: bike.model,
-        category: bike.category,
-        travelFront: bike.travelFront,
-        travelRear: bike.travelRear,
-        imagePath: bike.imagePath,
-        availableParameters: bike.availableParameters,
-        setups: updatedSetups,
-      );
+      _bikes[bikeIndex] = bike.copyWith(setups: updatedSetups);
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }
@@ -418,17 +393,7 @@ class BikeProvider extends ChangeNotifier {
       if (setupIndex != -1) {
         final updatedSetups = List<TrailSetup>.from(bike.setups);
         updatedSetups[setupIndex] = updatedSetup;
-        _bikes[bikeIndex] = Bike(
-          id: bike.id,
-          brand: bike.brand,
-          model: bike.model,
-          category: bike.category,
-          travelFront: bike.travelFront,
-          travelRear: bike.travelRear,
-          imagePath: bike.imagePath,
-          availableParameters: bike.availableParameters,
-          setups: updatedSetups,
-        );
+        _bikes[bikeIndex] = bike.copyWith(setups: updatedSetups);
         notifyListeners();
         saveToDevice(); // AUTO-SAVE
       }
@@ -440,17 +405,7 @@ class BikeProvider extends ChangeNotifier {
     if (bikeIndex != -1) {
       final bike = _bikes[bikeIndex];
       final updatedSetups = bike.setups.where((s) => s.id != setupId).toList();
-      _bikes[bikeIndex] = Bike(
-        id: bike.id,
-        brand: bike.brand,
-        model: bike.model,
-        category: bike.category,
-        travelFront: bike.travelFront,
-        travelRear: bike.travelRear,
-        imagePath: bike.imagePath,
-        availableParameters: bike.availableParameters,
-        setups: updatedSetups,
-      );
+      _bikes[bikeIndex] = bike.copyWith(setups: updatedSetups);
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }
@@ -468,17 +423,7 @@ class BikeProvider extends ChangeNotifier {
       );
       final updatedSetups = List<TrailSetup>.from(bike.setups)
         ..add(duplicatedSetup);
-      _bikes[bikeIndex] = Bike(
-        id: bike.id,
-        brand: bike.brand,
-        model: bike.model,
-        category: bike.category,
-        travelFront: bike.travelFront,
-        travelRear: bike.travelRear,
-        imagePath: bike.imagePath,
-        availableParameters: bike.availableParameters,
-        setups: updatedSetups,
-      );
+      _bikes[bikeIndex] = bike.copyWith(setups: updatedSetups);
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }
@@ -496,17 +441,7 @@ class BikeProvider extends ChangeNotifier {
         );
         final updatedSetups = List<TrailSetup>.from(bike.setups);
         updatedSetups[setupIndex] = updatedSetup;
-        _bikes[bikeIndex] = Bike(
-          id: bike.id,
-          brand: bike.brand,
-          model: bike.model,
-          category: bike.category,
-          travelFront: bike.travelFront,
-          travelRear: bike.travelRear,
-          imagePath: bike.imagePath,
-          availableParameters: bike.availableParameters,
-          setups: updatedSetups,
-        );
+        _bikes[bikeIndex] = bike.copyWith(setups: updatedSetups);
         notifyListeners();
         saveToDevice(); // AUTO-SAVE
       }

@@ -1,5 +1,7 @@
 // lib/screens/bike_detail/setup_configurator_screen.dart
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
@@ -44,6 +46,8 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   bool _tires = true;
   List<CustomSetupCategory> _customCategories = [];
   Map<String, String> _unitOverrides = {};
+  late String _initialStateJson;
+  bool _allowPop = false;
 
   @override
   void initState() {
@@ -90,10 +94,11 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           .toList();
       _unitOverrides = Map.of(p.unitOverrides);
     }
+    _initialStateJson = jsonEncode(_currentParameters().toMap());
   }
 
-  void _saveAndContinue() {
-    final params = BikeParameters(
+  BikeParameters _currentParameters() {
+    return BikeParameters(
       forkPsi: _forkPsi,
       forkOtt: _forkOtt,
       forkHsc: _forkHsc,
@@ -116,6 +121,21 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       customCategories: _customCategories,
       unitOverrides: _unitOverrides,
     );
+  }
+
+  bool get _hasUnsavedChanges =>
+      jsonEncode(_currentParameters().toMap()) != _initialStateJson;
+
+  void _popScreen() {
+    if (!mounted) return;
+    setState(() => _allowPop = true);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) Navigator.pop(context);
+    });
+  }
+
+  void _saveAndContinue() {
+    final params = _currentParameters();
 
     final provider = context.read<BikeProvider>();
 
@@ -133,14 +153,52 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     }
 
     if (widget.isEditing) {
-      Navigator.pop(context);
+      _popScreen();
     } else {
+      _allowPop = true;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (context) => AddSetupScreen(bikeId: widget.bikeId),
         ),
       );
+    }
+  }
+
+  Future<void> _handleBackNavigation() async {
+    if (_allowPop || !_hasUnsavedChanges) {
+      _popScreen();
+      return;
+    }
+
+    final lang = context.read<LanguageProvider>().currentLanguage;
+    final action = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(Translations.get(lang, 'unsavedChangesTitle')),
+        content: Text(Translations.get(lang, 'unsavedChangesBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'continue'),
+            child: Text(Translations.get(lang, 'keepEditing')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, 'discard'),
+            child: Text(Translations.get(lang, 'discard')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, 'save'),
+            child: Text(Translations.get(lang, 'save')),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    if (action == 'save') {
+      _saveAndContinue();
+    } else if (action == 'discard') {
+      _popScreen();
     }
   }
 
@@ -223,6 +281,48 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     });
   }
 
+  void _toggleCategoryNotes(
+    String categoryId,
+    String categoryName,
+    bool enabled,
+  ) {
+    setState(() {
+      final index = _customCategories.indexWhere(
+        (category) => category.id == categoryId,
+      );
+      if (index == -1) {
+        _customCategories.add(
+          CustomSetupCategory(
+            id: categoryId,
+            name: categoryName,
+            notesEnabled: enabled,
+          ),
+        );
+      } else {
+        final category = _customCategories[index];
+        _customCategories[index] = category.copyWith(notesEnabled: enabled);
+      }
+    });
+  }
+
+  Widget _categoryNotesControl(
+    String categoryId,
+    String categoryName,
+    String lang,
+  ) {
+    final index = _customCategories.indexWhere(
+      (category) => category.id == categoryId,
+    );
+    final enabled = index != -1 && _customCategories[index].notesEnabled;
+    return SwitchListTile(
+      secondary: const Icon(Icons.notes_outlined),
+      title: Text(Translations.get(lang, 'showNotesField')),
+      value: enabled,
+      onChanged: (value) =>
+          _toggleCategoryNotes(categoryId, categoryName, value),
+    );
+  }
+
   void _toggleCustomField(
     String categoryId,
     String categoryName,
@@ -270,16 +370,12 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: Text(lang == 'de' ? 'Feld bearbeiten' : 'Edit field'),
+              title: Text(Translations.get(lang, 'editCustomField')),
               onTap: () => Navigator.pop(context, 'edit'),
             ),
             ListTile(
               leading: const Icon(Icons.delete_outline),
-              title: Text(
-                lang == 'de'
-                    ? 'Feld aus Bibliothek löschen'
-                    : 'Delete field from library',
-              ),
+              title: Text(Translations.get(lang, 'deleteFieldFromLibrary')),
               onTap: () => Navigator.pop(context, 'delete'),
             ),
           ],
@@ -291,14 +387,8 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text(
-            lang == 'de' ? 'Feld wirklich löschen?' : 'Delete field?',
-          ),
-          content: Text(
-            lang == 'de'
-                ? 'Das Feld und seine gespeicherten Werte werden aus allen Bikes und Setups entfernt.'
-                : 'The field and its saved values will be removed from every bike and setup.',
-          ),
+          title: Text(Translations.get(lang, 'deleteFieldConfirmTitle')),
+          content: Text(Translations.get(lang, 'deleteFieldConfirmBody')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -381,10 +471,15 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
             subtitle: Text(
               [
                 switch (field.type) {
-                  CustomFieldType.number => lang == 'de' ? 'Zahl' : 'Number',
-                  CustomFieldType.text => 'Text',
-                  CustomFieldType.boolean =>
-                    lang == 'de' ? 'Ja / Nein' : 'Yes / No',
+                  CustomFieldType.number => Translations.get(
+                    lang,
+                    'numberType',
+                  ),
+                  CustomFieldType.text => Translations.get(lang, 'textType'),
+                  CustomFieldType.boolean => Translations.get(
+                    lang,
+                    'booleanType',
+                  ),
                 },
                 if (field.unit.isNotEmpty) field.unit,
               ].join(' · '),
@@ -401,7 +496,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           child: OutlinedButton.icon(
             onPressed: () => _addCustomField(categoryId, categoryName),
             icon: const Icon(Icons.add),
-            label: Text(lang == 'de' ? 'Eigenes Feld' : 'Custom field'),
+            label: Text(Translations.get(lang, 'customField')),
           ),
         ),
       ),
@@ -410,36 +505,15 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
 
   Future<void> _editUnit(String key, String defaultUnit) async {
     final lang = context.read<LanguageProvider>().currentLanguage;
-    final controller = TextEditingController(
-      text: _unitOverrides[key] ?? defaultUnit,
-    );
     final unit = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(lang == 'de' ? 'Einheit ändern' : 'Change unit'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: lang == 'de' ? 'Einheit' : 'Unit',
-            hintText: defaultUnit,
-          ),
-          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, defaultUnit),
-            child: Text(lang == 'de' ? 'Standard' : 'Default'),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.pop(dialogContext, controller.text.trim()),
-            child: Text(Translations.get(lang, 'save')),
-          ),
-        ],
+      requestFocus: false,
+      builder: (_) => _UnitEditDialog(
+        lang: lang,
+        initialUnit: _unitOverrides[key] ?? defaultUnit,
+        defaultUnit: defaultUnit,
       ),
     );
-    controller.dispose();
     if (unit == null || unit.isEmpty || !mounted) return;
     setState(() => _unitOverrides[key] = unit);
   }
@@ -515,260 +589,342 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       ),
     ];
 
-    return Scaffold(
-      // Titel dynamisch anpassen
-      appBar: AppBar(
-        title: Text(
-          widget.setupId != null
-              ? Translations.get(lang, 'setupConfig')
-              : Translations.get(lang, 'configSuspension'),
-        ),
-      ),
-      body: ListView(
-        children: [
-          buildSection(
-            storageKey: 'fork-section',
-            title: Translations.get(lang, 'forkSettings'),
-            svgPath: 'assets/icons/fork.svg',
-            children: [
-              _parameterSwitch(
-                title: Translations.get(lang, 'mainAir'),
-                value: _forkPsi,
-                onChanged: (v) => setState(() => _forkPsi = v),
-                unitKey: 'forkPsi',
-                defaultUnit: 'PSI',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'ottNeg'),
-                value: _forkOtt,
-                onChanged: (v) => setState(() => _forkOtt = v),
-                unitKey: 'forkOtt',
-                defaultUnit: 'PSI/Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'hsc'),
-                value: _forkHsc,
-                onChanged: (v) => setState(() => _forkHsc = v),
-                unitKey: 'forkHsc',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'lsc'),
-                value: _forkLsc,
-                onChanged: (v) => setState(() => _forkLsc = v),
-                unitKey: 'forkLsc',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'hsr'),
-                value: _forkHsr,
-                onChanged: (v) => setState(() => _forkHsr = v),
-                unitKey: 'forkHsr',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'lsr'),
-                value: _forkLsr,
-                onChanged: (v) => setState(() => _forkLsr = v),
-                unitKey: 'forkLsr',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'tokens'),
-                value: _forkTokens,
-                onChanged: (v) => setState(() => _forkTokens = v),
-                unitKey: 'forkTokens',
-                defaultUnit: 'Stück',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'hbo'),
-                value: _forkHbo,
-                onChanged: (v) => setState(() => _forkHbo = v),
-                unitKey: 'forkHbo',
-                defaultUnit: 'Klicks',
-              ),
-              ..._customFieldControls('fork', _sectionName('fork', lang), lang),
-            ],
+    return PopScope(
+      canPop: _allowPop || !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _handleBackNavigation();
+      },
+      child: Scaffold(
+        // Titel dynamisch anpassen
+        appBar: AppBar(
+          title: Text(
+            widget.setupId != null
+                ? Translations.get(lang, 'setupConfig')
+                : Translations.get(lang, 'configSuspension'),
           ),
-          buildSection(
-            storageKey: 'shock-section',
-            title: Translations.get(lang, 'shockSettings'),
-            svgPath: 'assets/icons/shock.svg',
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      Translations.get(lang, 'shockType'),
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 12),
-                    SegmentedButton<bool>(
-                      segments: [
-                        ButtonSegment(
-                          value: false,
-                          label: Text(Translations.get(lang, 'airShock')),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          label: Text(Translations.get(lang, 'coilShock')),
-                        ),
-                      ],
-                      selected: {_shockIsCoil},
-                      onSelectionChanged: (selection) =>
-                          setState(() => _shockIsCoil = selection.first),
-                    ),
-                  ],
-                ),
-              ),
-              if (!_shockIsCoil) ...[
+        ),
+        body: ListView(
+          children: [
+            buildSection(
+              storageKey: 'fork-section',
+              title: Translations.get(lang, 'forkSettings'),
+              svgPath: 'assets/icons/fork.svg',
+              children: [
                 _parameterSwitch(
-                  title: Translations.get(lang, 'shockAir'),
-                  value: _shockPsi,
-                  onChanged: (v) => setState(() => _shockPsi = v),
-                  unitKey: 'shockPsi',
+                  title: Translations.get(lang, 'mainAir'),
+                  value: _forkPsi,
+                  onChanged: (v) => setState(() => _forkPsi = v),
+                  unitKey: 'forkPsi',
                   defaultUnit: 'PSI',
                 ),
                 _parameterSwitch(
+                  title: Translations.get(lang, 'ottNeg'),
+                  value: _forkOtt,
+                  onChanged: (v) => setState(() => _forkOtt = v),
+                  unitKey: 'forkOtt',
+                  defaultUnit: Translations.get(lang, 'unitPsiClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'hsc'),
+                  value: _forkHsc,
+                  onChanged: (v) => setState(() => _forkHsc = v),
+                  unitKey: 'forkHsc',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'lsc'),
+                  value: _forkLsc,
+                  onChanged: (v) => setState(() => _forkLsc = v),
+                  unitKey: 'forkLsc',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'hsr'),
+                  value: _forkHsr,
+                  onChanged: (v) => setState(() => _forkHsr = v),
+                  unitKey: 'forkHsr',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'lsr'),
+                  value: _forkLsr,
+                  onChanged: (v) => setState(() => _forkLsr = v),
+                  unitKey: 'forkLsr',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
                   title: Translations.get(lang, 'tokens'),
-                  value: _shockTokens,
-                  onChanged: (v) => setState(() => _shockTokens = v),
-                  unitKey: 'shockTokens',
-                  defaultUnit: 'Stück',
-                ),
-              ] else ...[
-                _parameterSwitch(
-                  title: Translations.get(lang, 'springRate'),
-                  value: _shockRate,
-                  onChanged: (v) => setState(() => _shockRate = v),
-                  unitKey: 'shockRate',
-                  defaultUnit: 'lbs/in',
+                  value: _forkTokens,
+                  onChanged: (v) => setState(() => _forkTokens = v),
+                  unitKey: 'forkTokens',
+                  defaultUnit: Translations.get(lang, 'unitPieces'),
                 ),
                 _parameterSwitch(
-                  title: Translations.get(lang, 'preload'),
-                  value: _shockPreload,
-                  onChanged: (v) => setState(() => _shockPreload = v),
-                  unitKey: 'shockPreload',
-                  defaultUnit: 'Umdr.',
+                  title: Translations.get(lang, 'hbo'),
+                  value: _forkHbo,
+                  onChanged: (v) => setState(() => _forkHbo = v),
+                  unitKey: 'forkHbo',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _categoryNotesControl('fork', _sectionName('fork', lang), lang),
+                ..._customFieldControls(
+                  'fork',
+                  _sectionName('fork', lang),
+                  lang,
                 ),
               ],
-              _parameterSwitch(
-                title: Translations.get(lang, 'hsc'),
-                value: _shockHsc,
-                onChanged: (v) => setState(() => _shockHsc = v),
-                unitKey: 'shockHsc',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'lsc'),
-                value: _shockLsc,
-                onChanged: (v) => setState(() => _shockLsc = v),
-                unitKey: 'shockLsc',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'hsr'),
-                value: _shockHsr,
-                onChanged: (v) => setState(() => _shockHsr = v),
-                unitKey: 'shockHsr',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'lsr'),
-                value: _shockLsr,
-                onChanged: (v) => setState(() => _shockLsr = v),
-                unitKey: 'shockLsr',
-                defaultUnit: 'Klicks',
-              ),
-              _parameterSwitch(
-                title: Translations.get(lang, 'hbo'),
-                value: _shockHbo,
-                onChanged: (v) => setState(() => _shockHbo = v),
-                unitKey: 'shockHbo',
-                defaultUnit: 'Klicks',
-              ),
-              ..._customFieldControls(
-                'shock',
-                _sectionName('shock', lang),
-                lang,
-              ),
-            ],
-          ),
-          buildSection(
-            storageKey: 'tires-section',
-            title: Translations.get(lang, 'tireSettings'),
-            icon: Icons.tire_repair,
-            initiallyExpanded: false,
-            children: [
-              _parameterSwitch(
-                title: Translations.get(lang, 'trackTires'),
-                value: _tires,
-                onChanged: (v) => setState(() => _tires = v),
-                unitKey: 'tirePressure',
-                defaultUnit: 'bar/PSI',
-              ),
-              ..._customFieldControls(
-                'tires',
-                _sectionName('tires', lang),
-                lang,
-              ),
-            ],
-          ),
-          for (final category in visibleCustomCategories)
+            ),
             buildSection(
-              storageKey: '${category.id}-section',
-              title: category.name,
-              icon: Icons.category_outlined,
-              initiallyExpanded: false,
+              storageKey: 'shock-section',
+              title: Translations.get(lang, 'shockSettings'),
+              svgPath: 'assets/icons/shock.svg',
               children: [
-                ..._customFieldControls(category.id, category.name, lang),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: () {
-                      context.read<BikeProvider>().deleteCustomCategoryTemplate(
-                        category.id,
-                      );
-                      setState(
-                        () => _customCategories.removeWhere(
-                          (item) => item.id == category.id,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.delete_outline),
-                    label: Text(
-                      lang == 'de' ? 'Kategorie löschen' : 'Delete category',
-                    ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        Translations.get(lang, 'shockType'),
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<bool>(
+                        segments: [
+                          ButtonSegment(
+                            value: false,
+                            label: Text(Translations.get(lang, 'airShock')),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text(Translations.get(lang, 'coilShock')),
+                          ),
+                        ],
+                        selected: {_shockIsCoil},
+                        onSelectionChanged: (selection) =>
+                            setState(() => _shockIsCoil = selection.first),
+                      ),
+                    ],
                   ),
                 ),
+                if (!_shockIsCoil) ...[
+                  _parameterSwitch(
+                    title: Translations.get(lang, 'shockAir'),
+                    value: _shockPsi,
+                    onChanged: (v) => setState(() => _shockPsi = v),
+                    unitKey: 'shockPsi',
+                    defaultUnit: 'PSI',
+                  ),
+                  _parameterSwitch(
+                    title: Translations.get(lang, 'tokens'),
+                    value: _shockTokens,
+                    onChanged: (v) => setState(() => _shockTokens = v),
+                    unitKey: 'shockTokens',
+                    defaultUnit: Translations.get(lang, 'unitPieces'),
+                  ),
+                ] else ...[
+                  _parameterSwitch(
+                    title: Translations.get(lang, 'springRate'),
+                    value: _shockRate,
+                    onChanged: (v) => setState(() => _shockRate = v),
+                    unitKey: 'shockRate',
+                    defaultUnit: 'lbs/in',
+                  ),
+                  _parameterSwitch(
+                    title: Translations.get(lang, 'preload'),
+                    value: _shockPreload,
+                    onChanged: (v) => setState(() => _shockPreload = v),
+                    unitKey: 'shockPreload',
+                    defaultUnit: Translations.get(lang, 'unitTurns'),
+                  ),
+                ],
+                _parameterSwitch(
+                  title: Translations.get(lang, 'hsc'),
+                  value: _shockHsc,
+                  onChanged: (v) => setState(() => _shockHsc = v),
+                  unitKey: 'shockHsc',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'lsc'),
+                  value: _shockLsc,
+                  onChanged: (v) => setState(() => _shockLsc = v),
+                  unitKey: 'shockLsc',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'hsr'),
+                  value: _shockHsr,
+                  onChanged: (v) => setState(() => _shockHsr = v),
+                  unitKey: 'shockHsr',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'lsr'),
+                  value: _shockLsr,
+                  onChanged: (v) => setState(() => _shockLsr = v),
+                  unitKey: 'shockLsr',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _parameterSwitch(
+                  title: Translations.get(lang, 'hbo'),
+                  value: _shockHbo,
+                  onChanged: (v) => setState(() => _shockHbo = v),
+                  unitKey: 'shockHbo',
+                  defaultUnit: Translations.get(lang, 'unitClicks'),
+                ),
+                _categoryNotesControl(
+                  'shock',
+                  _sectionName('shock', lang),
+                  lang,
+                ),
+                ..._customFieldControls(
+                  'shock',
+                  _sectionName('shock', lang),
+                  lang,
+                ),
               ],
             ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: OutlinedButton.icon(
-              onPressed: _addCustomCategory,
-              icon: const Icon(Icons.create_new_folder_outlined),
-              label: Text(
-                lang == 'de' ? 'Neue Kategorie hinzufügen' : 'Add new category',
+            buildSection(
+              storageKey: 'tires-section',
+              title: Translations.get(lang, 'tireSettings'),
+              icon: Icons.tire_repair,
+              initiallyExpanded: false,
+              children: [
+                _parameterSwitch(
+                  title: Translations.get(lang, 'trackTires'),
+                  value: _tires,
+                  onChanged: (v) => setState(() => _tires = v),
+                  unitKey: 'tirePressure',
+                  defaultUnit: 'bar/PSI',
+                ),
+                _categoryNotesControl(
+                  'tires',
+                  _sectionName('tires', lang),
+                  lang,
+                ),
+                ..._customFieldControls(
+                  'tires',
+                  _sectionName('tires', lang),
+                  lang,
+                ),
+              ],
+            ),
+            for (final category in visibleCustomCategories)
+              buildSection(
+                storageKey: '${category.id}-section',
+                title: category.name,
+                icon: Icons.category_outlined,
+                initiallyExpanded: false,
+                children: [
+                  _categoryNotesControl(category.id, category.name, lang),
+                  ..._customFieldControls(category.id, category.name, lang),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: () {
+                        context
+                            .read<BikeProvider>()
+                            .deleteCustomCategoryTemplate(category.id);
+                        setState(
+                          () => _customCategories.removeWhere(
+                            (item) => item.id == category.id,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.delete_outline),
+                      label: Text(Translations.get(lang, 'deleteCategory')),
+                    ),
+                  ),
+                ],
+              ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: OutlinedButton.icon(
+                onPressed: _addCustomCategory,
+                icon: const Icon(Icons.create_new_folder_outlined),
+                label: Text(Translations.get(lang, 'addCategory')),
               ),
             ),
-          ),
 
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: FilledButton(
-              onPressed: _saveAndContinue,
-              child: Text(
-                widget.isEditing
-                    ? Translations.get(lang, 'saveChanges')
-                    : Translations.get(lang, 'saveConfig'),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: FilledButton(
+                onPressed: _saveAndContinue,
+                child: Text(
+                  widget.isEditing
+                      ? Translations.get(lang, 'saveChanges')
+                      : Translations.get(lang, 'saveConfig'),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _UnitEditDialog extends StatefulWidget {
+  const _UnitEditDialog({
+    required this.lang,
+    required this.initialUnit,
+    required this.defaultUnit,
+  });
+
+  final String lang;
+  final String initialUnit;
+  final String defaultUnit;
+
+  @override
+  State<_UnitEditDialog> createState() => _UnitEditDialogState();
+}
+
+class _UnitEditDialogState extends State<_UnitEditDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialUnit);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final unit = _controller.text.trim();
+    if (unit.isEmpty) return;
+    Navigator.pop(context, unit);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(Translations.get(widget.lang, 'changeUnit')),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        textInputAction: TextInputAction.done,
+        decoration: InputDecoration(
+          labelText: Translations.get(widget.lang, 'unit'),
+          hintText: widget.defaultUnit,
+        ),
+        onSubmitted: (_) => _submit(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, widget.defaultUnit),
+          child: Text(Translations.get(widget.lang, 'defaultValue')),
+        ),
+        FilledButton(
+          onPressed: _submit,
+          child: Text(Translations.get(widget.lang, 'save')),
+        ),
+      ],
     );
   }
 }
@@ -799,15 +955,14 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isGerman = widget.lang == 'de';
     return AlertDialog(
-      title: Text(isGerman ? 'Neue Kategorie' : 'New category'),
+      title: Text(Translations.get(widget.lang, 'newCategory')),
       content: TextField(
         controller: _controller,
         autofocus: true,
         textInputAction: TextInputAction.done,
         decoration: InputDecoration(
-          labelText: isGerman ? 'Kategoriename' : 'Category name',
+          labelText: Translations.get(widget.lang, 'categoryName'),
         ),
         onSubmitted: (_) => _submit(),
       ),
@@ -818,7 +973,7 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
         ),
         FilledButton(
           onPressed: _submit,
-          child: Text(isGerman ? 'Erstellen' : 'Create'),
+          child: Text(Translations.get(widget.lang, 'create')),
         ),
       ],
     );
@@ -836,17 +991,18 @@ class _CustomFieldDialog extends StatefulWidget {
 }
 
 class _CustomFieldDialogState extends State<_CustomFieldDialog> {
-  static const _units = [
+  static const _customUnitValue = '__custom_unit__';
+  List<String> get _units => [
     '',
     'PSI',
     'bar',
     'mm',
     '%',
-    'Klicks',
-    'Umdr.',
+    Translations.get(widget.lang, 'unitClicks'),
+    Translations.get(widget.lang, 'unitTurns'),
     'Nm',
     '°',
-    'Eigene…',
+    _customUnitValue,
   ];
 
   late final TextEditingController _nameController;
@@ -863,7 +1019,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
     if (field != null &&
         field.unit.isNotEmpty &&
         !_units.contains(field.unit)) {
-      _selectedUnit = 'Eigene…';
+      _selectedUnit = _customUnitValue;
       _customUnitController.text = field.unit;
     } else {
       _selectedUnit = field?.unit ?? '';
@@ -889,7 +1045,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
             DateTime.now().microsecondsSinceEpoch.toString(),
         name: name,
         type: _type,
-        unit: _selectedUnit == 'Eigene…'
+        unit: _selectedUnit == _customUnitValue
             ? _customUnitController.text.trim()
             : _selectedUnit,
       ),
@@ -898,12 +1054,11 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isGerman = widget.lang == 'de';
     return AlertDialog(
       title: Text(
         widget.initialField == null
-            ? (isGerman ? 'Eigenes Feld hinzufügen' : 'Add custom field')
-            : (isGerman ? 'Feld bearbeiten' : 'Edit field'),
+            ? Translations.get(widget.lang, 'addCustomField')
+            : Translations.get(widget.lang, 'editCustomField'),
       ),
       content: SingleChildScrollView(
         child: Column(
@@ -912,7 +1067,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: isGerman ? 'Feldname' : 'Field name',
+                labelText: Translations.get(widget.lang, 'fieldName'),
               ),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _submit(),
@@ -921,20 +1076,20 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
             DropdownButtonFormField<CustomFieldType>(
               initialValue: _type,
               decoration: InputDecoration(
-                labelText: isGerman ? 'Werttyp' : 'Value type',
+                labelText: Translations.get(widget.lang, 'valueType'),
               ),
               items: [
                 DropdownMenuItem(
                   value: CustomFieldType.number,
-                  child: Text(isGerman ? 'Zahl' : 'Number'),
+                  child: Text(Translations.get(widget.lang, 'numberType')),
                 ),
-                const DropdownMenuItem(
+                DropdownMenuItem(
                   value: CustomFieldType.text,
-                  child: Text('Text'),
+                  child: Text(Translations.get(widget.lang, 'textType')),
                 ),
                 DropdownMenuItem(
                   value: CustomFieldType.boolean,
-                  child: Text(isGerman ? 'Ja / Nein' : 'Yes / No'),
+                  child: Text(Translations.get(widget.lang, 'booleanType')),
                 ),
               ],
               onChanged: (value) {
@@ -946,14 +1101,18 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
               DropdownButtonFormField<String>(
                 initialValue: _selectedUnit,
                 decoration: InputDecoration(
-                  labelText: isGerman ? 'Einheit' : 'Unit',
+                  labelText: Translations.get(widget.lang, 'unit'),
                 ),
                 items: _units
                     .map(
                       (unit) => DropdownMenuItem(
                         value: unit,
                         child: Text(
-                          unit.isEmpty ? (isGerman ? 'Keine' : 'None') : unit,
+                          unit.isEmpty
+                              ? Translations.get(widget.lang, 'none')
+                              : unit == _customUnitValue
+                              ? Translations.get(widget.lang, 'customUnit')
+                              : unit,
                         ),
                       ),
                     )
@@ -961,12 +1120,12 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
                 onChanged: (value) =>
                     setState(() => _selectedUnit = value ?? ''),
               ),
-              if (_selectedUnit == 'Eigene…') ...[
+              if (_selectedUnit == _customUnitValue) ...[
                 const SizedBox(height: 12),
                 TextField(
                   controller: _customUnitController,
                   decoration: InputDecoration(
-                    labelText: isGerman ? 'Eigene Einheit' : 'Custom unit',
+                    labelText: Translations.get(widget.lang, 'customUnit'),
                   ),
                 ),
               ],
@@ -983,7 +1142,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
           onPressed: _submit,
           child: Text(
             widget.initialField == null
-                ? (isGerman ? 'Hinzufügen' : 'Add')
+                ? Translations.get(widget.lang, 'add')
                 : Translations.get(widget.lang, 'save'),
           ),
         ),

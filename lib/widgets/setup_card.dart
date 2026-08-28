@@ -154,7 +154,7 @@ class SetupCard extends StatelessWidget {
                 children: [
                   buildValueBox(
                     'assets/icons/fork.svg',
-                    'Gabel',
+                    Translations.get(lang, 'fork'),
                     _formatNum(setup.forkPsi),
                     forkUnitStr,
                   ),
@@ -162,7 +162,7 @@ class SetupCard extends StatelessWidget {
                   // Setzt den korrekten String & Einheit ein
                   buildValueBox(
                     'assets/icons/shock.svg',
-                    'Dämpfer',
+                    Translations.get(lang, 'shock'),
                     shockValStr,
                     shockUnitStr,
                   ),

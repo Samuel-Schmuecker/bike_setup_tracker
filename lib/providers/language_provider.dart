@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../utils/translations.dart';
+
 class LanguageProvider extends ChangeNotifier {
   String _currentLanguage = 'de'; // Standard ist Deutsch
 
@@ -14,11 +16,18 @@ class LanguageProvider extends ChangeNotifier {
 
   Future<void> _loadLanguage() async {
     final prefs = await SharedPreferences.getInstance();
-    _currentLanguage = prefs.getString('app_lang') ?? 'de';
+    final savedLanguage = prefs.getString('app_lang');
+    if (savedLanguage != null &&
+        Translations.supportedLanguageCodes.contains(savedLanguage)) {
+      _currentLanguage = savedLanguage;
+    }
     notifyListeners();
   }
 
   Future<void> setLanguage(String langCode) async {
+    if (!Translations.supportedLanguageCodes.contains(langCode)) {
+      return;
+    }
     if (_currentLanguage != langCode) {
       _currentLanguage = langCode;
       final prefs = await SharedPreferences.getInstance();

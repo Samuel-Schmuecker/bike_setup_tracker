@@ -9,6 +9,8 @@ void main() {
         CustomSetupCategory(
           id: 'fork',
           name: 'Gabel',
+          notesEnabled: true,
+          notes: 'Etwas weniger SAG testen',
           fields: [
             CustomSetupField(
               id: 'field-1',
@@ -33,6 +35,8 @@ void main() {
     );
     expect(restored.customCategories.single.fields.single.unit, '%');
     expect(restored.customCategories.single.fields.single.value, '18');
+    expect(restored.customCategories.single.notesEnabled, isTrue);
+    expect(restored.customCategories.single.notes, 'Etwas weniger SAG testen');
     expect(restored.unitOverrides['forkPsi'], 'bar');
   });
 }
