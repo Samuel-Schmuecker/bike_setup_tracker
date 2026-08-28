@@ -915,9 +915,7 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final dialog = AlertDialog(
-      alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
       title: Text(Translations.get(widget.lang, 'changeUnit')),
@@ -972,9 +970,7 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final dialog = AlertDialog(
-      alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
       title: Text(Translations.get(widget.lang, 'newCategory')),
@@ -1076,9 +1072,7 @@ class _CustomFieldDialogState extends State<_CustomFieldDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final keyboardIsOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     final dialog = AlertDialog(
-      alignment: keyboardIsOpen ? Alignment.topCenter : Alignment.center,
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       title: Text(
         widget.initialField == null
