@@ -34,6 +34,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
   bool _editingOrder = false;
   final Map<String, List<String>> _draftOrders = {};
   final Map<String, List<String>> _initialOrders = {};
+  List<String>? _draftCategoryOrder;
+  List<String> _initialCategoryOrder = [];
 
   Future<void> _finishOrdering() async {
     final changed = <String, List<String>>{
@@ -41,7 +43,10 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         if (!listEquals(entry.value, _initialOrders[entry.key]))
           entry.key: entry.value,
     };
-    if (changed.isEmpty) {
+    final categoriesChanged =
+        _draftCategoryOrder != null &&
+        !listEquals(_draftCategoryOrder, _initialCategoryOrder);
+    if (changed.isEmpty && !categoriesChanged) {
       setState(() => _editingOrder = false);
       return;
     }
@@ -76,6 +81,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       widget.setupId,
       changed,
       applyToAll: applyToAll,
+      categoryOrder: categoriesChanged ? _draftCategoryOrder : null,
     );
     setState(() => _editingOrder = false);
   }
@@ -194,6 +200,31 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 
     final colorScheme = Theme.of(context).colorScheme;
     final lang = context.watch<LanguageProvider>().currentLanguage;
+    final availableCategoryIds = <String>[
+      'fork',
+      'shock',
+      if (params.tires ||
+          params.customCategories.any(
+            (category) =>
+                category.id == 'tires' &&
+                (category.fields.isNotEmpty || category.notesEnabled),
+          ))
+        'tires',
+      for (final category in params.customCategories)
+        if (!const {'fork', 'shock', 'tires'}.contains(category.id) &&
+            (category.fields.isNotEmpty || category.notesEnabled))
+          category.id,
+    ];
+    final categoryOrder = <String>{
+      ...(_editingOrder
+          ? _draftCategoryOrder ?? setup.categoryOrder
+          : setup.categoryOrder),
+      ...availableCategoryIds,
+    }.toList();
+    final visibleCategoryIds = categoryOrder
+        .where(availableCategoryIds.contains)
+        .toList();
+
     Widget orderedFields(String categoryId, List<Widget> children) {
       final original = <String>{
         ...?setup.fieldOrders[categoryId],
@@ -338,6 +369,35 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
               ),
             ),
           ],
+        ),
+      );
+    }
+
+    Widget categoryHeader(
+      String id,
+      String title, {
+      IconData? icon,
+      String? svgPath,
+    }) {
+      final header = buildSectionHeader(title, icon: icon, svgPath: svgPath);
+      if (!_editingOrder) return header;
+      return ReorderableDelayedDragStartListener(
+        key: ValueKey('category-handle-$id'),
+        index: visibleCategoryIds.indexOf(id),
+        child: ColoredBox(
+          color: Colors.transparent,
+          child: Row(
+            children: [
+              Expanded(child: header),
+              Padding(
+                padding: const EdgeInsets.only(right: 16, top: 16),
+                child: Tooltip(
+                  message: Translations.get(lang, 'dragCategory'),
+                  child: Icon(Icons.drag_indicator, color: colorScheme.primary),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -665,6 +725,519 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       );
     }
 
+    final categorySections = <String, Widget>{
+      'fork': Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- FORK ---
+          categoryHeader(
+            'fork',
+            Translations.get(lang, 'fork'),
+            svgPath: 'assets/icons/fork.svg',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: orderedFields('fork', [
+              if (params.forkPsi)
+                buildTile(
+                  'forkPsi',
+                  Translations.get(lang, 'mainShort'),
+                  _formatNum(setup.forkPsi),
+                  unitFor('forkPsi', 'PSI'),
+                  () => showStepperModal(
+                    componentField('fork', 'mainShort'),
+                    unitFor('forkPsi', 'PSI'),
+                    _formatNum(setup.forkPsi),
+                    false,
+                    5,
+                    (v, n) => handleSave(
+                      componentField('fork', 'mainShort'),
+                      _formatNum(setup.forkPsi),
+                      v,
+                      n,
+                      setup.copyWith(forkPsi: _parseDouble(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkOtt)
+                buildTile(
+                  'forkOtt',
+                  Translations.get(lang, 'negativeChamberShort'),
+                  _formatNum(setup.forkOtt),
+                  unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'negativeChamberShort'),
+                    unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
+                    _formatNum(setup.forkOtt),
+                    false,
+                    5,
+                    (v, n) => handleSave(
+                      componentField('fork', 'negativeChamberShort'),
+                      _formatNum(setup.forkOtt),
+                      v,
+                      n,
+                      setup.copyWith(forkOtt: _parseDouble(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkHsc)
+                buildTile(
+                  'forkHsc',
+                  'HSC',
+                  _formatNum(setup.forkHsc),
+                  unitFor('forkHsc', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'hsc'),
+                    unitFor('forkHsc', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkHsc),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'hsc'),
+                      _formatNum(setup.forkHsc),
+                      v,
+                      n,
+                      setup.copyWith(forkHsc: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkLsc)
+                buildTile(
+                  'forkLsc',
+                  'LSC',
+                  _formatNum(setup.forkLsc),
+                  unitFor('forkLsc', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'lsc'),
+                    unitFor('forkLsc', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkLsc),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'lsc'),
+                      _formatNum(setup.forkLsc),
+                      v,
+                      n,
+                      setup.copyWith(forkLsc: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkHsr)
+                buildTile(
+                  'forkHsr',
+                  'HSR',
+                  _formatNum(setup.forkHsr),
+                  unitFor('forkHsr', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'hsr'),
+                    unitFor('forkHsr', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkHsr),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'hsr'),
+                      _formatNum(setup.forkHsr),
+                      v,
+                      n,
+                      setup.copyWith(forkHsr: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkLsr)
+                buildTile(
+                  'forkLsr',
+                  'LSR',
+                  _formatNum(setup.forkLsr),
+                  unitFor('forkLsr', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'lsr'),
+                    unitFor('forkLsr', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkLsr),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'lsr'),
+                      _formatNum(setup.forkLsr),
+                      v,
+                      n,
+                      setup.copyWith(forkLsr: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkTokens)
+                buildTile(
+                  'forkTokens',
+                  Translations.get(lang, 'tokensShort'),
+                  _formatNum(setup.forkTokens),
+                  unitFor('forkTokens', Translations.get(lang, 'unitPieces')),
+                  () => showStepperModal(
+                    componentField('fork', 'tokensShort'),
+                    unitFor('forkTokens', Translations.get(lang, 'unitPieces')),
+                    _formatNum(setup.forkTokens),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'tokensShort'),
+                      _formatNum(setup.forkTokens),
+                      v,
+                      n,
+                      setup.copyWith(forkTokens: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkHbo)
+                buildTile(
+                  'forkHbo',
+                  'HBO',
+                  _formatNum(setup.forkHbo),
+                  unitFor('forkHbo', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('fork', 'hbo'),
+                    unitFor('forkHbo', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkHbo),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('fork', 'hbo'),
+                      _formatNum(setup.forkHbo),
+                      v,
+                      n,
+                      setup.copyWith(forkHbo: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              ...buildCustomFieldTiles(customCategory('fork')),
+            ]),
+          ),
+          buildCategoryNotes(customCategory('fork')),
+        ],
+      ),
+      'shock': Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- SHOCK ---
+          categoryHeader(
+            'shock',
+            Translations.get(lang, 'shock'),
+            svgPath: 'assets/icons/shock.svg',
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: orderedFields('shock', [
+              if (!params.shockIsCoil) ...[
+                if (params.shockPsi)
+                  buildTile(
+                    'shockPsi',
+                    Translations.get(lang, 'airShock'),
+                    _formatNum(setup.shockPsi),
+                    unitFor('shockPsi', 'PSI'),
+                    () => showStepperModal(
+                      Translations.get(lang, 'shockAir'),
+                      unitFor('shockPsi', 'PSI'),
+                      _formatNum(setup.shockPsi),
+                      false,
+                      5,
+                      (v, n) => handleSave(
+                        Translations.get(lang, 'shockAir'),
+                        _formatNum(setup.shockPsi),
+                        v,
+                        n,
+                        setup.copyWith(shockPsi: _parseDouble(v)),
+                      ),
+                    ),
+                  ),
+                if (params.shockTokens)
+                  buildTile(
+                    'shockTokens',
+                    Translations.get(lang, 'tokensShort'),
+                    _formatNum(setup.shockTokens),
+                    unitFor(
+                      'shockTokens',
+                      Translations.get(lang, 'unitPieces'),
+                    ),
+                    () => showStepperModal(
+                      componentField('shock', 'tokensShort'),
+                      unitFor(
+                        'shockTokens',
+                        Translations.get(lang, 'unitPieces'),
+                      ),
+                      _formatNum(setup.shockTokens),
+                      false,
+                      1,
+                      (v, n) => handleSave(
+                        componentField('shock', 'tokensShort'),
+                        _formatNum(setup.shockTokens),
+                        v,
+                        n,
+                        setup.copyWith(shockTokens: int.tryParse(v)),
+                      ),
+                    ),
+                  ),
+              ] else ...[
+                if (params.shockRate)
+                  buildTile(
+                    'shockRate',
+                    Translations.get(lang, 'springShort'),
+                    _formatNum(setup.shockRate),
+                    unitFor('shockRate', 'lbs/in'),
+                    () => showStepperModal(
+                      componentField('shock', 'springRate'),
+                      unitFor('shockRate', 'lbs/in'),
+                      _formatNum(setup.shockRate),
+                      false,
+                      25,
+                      (v, n) => handleSave(
+                        componentField('shock', 'springRate'),
+                        _formatNum(setup.shockRate),
+                        v,
+                        n,
+                        setup.copyWith(shockRate: _parseDouble(v)),
+                      ),
+                    ),
+                  ),
+                if (params.shockPreload)
+                  buildTile(
+                    'shockPreload',
+                    Translations.get(lang, 'preloadShort'),
+                    _formatNum(setup.shockPreload),
+                    unitFor(
+                      'shockPreload',
+                      Translations.get(lang, 'unitTurns'),
+                    ),
+                    () => showStepperModal(
+                      componentField('shock', 'preload'),
+                      unitFor(
+                        'shockPreload',
+                        Translations.get(lang, 'unitTurns'),
+                      ),
+                      _formatNum(setup.shockPreload),
+                      false,
+                      0.25,
+                      (v, n) => handleSave(
+                        componentField('shock', 'preload'),
+                        _formatNum(setup.shockPreload),
+                        v,
+                        n,
+                        setup.copyWith(shockPreload: _parseDouble(v)),
+                      ),
+                    ),
+                  ),
+              ],
+              if (params.shockHsc)
+                buildTile(
+                  'shockHsc',
+                  'HSC',
+                  _formatNum(setup.shockHsc),
+                  unitFor('shockHsc', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('shock', 'hsc'),
+                    unitFor('shockHsc', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.shockHsc),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('shock', 'hsc'),
+                      _formatNum(setup.shockHsc),
+                      v,
+                      n,
+                      setup.copyWith(shockHsc: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.shockLsc)
+                buildTile(
+                  'shockLsc',
+                  'LSC',
+                  _formatNum(setup.shockLsc),
+                  unitFor('shockLsc', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('shock', 'lsc'),
+                    unitFor('shockLsc', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.shockLsc),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('shock', 'lsc'),
+                      _formatNum(setup.shockLsc),
+                      v,
+                      n,
+                      setup.copyWith(shockLsc: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.shockHsr)
+                buildTile(
+                  'shockHsr',
+                  'HSR',
+                  _formatNum(setup.shockHsr),
+                  unitFor('shockHsr', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('shock', 'hsr'),
+                    unitFor('shockHsr', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.shockHsr),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('shock', 'hsr'),
+                      _formatNum(setup.shockHsr),
+                      v,
+                      n,
+                      setup.copyWith(shockHsr: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.shockLsr)
+                buildTile(
+                  'shockLsr',
+                  'LSR',
+                  _formatNum(setup.shockLsr),
+                  unitFor('shockLsr', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('shock', 'lsr'),
+                    unitFor('shockLsr', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.shockLsr),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('shock', 'lsr'),
+                      _formatNum(setup.shockLsr),
+                      v,
+                      n,
+                      setup.copyWith(shockLsr: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              if (params.shockHbo)
+                buildTile(
+                  'shockHbo',
+                  'HBO',
+                  _formatNum(setup.shockHbo),
+                  unitFor('shockHbo', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    componentField('shock', 'hbo'),
+                    unitFor('shockHbo', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.shockHbo),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField('shock', 'hbo'),
+                      _formatNum(setup.shockHbo),
+                      v,
+                      n,
+                      setup.copyWith(shockHbo: int.tryParse(v)),
+                    ),
+                  ),
+                ),
+              ...buildCustomFieldTiles(customCategory('shock')),
+            ]),
+          ),
+          buildCategoryNotes(customCategory('shock')),
+        ],
+      ),
+      if (availableCategoryIds.contains('tires'))
+        'tires': Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            categoryHeader(
+              'tires',
+              Translations.get(lang, 'tires'),
+              svgPath: 'assets/icons/tire.svg',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: orderedFields('tires', [
+                if (params.tires) ...[
+                  buildTireCard(
+                    'frontTire',
+                    Translations.get(lang, 'front'),
+                    setup.frontTire,
+                    _formatNum(setup.frontPressure),
+                    () => showStepperModal(
+                      Translations.get(lang, 'frontTireModel'),
+                      '',
+                      setup.frontTire,
+                      true,
+                      1,
+                      (v, n) => handleSave(
+                        Translations.get(lang, 'frontTireModel'),
+                        setup.frontTire,
+                        v,
+                        n,
+                        setup.copyWith(frontTire: v),
+                      ),
+                    ),
+                    () => showStepperModal(
+                      Translations.get(lang, 'frontTirePressure'),
+                      unitFor('tirePressure', 'bar/PSI'),
+                      _formatNum(setup.frontPressure),
+                      false,
+                      0.1,
+                      (v, n) => handleSave(
+                        Translations.get(lang, 'frontTirePressure'),
+                        _formatNum(setup.frontPressure),
+                        v,
+                        n,
+                        setup.copyWith(frontPressure: _parseDouble(v)),
+                      ),
+                    ),
+                  ),
+                  buildTireCard(
+                    'rearTire',
+                    Translations.get(lang, 'rear'),
+                    setup.rearTire,
+                    _formatNum(setup.rearPressure),
+                    () => showStepperModal(
+                      Translations.get(lang, 'rearTireModel'),
+                      '',
+                      setup.rearTire,
+                      true,
+                      1,
+                      (v, n) => handleSave(
+                        Translations.get(lang, 'rearTireModel'),
+                        setup.rearTire,
+                        v,
+                        n,
+                        setup.copyWith(rearTire: v),
+                      ),
+                    ),
+                    () => showStepperModal(
+                      Translations.get(lang, 'rearTirePressure'),
+                      unitFor('tirePressure', 'bar/PSI'),
+                      _formatNum(setup.rearPressure),
+                      false,
+                      0.1,
+                      (v, n) => handleSave(
+                        Translations.get(lang, 'rearTirePressure'),
+                        _formatNum(setup.rearPressure),
+                        v,
+                        n,
+                        setup.copyWith(rearPressure: _parseDouble(v)),
+                      ),
+                    ),
+                  ),
+                ],
+                ...buildCustomFieldTiles(customCategory('tires')),
+              ]),
+            ),
+            buildCategoryNotes(customCategory('tires')),
+          ],
+        ),
+      for (final category in params.customCategories)
+        if (!const {'fork', 'shock', 'tires'}.contains(category.id) &&
+            availableCategoryIds.contains(category.id))
+          category.id: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              categoryHeader(
+                category.id,
+                category.name,
+                icon: Icons.category_outlined,
+              ),
+              buildCustomFields(category),
+              buildCategoryNotes(category),
+            ],
+          ),
+    };
     return PopScope(
       canPop: !_editingOrder,
       onPopInvokedWithResult: (didPop, result) {
@@ -699,6 +1272,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                         setState(() {
                           _draftOrders.clear();
                           _initialOrders.clear();
+                          _draftCategoryOrder = null;
+                          _initialCategoryOrder = List.of(categoryOrder);
                           _editingOrder = true;
                         });
                       },
@@ -778,586 +1353,42 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                     ),
                   ),
                 ),
+              SliverReorderableList(
+                itemCount: visibleCategoryIds.length,
+                itemBuilder: (context, index) {
+                  final id = visibleCategoryIds[index];
+                  return Container(
+                    key: ValueKey('category-$id'),
+                    child: categorySections[id],
+                  );
+                },
+                onReorder: (oldIndex, newIndex) {
+                  if (!_editingOrder) return;
+                  final visible = List<String>.of(visibleCategoryIds);
+                  if (newIndex > oldIndex) newIndex--;
+                  visible.insert(newIndex, visible.removeAt(oldIndex));
+                  var index = 0;
+                  setState(() {
+                    _draftCategoryOrder = categoryOrder
+                        .map(
+                          (id) => availableCategoryIds.contains(id)
+                              ? visible[index++]
+                              : id,
+                        )
+                        .toList();
+                  });
+                },
+                proxyDecorator: (child, index, animation) => Material(
+                  color: colorScheme.surface,
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(12),
+                  child: child,
+                ),
+              ),
               SliverToBoxAdapter(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- FORK ---
-                    buildSectionHeader(
-                      Translations.get(lang, 'fork'),
-                      svgPath: 'assets/icons/fork.svg',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: orderedFields('fork', [
-                        if (params.forkPsi)
-                          buildTile(
-                            'forkPsi',
-                            Translations.get(lang, 'mainShort'),
-                            _formatNum(setup.forkPsi),
-                            unitFor('forkPsi', 'PSI'),
-                            () => showStepperModal(
-                              componentField('fork', 'mainShort'),
-                              unitFor('forkPsi', 'PSI'),
-                              _formatNum(setup.forkPsi),
-                              false,
-                              5,
-                              (v, n) => handleSave(
-                                componentField('fork', 'mainShort'),
-                                _formatNum(setup.forkPsi),
-                                v,
-                                n,
-                                setup.copyWith(forkPsi: _parseDouble(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkOtt)
-                          buildTile(
-                            'forkOtt',
-                            Translations.get(lang, 'negativeChamberShort'),
-                            _formatNum(setup.forkOtt),
-                            unitFor(
-                              'forkOtt',
-                              Translations.get(lang, 'unitPsiClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'negativeChamberShort'),
-                              unitFor(
-                                'forkOtt',
-                                Translations.get(lang, 'unitPsiClicks'),
-                              ),
-                              _formatNum(setup.forkOtt),
-                              false,
-                              5,
-                              (v, n) => handleSave(
-                                componentField('fork', 'negativeChamberShort'),
-                                _formatNum(setup.forkOtt),
-                                v,
-                                n,
-                                setup.copyWith(forkOtt: _parseDouble(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkHsc)
-                          buildTile(
-                            'forkHsc',
-                            'HSC',
-                            _formatNum(setup.forkHsc),
-                            unitFor(
-                              'forkHsc',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'hsc'),
-                              unitFor(
-                                'forkHsc',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.forkHsc),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'hsc'),
-                                _formatNum(setup.forkHsc),
-                                v,
-                                n,
-                                setup.copyWith(forkHsc: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkLsc)
-                          buildTile(
-                            'forkLsc',
-                            'LSC',
-                            _formatNum(setup.forkLsc),
-                            unitFor(
-                              'forkLsc',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'lsc'),
-                              unitFor(
-                                'forkLsc',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.forkLsc),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'lsc'),
-                                _formatNum(setup.forkLsc),
-                                v,
-                                n,
-                                setup.copyWith(forkLsc: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkHsr)
-                          buildTile(
-                            'forkHsr',
-                            'HSR',
-                            _formatNum(setup.forkHsr),
-                            unitFor(
-                              'forkHsr',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'hsr'),
-                              unitFor(
-                                'forkHsr',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.forkHsr),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'hsr'),
-                                _formatNum(setup.forkHsr),
-                                v,
-                                n,
-                                setup.copyWith(forkHsr: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkLsr)
-                          buildTile(
-                            'forkLsr',
-                            'LSR',
-                            _formatNum(setup.forkLsr),
-                            unitFor(
-                              'forkLsr',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'lsr'),
-                              unitFor(
-                                'forkLsr',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.forkLsr),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'lsr'),
-                                _formatNum(setup.forkLsr),
-                                v,
-                                n,
-                                setup.copyWith(forkLsr: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkTokens)
-                          buildTile(
-                            'forkTokens',
-                            Translations.get(lang, 'tokensShort'),
-                            _formatNum(setup.forkTokens),
-                            unitFor(
-                              'forkTokens',
-                              Translations.get(lang, 'unitPieces'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'tokensShort'),
-                              unitFor(
-                                'forkTokens',
-                                Translations.get(lang, 'unitPieces'),
-                              ),
-                              _formatNum(setup.forkTokens),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'tokensShort'),
-                                _formatNum(setup.forkTokens),
-                                v,
-                                n,
-                                setup.copyWith(forkTokens: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.forkHbo)
-                          buildTile(
-                            'forkHbo',
-                            'HBO',
-                            _formatNum(setup.forkHbo),
-                            unitFor(
-                              'forkHbo',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('fork', 'hbo'),
-                              unitFor(
-                                'forkHbo',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.forkHbo),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('fork', 'hbo'),
-                                _formatNum(setup.forkHbo),
-                                v,
-                                n,
-                                setup.copyWith(forkHbo: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        ...buildCustomFieldTiles(customCategory('fork')),
-                      ]),
-                    ),
-                    buildCategoryNotes(customCategory('fork')),
-
-                    // --- SHOCK ---
-                    buildSectionHeader(
-                      Translations.get(lang, 'shock'),
-                      svgPath: 'assets/icons/shock.svg',
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: orderedFields('shock', [
-                        if (!params.shockIsCoil) ...[
-                          if (params.shockPsi)
-                            buildTile(
-                              'shockPsi',
-                              Translations.get(lang, 'airShock'),
-                              _formatNum(setup.shockPsi),
-                              unitFor('shockPsi', 'PSI'),
-                              () => showStepperModal(
-                                Translations.get(lang, 'shockAir'),
-                                unitFor('shockPsi', 'PSI'),
-                                _formatNum(setup.shockPsi),
-                                false,
-                                5,
-                                (v, n) => handleSave(
-                                  Translations.get(lang, 'shockAir'),
-                                  _formatNum(setup.shockPsi),
-                                  v,
-                                  n,
-                                  setup.copyWith(shockPsi: _parseDouble(v)),
-                                ),
-                              ),
-                            ),
-                          if (params.shockTokens)
-                            buildTile(
-                              'shockTokens',
-                              Translations.get(lang, 'tokensShort'),
-                              _formatNum(setup.shockTokens),
-                              unitFor(
-                                'shockTokens',
-                                Translations.get(lang, 'unitPieces'),
-                              ),
-                              () => showStepperModal(
-                                componentField('shock', 'tokensShort'),
-                                unitFor(
-                                  'shockTokens',
-                                  Translations.get(lang, 'unitPieces'),
-                                ),
-                                _formatNum(setup.shockTokens),
-                                false,
-                                1,
-                                (v, n) => handleSave(
-                                  componentField('shock', 'tokensShort'),
-                                  _formatNum(setup.shockTokens),
-                                  v,
-                                  n,
-                                  setup.copyWith(shockTokens: int.tryParse(v)),
-                                ),
-                              ),
-                            ),
-                        ] else ...[
-                          if (params.shockRate)
-                            buildTile(
-                              'shockRate',
-                              Translations.get(lang, 'springShort'),
-                              _formatNum(setup.shockRate),
-                              unitFor('shockRate', 'lbs/in'),
-                              () => showStepperModal(
-                                componentField('shock', 'springRate'),
-                                unitFor('shockRate', 'lbs/in'),
-                                _formatNum(setup.shockRate),
-                                false,
-                                25,
-                                (v, n) => handleSave(
-                                  componentField('shock', 'springRate'),
-                                  _formatNum(setup.shockRate),
-                                  v,
-                                  n,
-                                  setup.copyWith(shockRate: _parseDouble(v)),
-                                ),
-                              ),
-                            ),
-                          if (params.shockPreload)
-                            buildTile(
-                              'shockPreload',
-                              Translations.get(lang, 'preloadShort'),
-                              _formatNum(setup.shockPreload),
-                              unitFor(
-                                'shockPreload',
-                                Translations.get(lang, 'unitTurns'),
-                              ),
-                              () => showStepperModal(
-                                componentField('shock', 'preload'),
-                                unitFor(
-                                  'shockPreload',
-                                  Translations.get(lang, 'unitTurns'),
-                                ),
-                                _formatNum(setup.shockPreload),
-                                false,
-                                0.25,
-                                (v, n) => handleSave(
-                                  componentField('shock', 'preload'),
-                                  _formatNum(setup.shockPreload),
-                                  v,
-                                  n,
-                                  setup.copyWith(shockPreload: _parseDouble(v)),
-                                ),
-                              ),
-                            ),
-                        ],
-                        if (params.shockHsc)
-                          buildTile(
-                            'shockHsc',
-                            'HSC',
-                            _formatNum(setup.shockHsc),
-                            unitFor(
-                              'shockHsc',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('shock', 'hsc'),
-                              unitFor(
-                                'shockHsc',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.shockHsc),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('shock', 'hsc'),
-                                _formatNum(setup.shockHsc),
-                                v,
-                                n,
-                                setup.copyWith(shockHsc: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.shockLsc)
-                          buildTile(
-                            'shockLsc',
-                            'LSC',
-                            _formatNum(setup.shockLsc),
-                            unitFor(
-                              'shockLsc',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('shock', 'lsc'),
-                              unitFor(
-                                'shockLsc',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.shockLsc),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('shock', 'lsc'),
-                                _formatNum(setup.shockLsc),
-                                v,
-                                n,
-                                setup.copyWith(shockLsc: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.shockHsr)
-                          buildTile(
-                            'shockHsr',
-                            'HSR',
-                            _formatNum(setup.shockHsr),
-                            unitFor(
-                              'shockHsr',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('shock', 'hsr'),
-                              unitFor(
-                                'shockHsr',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.shockHsr),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('shock', 'hsr'),
-                                _formatNum(setup.shockHsr),
-                                v,
-                                n,
-                                setup.copyWith(shockHsr: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.shockLsr)
-                          buildTile(
-                            'shockLsr',
-                            'LSR',
-                            _formatNum(setup.shockLsr),
-                            unitFor(
-                              'shockLsr',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('shock', 'lsr'),
-                              unitFor(
-                                'shockLsr',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.shockLsr),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('shock', 'lsr'),
-                                _formatNum(setup.shockLsr),
-                                v,
-                                n,
-                                setup.copyWith(shockLsr: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        if (params.shockHbo)
-                          buildTile(
-                            'shockHbo',
-                            'HBO',
-                            _formatNum(setup.shockHbo),
-                            unitFor(
-                              'shockHbo',
-                              Translations.get(lang, 'unitClicks'),
-                            ),
-                            () => showStepperModal(
-                              componentField('shock', 'hbo'),
-                              unitFor(
-                                'shockHbo',
-                                Translations.get(lang, 'unitClicks'),
-                              ),
-                              _formatNum(setup.shockHbo),
-                              false,
-                              1,
-                              (v, n) => handleSave(
-                                componentField('shock', 'hbo'),
-                                _formatNum(setup.shockHbo),
-                                v,
-                                n,
-                                setup.copyWith(shockHbo: int.tryParse(v)),
-                              ),
-                            ),
-                          ),
-                        ...buildCustomFieldTiles(customCategory('shock')),
-                      ]),
-                    ),
-                    buildCategoryNotes(customCategory('shock')),
-
-                    // --- TIRES ---
-                    if (params.tires ||
-                        (customCategory('tires')?.fields.isNotEmpty ?? false) ||
-                        (customCategory('tires')?.notesEnabled ?? false)) ...[
-                      buildSectionHeader(
-                        Translations.get(lang, 'tires'),
-                        svgPath: 'assets/icons/tire.svg',
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: orderedFields('tires', [
-                          if (params.tires) ...[
-                            buildTireCard(
-                              'frontTire',
-                              Translations.get(lang, 'front'),
-                              setup.frontTire,
-                              _formatNum(setup.frontPressure),
-                              () => showStepperModal(
-                                Translations.get(lang, 'frontTireModel'),
-                                '',
-                                setup.frontTire,
-                                true,
-                                1,
-                                (v, n) => handleSave(
-                                  Translations.get(lang, 'frontTireModel'),
-                                  setup.frontTire,
-                                  v,
-                                  n,
-                                  setup.copyWith(frontTire: v),
-                                ),
-                              ),
-                              () => showStepperModal(
-                                Translations.get(lang, 'frontTirePressure'),
-                                unitFor('tirePressure', 'bar/PSI'),
-                                _formatNum(setup.frontPressure),
-                                false,
-                                0.1,
-                                (v, n) => handleSave(
-                                  Translations.get(lang, 'frontTirePressure'),
-                                  _formatNum(setup.frontPressure),
-                                  v,
-                                  n,
-                                  setup.copyWith(
-                                    frontPressure: _parseDouble(v),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            buildTireCard(
-                              'rearTire',
-                              Translations.get(lang, 'rear'),
-                              setup.rearTire,
-                              _formatNum(setup.rearPressure),
-                              () => showStepperModal(
-                                Translations.get(lang, 'rearTireModel'),
-                                '',
-                                setup.rearTire,
-                                true,
-                                1,
-                                (v, n) => handleSave(
-                                  Translations.get(lang, 'rearTireModel'),
-                                  setup.rearTire,
-                                  v,
-                                  n,
-                                  setup.copyWith(rearTire: v),
-                                ),
-                              ),
-                              () => showStepperModal(
-                                Translations.get(lang, 'rearTirePressure'),
-                                unitFor('tirePressure', 'bar/PSI'),
-                                _formatNum(setup.rearPressure),
-                                false,
-                                0.1,
-                                (v, n) => handleSave(
-                                  Translations.get(lang, 'rearTirePressure'),
-                                  _formatNum(setup.rearPressure),
-                                  v,
-                                  n,
-                                  setup.copyWith(rearPressure: _parseDouble(v)),
-                                ),
-                              ),
-                            ),
-                          ],
-                          ...buildCustomFieldTiles(customCategory('tires')),
-                        ]),
-                      ),
-                      buildCategoryNotes(customCategory('tires')),
-                    ],
-
-                    for (final category in params.customCategories.where(
-                      (category) =>
-                          !const {
-                            'fork',
-                            'shock',
-                            'tires',
-                          }.contains(category.id) &&
-                          (category.fields.isNotEmpty || category.notesEnabled),
-                    )) ...[
-                      buildSectionHeader(
-                        category.name,
-                        icon: Icons.category_outlined,
-                      ),
-                      buildCustomFields(category),
-                      buildCategoryNotes(category),
-                    ],
-
                     // --- LOG ---
                     buildSectionHeader(
                       Translations.get(lang, 'history'),

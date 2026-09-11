@@ -58,7 +58,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   for (final width in [400.0, 200.0, 100.0]) {
-    testWidgets('gap marker and precise insertion at width $width', (
+    testWidgets('fields animate live into place at width $width', (
       tester,
     ) async {
       var order = <String>['a', 'hidden', 'b', 'c'];
@@ -94,6 +94,12 @@ void main() {
 
       Future<void> insert(String source, String anchor, bool before) async {
         final rect = tester.getRect(find.byKey(ValueKey(anchor)));
+        final visible = order.where((id) => id != 'hidden').toList();
+        final movedId =
+            !before && visible.indexOf(source) > visible.indexOf(anchor)
+            ? visible[visible.indexOf(anchor) + 1]
+            : anchor;
+        final movedStart = tester.getTopLeft(find.byKey(ValueKey(movedId)));
         final vertical = width == 100;
         final destination = vertical
             ? Offset(rect.center.dx, before ? rect.top - 6 : rect.bottom + 6)
@@ -105,8 +111,19 @@ void main() {
         await gesture.moveTo(destination);
         await tester.pump();
         final marker = find.byKey(const ValueKey('insertion-fork'));
-        expect(marker, findsOneWidget);
-        expect((tester.getCenter(marker) - destination).distance, lessThan(1));
+        expect(marker, findsNothing);
+        final orderBeforeDrop = List<String>.of(order);
+        await tester.pump(const Duration(milliseconds: 125));
+        final halfway = tester.getTopLeft(find.byKey(ValueKey(movedId)));
+        await tester.pumpAndSettle();
+        final preview = tester.getTopLeft(find.byKey(ValueKey(movedId)));
+        // The surrounding cards move before releasing the pointer.
+        expect(preview, isNot(movedStart));
+        expect(halfway, isNot(preview));
+        expect(order, orderBeforeDrop);
+        await gesture.moveTo(destination + const Offset(0.1, 0.1));
+        await tester.pumpAndSettle();
+        expect(tester.getTopLeft(find.byKey(ValueKey(movedId))), preview);
         await gesture.up();
         await tester.pumpAndSettle();
         expect(marker, findsNothing);
@@ -128,6 +145,7 @@ void main() {
       final setup = TrailSetup(
         id: 's',
         name: 'Setup',
+        categoryOrder: ['shock', 'fork', 'tires'],
         fieldOrders: {
           'fork': ['forkLsr', 'forkPsi', 'custom:sag'],
         },
@@ -140,6 +158,11 @@ void main() {
         setup.fieldOrders,
       );
       expect(TrailSetup.fromMap({'id': 'old'}).fieldOrders, isEmpty);
+      expect(
+        restored.copyWith(notes: 'Updated').categoryOrder,
+        setup.categoryOrder,
+      );
+      expect(TrailSetup.fromMap({'id': 'old'}).categoryOrder, isEmpty);
     },
   );
 
@@ -219,12 +242,141 @@ void main() {
       tester.getTopLeft(find.byKey(const ValueKey('rebound'))).dx,
       lessThan(tester.getTopLeft(find.byKey(const ValueKey('pressure'))).dx),
     );
-    await dragField(tester, 'pressure', 'shock');
+    final rebound = find.byKey(const ValueKey('rebound'));
+    final originalPosition = tester.getTopLeft(rebound);
+    final destination = tester.getCenter(rebound);
+    final outside = tester.getCenter(find.byKey(const ValueKey('shock')));
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.byKey(const ValueKey('pressure'))),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await gesture.moveTo(destination);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(rebound), isNot(originalPosition));
+    await gesture.moveTo(outside);
+    await tester.pumpAndSettle();
+    await gesture.up();
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(rebound), originalPosition);
     expect(order, ['hidden', 'rebound', 'pressure']);
     expect(tester.takeException(), isNull);
   });
 
   for (final applyAll in [false, true]) {
+    testWidgets('categories move together and save with applyAll=$applyAll', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 1800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final provider = await loadProvider();
+      final source = provider.bikes.first.setups.first;
+      provider.updateSetup(
+        'a',
+        source.copyWith(
+          customParameters: BikeParameters(
+            customCategories: const [
+              CustomSetupCategory(
+                id: 'custom-fit',
+                name: 'Fit',
+                notesEnabled: true,
+                notes: 'Keep these notes',
+                fields: [
+                  CustomSetupField(
+                    id: 'reach',
+                    name: 'Reach',
+                    type: CustomFieldType.number,
+                    value: '480',
+                  ),
+                ],
+              ),
+            ],
+          ),
+          fieldOrders: {
+            'fork': ['forkLsr', 'forkPsi', 'forkLsc'],
+          },
+        ),
+      );
+      final before = provider.bikes.first.setups
+          .map((setup) => setup.toMap())
+          .toList();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider.value(value: provider),
+            ChangeNotifierProvider(create: (_) => LanguageProvider()),
+          ],
+          child: const MaterialApp(
+            home: SetupDetailScreen(bikeId: 'a', setupId: 'a-0'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Felder anordnen'));
+      await tester.pumpAndSettle();
+      final handle = find.byKey(const ValueKey('category-handle-custom-fit'));
+      final destination = tester.getTopLeft(
+        find.byKey(const ValueKey('category-fork')),
+      );
+      final start = tester.getCenter(handle);
+      final gesture = await tester.startGesture(start);
+      await tester.pump(const Duration(milliseconds: 600));
+      for (var y = start.dy; y > destination.dy - 40; y -= 60) {
+        await gesture.moveTo(Offset(195, y));
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+      await gesture.moveTo(Offset(195, destination.dy - 40));
+      await tester.pump(const Duration(milliseconds: 500));
+      await gesture.up();
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('category-custom-fit'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const ValueKey('category-fork'))).dy,
+        ),
+      );
+      expect(find.text('480'), findsOneWidget);
+      await tester.tap(find.text('Fertig'));
+      await tester.pumpAndSettle();
+      expect(find.text('Anordnung übernehmen?'), findsOneWidget);
+      await tester.tap(
+        find.text(applyAll ? 'Für alle übernehmen' : 'Nur dieses Setup'),
+      );
+      await tester.pumpAndSettle();
+      expect(provider.bikes.first.setups.first.categoryOrder, [
+        'custom-fit',
+        'fork',
+        'shock',
+        'tires',
+      ]);
+      expect(
+        provider.bikes.first.setups.last.categoryOrder.isNotEmpty,
+        applyAll,
+      );
+      expect(provider.bikes.last.setups.first.categoryOrder, isEmpty);
+      for (var i = 0; i < 2; i++) {
+        expect(
+          provider.bikes.first.setups[i].toMap()..remove('categoryOrder'),
+          before[i]..remove('categoryOrder'),
+        );
+      }
+      await provider.saveToDevice();
+      await provider.loadFromDevice();
+      expect(
+        provider.bikes.first.setups.first.categoryOrder.first,
+        'custom-fit',
+      );
+      await tester.pumpAndSettle();
+      expect(
+        tester.getTopLeft(find.byKey(const ValueKey('category-custom-fit'))).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const ValueKey('category-fork'))).dy,
+        ),
+      );
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('finish asks and saves with applyAll=$applyAll', (
       tester,
     ) async {

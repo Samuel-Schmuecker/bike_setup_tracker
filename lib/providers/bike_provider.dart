@@ -434,6 +434,7 @@ class BikeProvider extends ChangeNotifier {
     String setupId,
     Map<String, List<String>> orders, {
     bool applyToAll = false,
+    List<String>? categoryOrder,
   }) {
     final index = _bikes.indexWhere((bike) => bike.id == bikeId);
     if (index == -1) return;
@@ -443,6 +444,9 @@ class BikeProvider extends ChangeNotifier {
       setups: bike.setups.map((setup) {
         if (!applyToAll && setup.id != setupId) return setup;
         return setup.copyWith(
+          categoryOrder: categoryOrder == null
+              ? null
+              : List<String>.of(categoryOrder),
           fieldOrders: {
             ...setup.fieldOrders,
             for (final entry in orders.entries)

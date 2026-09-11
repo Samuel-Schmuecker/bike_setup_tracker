@@ -150,8 +150,9 @@ class Translations {
       'editFieldOrder': 'Felder anordnen',
       'finishFieldOrder': 'Fertig',
       'dragField': 'Zum Verschieben kurz gedrückt halten und ziehen',
+      'dragCategory': 'Kategorie gedrückt halten und verschieben',
       'fieldOrderHint':
-          'Halte ein Feld kurz gedrückt und ziehe es an die gewünschte Stelle innerhalb seiner Kategorie.',
+          'Halte ein Feld kurz gedrückt und ziehe es innerhalb seiner Kategorie an die gewünschte Stelle. Ganze Kategorien verschiebst du, indem du ihre Überschrift oder den Griff daneben gedrückt hältst und ziehst.',
       'applyFieldOrderTitle': 'Anordnung übernehmen?',
       'applyFieldOrderBody':
           'Diese Anordnung auch für die anderen Setups dieses Rads übernehmen? Werte und aktivierte Felder bleiben unverändert.',
@@ -342,8 +343,9 @@ class Translations {
       'editFieldOrder': 'Arrange fields',
       'finishFieldOrder': 'Done',
       'dragField': 'Briefly hold and drag to move',
+      'dragCategory': 'Hold and drag to move the category',
       'fieldOrderHint':
-          'Briefly hold a field and drag it to the desired position within its category.',
+          'Briefly hold a field and drag it to the desired position within its category. To move an entire category, hold and drag its heading or the handle next to it.',
       'applyFieldOrderTitle': 'Apply field order?',
       'applyFieldOrderBody':
           'Apply this order to the other setups of this bike as well? Values and enabled fields will stay unchanged.',

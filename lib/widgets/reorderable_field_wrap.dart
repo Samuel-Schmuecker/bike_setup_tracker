@@ -1,7 +1,71 @@
 import 'package:flutter/material.dart';
 
+/// Animate wrap layout changes without forcing equal-sized field cards.
+class _AnimatedFieldPosition extends StatefulWidget {
+  const _AnimatedFieldPosition({
+    super.key,
+    required this.orderVersion,
+    required this.animate,
+    required this.child,
+  });
+
+  final int orderVersion;
+  final bool animate;
+  final Widget child;
+
+  @override
+  State<_AnimatedFieldPosition> createState() => _AnimatedFieldPositionState();
+}
+
+class _AnimatedFieldPositionState extends State<_AnimatedFieldPosition>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 250),
+    value: 1,
+  );
+  Offset _from = Offset.zero;
+
+  Offset get _offset => Offset.lerp(
+    _from,
+    Offset.zero,
+    Curves.easeInOut.transform(_controller.value),
+  )!;
+
+  @override
+  void didUpdateWidget(_AnimatedFieldPosition oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.animate || oldWidget.orderVersion == widget.orderVersion) {
+      return;
+    }
+    final box = context.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final previous = box.localToGlobal(Offset.zero) + _offset;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !widget.animate) return;
+      final box = context.findRenderObject() as RenderBox;
+      _from = previous - box.localToGlobal(Offset.zero);
+      _controller.forward(from: 0);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) =>
+        Transform.translate(offset: _offset, child: child),
+    child: widget.child,
+  );
+}
+
 typedef _FieldDrag = ({String category, String field});
-typedef _Insertion = ({String anchor, bool before, Rect marker});
+typedef _Insertion = ({String anchor, bool before});
 
 /// Stable field IDs keep ordering independent of labels and enabled fields.
 class ReorderableFieldWrap extends StatefulWidget {
@@ -29,7 +93,8 @@ class ReorderableFieldWrap extends StatefulWidget {
 class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
   final _layoutKey = GlobalKey();
   final Map<String, GlobalKey> _tileKeys = {};
-  _Insertion? _insertion;
+  List<String>? _previewOrder;
+  String? _draggingField;
 
   String _id(Widget child) => (child.key! as ValueKey<String>).value;
 
@@ -53,32 +118,45 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
         final nearestPoint = fullRow
             ? Offset(point.dx.clamp(rect.left, rect.right), edge)
             : Offset(edge, point.dy.clamp(rect.top, rect.bottom));
-        final candidateDistance = (nearestPoint - point).distanceSquared;
+        final candidateDistance =
+            (nearestPoint - point).distanceSquared -
+            (rect.contains(point) ? 0.01 : 0);
         if (candidateDistance < distance) {
           distance = candidateDistance;
-          nearest = (
-            anchor: id,
-            before: before,
-            marker: fullRow
-                ? Rect.fromLTWH(rect.left, edge - 2, rect.width, 4)
-                : Rect.fromLTWH(edge - 2, rect.top, 4, rect.height),
-          );
+          nearest = (anchor: id, before: before);
         }
       }
     }
     return nearest;
   }
 
-  void _preview(Offset position) {
+  void _preview(Offset position, String field) {
+    final layout = _layoutKey.currentContext?.findRenderObject() as RenderBox?;
+    final slot =
+        _tileKeys[field]?.currentContext?.findRenderObject() as RenderBox?;
+    if (layout == null) return;
+    // Keep the preview stable while the pointer remains in its new slot.
+    if (_previewOrder != null && slot != null) {
+      final rect =
+          slot.localToGlobal(Offset.zero, ancestor: layout) & slot.size;
+      if (rect.inflate(6).contains(layout.globalToLocal(position))) return;
+    }
     final insertion = _locate(position);
-    if (insertion != _insertion) setState(() => _insertion = insertion);
+    if (insertion == null || insertion.anchor == field) return;
+    final updated = <String>{
+      ...(_previewOrder ?? widget.order),
+      for (final child in widget.children) _id(child),
+    }.toList()..remove(field);
+    final index = updated.indexOf(insertion.anchor);
+    updated.insert(index + (insertion.before ? 0 : 1), field);
+    setState(() => _previewOrder = updated);
   }
 
   @override
   Widget build(BuildContext context) {
     final byId = {for (final child in widget.children) _id(child): child};
     final ids = <String>{
-      ...widget.order.where(byId.containsKey),
+      ...(_previewOrder ?? widget.order).where(byId.containsKey),
       ...byId.keys,
     }.toList();
     if (!widget.editing) {
@@ -92,25 +170,19 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
       hitTestBehavior: HitTestBehavior.opaque,
       onWillAcceptWithDetails: (details) {
         if (details.data.category != widget.categoryId) return false;
-        _preview(details.offset);
+        _preview(details.offset, details.data.field);
         return true;
       },
       onMove: (details) {
         if (details.data.category == widget.categoryId) {
-          _preview(details.offset);
+          _preview(details.offset, details.data.field);
         }
       },
-      onLeave: (_) => setState(() => _insertion = null),
+      onLeave: (_) => setState(() => _previewOrder = null),
       onAcceptWithDetails: (details) {
-        final insertion = _locate(details.offset);
-        setState(() => _insertion = null);
-        if (insertion == null || insertion.anchor == details.data.field) return;
-        // Resolve the anchor after removal, preserving disabled field IDs.
-        final updated = <String>{...widget.order, ...ids}.toList()
-          ..remove(details.data.field);
-        final index = updated.indexOf(insertion.anchor);
-        updated.insert(index + (insertion.before ? 0 : 1), details.data.field);
-        widget.onReorder(updated);
+        final updated = _previewOrder;
+        if (updated != null) widget.onReorder(List.of(updated));
+        setState(() => _previewOrder = null);
       },
       builder: (context, candidates, rejected) => Stack(
         key: _layoutKey,
@@ -140,15 +212,23 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
                     ),
                   ],
                 );
-                return SizedBox(
+                return _AnimatedFieldPosition(
                   key: _tileKeys.putIfAbsent(id, GlobalKey.new),
+                  orderVersion: Object.hashAll(ids),
+                  animate: id != _draggingField,
                   child: LongPressDraggable<_FieldDrag>(
                     data: (category: widget.categoryId, field: id),
                     dragAnchorStrategy: pointerDragAnchorStrategy,
                     delay: const Duration(milliseconds: 150),
                     maxSimultaneousDrags: 1,
+                    onDragStarted: () => setState(() => _draggingField = id),
                     onDragEnd: (_) {
-                      if (mounted) setState(() => _insertion = null);
+                      if (mounted) {
+                        setState(() {
+                          _previewOrder = null;
+                          _draggingField = null;
+                        });
+                      }
                     },
                     onDragUpdate: (details) {
                       final position = Scrollable.maybeOf(context)?.position;
@@ -168,7 +248,7 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
                       }
                     },
                     feedback: FractionalTranslation(
-                      translation: const Offset(-0.5, -1.1),
+                      translation: const Offset(-0.5, -0.5),
                       child: Material(
                         color: Colors.transparent,
                         elevation: 8,
@@ -183,7 +263,7 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
                         ),
                       ),
                     ),
-                    childWhenDragging: Opacity(opacity: 0.25, child: tile),
+                    childWhenDragging: Opacity(opacity: 0, child: tile),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
@@ -198,19 +278,6 @@ class _ReorderableFieldWrapState extends State<ReorderableFieldWrap> {
               }).toList(),
             ),
           ),
-          if (_insertion case final insertion?)
-            Positioned.fromRect(
-              rect: insertion.marker,
-              child: IgnorePointer(
-                child: DecoratedBox(
-                  key: ValueKey('insertion-${widget.categoryId}'),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );

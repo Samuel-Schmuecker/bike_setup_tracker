@@ -31,6 +31,7 @@ class TrailSetup {
   final String name;
   final BikeParameters? customParameters;
   final Map<String, List<String>> fieldOrders;
+  final List<String> categoryOrder;
 
   // Fork
   final double? forkPsi;
@@ -68,6 +69,7 @@ class TrailSetup {
     required this.name,
     this.customParameters,
     this.fieldOrders = const {},
+    this.categoryOrder = const [],
     this.forkPsi,
     this.forkOtt,
     this.forkHsc,
@@ -99,6 +101,7 @@ class TrailSetup {
     String? name,
     BikeParameters? customParameters,
     Map<String, List<String>>? fieldOrders,
+    List<String>? categoryOrder,
     double? forkPsi,
     double? forkOtt,
     int? forkHsc,
@@ -129,6 +132,7 @@ class TrailSetup {
       name: name ?? this.name,
       customParameters: customParameters ?? this.customParameters,
       fieldOrders: fieldOrders ?? this.fieldOrders,
+      categoryOrder: categoryOrder ?? this.categoryOrder,
       forkPsi: forkPsi ?? this.forkPsi,
       forkOtt: forkOtt ?? this.forkOtt,
       forkHsc: forkHsc ?? this.forkHsc,
@@ -162,6 +166,7 @@ class TrailSetup {
       'id': id, 'name': name,
       'customParameters': customParameters?.toMap(),
       'fieldOrders': fieldOrders,
+      'categoryOrder': categoryOrder,
       'forkPsi': forkPsi,
       'forkOtt': forkOtt,
       'forkHsc': forkHsc,
@@ -196,6 +201,9 @@ class TrailSetup {
           (value as List? ?? const []).whereType<String>().toList(),
         ),
       ),
+      categoryOrder: (map['categoryOrder'] as List? ?? const [])
+          .whereType<String>()
+          .toList(),
       customParameters: map['customParameters'] is Map
           ? BikeParameters.fromMap(
               Map<String, dynamic>.from(map['customParameters']),
