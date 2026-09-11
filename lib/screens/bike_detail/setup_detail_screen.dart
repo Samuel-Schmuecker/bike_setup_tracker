@@ -2,6 +2,7 @@
 
 import 'package:bike_setup_tracker/providers/language_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../providers/bike_provider.dart';
@@ -10,6 +11,7 @@ import '../../models/bike_parameters.dart';
 import '../../utils/suspension_dictionary.dart';
 import '../../utils/translations.dart';
 import 'setup_configurator_screen.dart';
+import '../../widgets/reorderable_field_wrap.dart';
 
 class SetupDetailScreen extends StatefulWidget {
   final String bikeId;
@@ -29,6 +31,54 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
   late TextEditingController _notesController;
   late FocusNode _notesFocusNode;
   late BikeProvider _bikeProvider;
+  bool _editingOrder = false;
+  final Map<String, List<String>> _draftOrders = {};
+  final Map<String, List<String>> _initialOrders = {};
+
+  Future<void> _finishOrdering() async {
+    final changed = <String, List<String>>{
+      for (final entry in _draftOrders.entries)
+        if (!listEquals(entry.value, _initialOrders[entry.key]))
+          entry.key: entry.value,
+    };
+    if (changed.isEmpty) {
+      setState(() => _editingOrder = false);
+      return;
+    }
+    final bike = _bikeProvider.bikes.firstWhere(
+      (bike) => bike.id == widget.bikeId,
+    );
+    var applyToAll = false;
+    if (bike.setups.length > 1) {
+      final lang = context.read<LanguageProvider>().currentLanguage;
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(Translations.get(lang, 'applyFieldOrderTitle')),
+          content: Text(Translations.get(lang, 'applyFieldOrderBody')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(Translations.get(lang, 'fieldOrderOnlyThis')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(Translations.get(lang, 'fieldOrderApplyAll')),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || result == null) return;
+      applyToAll = result;
+    }
+    _bikeProvider.updateFieldOrders(
+      widget.bikeId,
+      widget.setupId,
+      changed,
+      applyToAll: applyToAll,
+    );
+    setState(() => _editingOrder = false);
+  }
 
   @override
   void initState() {
@@ -144,6 +194,26 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
 
     final colorScheme = Theme.of(context).colorScheme;
     final lang = context.watch<LanguageProvider>().currentLanguage;
+    Widget orderedFields(String categoryId, List<Widget> children) {
+      final original = <String>{
+        ...?setup.fieldOrders[categoryId],
+        for (final child in children) (child.key! as ValueKey<String>).value,
+      }.toList();
+      if (_editingOrder) {
+        _initialOrders.putIfAbsent(categoryId, () => original);
+      }
+      return ReorderableFieldWrap(
+        categoryId: categoryId,
+        order: _editingOrder
+            ? (_draftOrders[categoryId] ?? original)
+            : original,
+        editing: _editingOrder,
+        dragLabel: Translations.get(lang, 'dragField'),
+        onReorder: (order) => setState(() => _draftOrders[categoryId] = order),
+        children: children,
+      );
+    }
+
     String componentField(String componentKey, String fieldKey) {
       return Translations.format(lang, 'componentField', {
         'component': Translations.get(lang, componentKey),
@@ -273,6 +343,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
     }
 
     Widget buildTile(
+      String fieldId,
       String label,
       String? value,
       String unit,
@@ -282,6 +353,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       final isSet = value != null && value != '-';
 
       return InkWell(
+        key: ValueKey(fieldId),
         onTap: onTap,
         borderRadius: BorderRadius.circular(12.0),
         child: Container(
@@ -337,6 +409,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
     }
 
     Widget buildTireCard(
+      String fieldId,
       String position,
       String? model,
       String? pressure,
@@ -347,6 +420,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       final hasPressure = pressure != null && pressure != '-';
 
       return Container(
+        key: ValueKey(fieldId),
+        width: MediaQuery.sizeOf(context).width - 36,
         margin: const EdgeInsets.only(bottom: 12),
         height: 85,
         decoration: BoxDecoration(
@@ -483,6 +558,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         if (field.type == CustomFieldType.boolean) {
           final enabled = field.value == 'true';
           return SizedBox(
+            key: ValueKey('custom:${field.id}'),
             width: 182,
             child: SwitchListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -508,6 +584,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         }
 
         return buildTile(
+          'custom:${field.id}',
           field.name,
           field.value.isEmpty ? null : field.value,
           field.unit,
@@ -533,11 +610,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       if (category.fields.isEmpty) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: buildCustomFieldTiles(category),
-        ),
+        child: orderedFields(category.id, buildCustomFieldTiles(category)),
       );
     }
 
@@ -592,73 +665,134 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       );
     }
 
-    return Scaffold(
-      body: GestureDetector(
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              expandedHeight: 120.0,
-              pinned: true,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.tune),
-                  tooltip: Translations.get(lang, 'setupConfig'),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SetupConfiguratorScreen(
-                          bikeId: bike.id,
-                          setupId: setup.id,
-                          isEditing: true,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 48.0, bottom: 16.0),
-                title: Text(
-                  setup.name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+    return PopScope(
+      canPop: !_editingOrder,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _editingOrder) _finishOrdering();
+      },
+      child: Scaffold(
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: CustomScrollView(
+            slivers: [
+              SliverAppBar(
+                expandedHeight: 120.0,
+                pinned: true,
+                actions: [
+                  if (_editingOrder)
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: Translations.get(lang, 'cancel'),
+                      onPressed: () => setState(() => _editingOrder = false),
+                    ),
+                  if (_editingOrder)
+                    TextButton(
+                      onPressed: _finishOrdering,
+                      child: Text(Translations.get(lang, 'finishFieldOrder')),
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: Translations.get(lang, 'editFieldOrder'),
+                      onPressed: () {
+                        FocusScope.of(context).unfocus();
+                        setState(() {
+                          _draftOrders.clear();
+                          _initialOrders.clear();
+                          _editingOrder = true;
+                        });
+                      },
+                    ),
+                  if (!_editingOrder)
+                    IconButton(
+                      icon: const Icon(Icons.tune),
+                      tooltip: Translations.get(lang, 'setupConfig'),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SetupConfiguratorScreen(
+                              bikeId: bike.id,
+                              setupId: setup.id,
+                              isEditing: true,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
+                flexibleSpace: FlexibleSpaceBar(
+                  titlePadding: const EdgeInsets.only(left: 48.0, bottom: 16.0),
+                  title: Text(
+                    setup.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                ),
-                background: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        colorScheme.surface.withOpacity(0.8),
-                        colorScheme.surface,
-                      ],
+                  background: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          colorScheme.surface.withOpacity(0.8),
+                          colorScheme.surface,
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // --- FORK ---
-                  buildSectionHeader(
-                    Translations.get(lang, 'fork'),
-                    svgPath: 'assets/icons/fork.svg',
+              if (_editingOrder)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: colorScheme.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: colorScheme.primary.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info_outline, color: colorScheme.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              Translations.get(lang, 'fieldOrderHint'),
+                              style: TextStyle(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Wrap(
-                      spacing: 12.0,
-                      runSpacing: 12.0,
-                      children: [
+                ),
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- FORK ---
+                    buildSectionHeader(
+                      Translations.get(lang, 'fork'),
+                      svgPath: 'assets/icons/fork.svg',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: orderedFields('fork', [
                         if (params.forkPsi)
                           buildTile(
+                            'forkPsi',
                             Translations.get(lang, 'mainShort'),
                             _formatNum(setup.forkPsi),
                             unitFor('forkPsi', 'PSI'),
@@ -679,6 +813,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkOtt)
                           buildTile(
+                            'forkOtt',
                             Translations.get(lang, 'negativeChamberShort'),
                             _formatNum(setup.forkOtt),
                             unitFor(
@@ -705,6 +840,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkHsc)
                           buildTile(
+                            'forkHsc',
                             'HSC',
                             _formatNum(setup.forkHsc),
                             unitFor(
@@ -731,6 +867,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkLsc)
                           buildTile(
+                            'forkLsc',
                             'LSC',
                             _formatNum(setup.forkLsc),
                             unitFor(
@@ -757,6 +894,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkHsr)
                           buildTile(
+                            'forkHsr',
                             'HSR',
                             _formatNum(setup.forkHsr),
                             unitFor(
@@ -783,6 +921,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkLsr)
                           buildTile(
+                            'forkLsr',
                             'LSR',
                             _formatNum(setup.forkLsr),
                             unitFor(
@@ -809,6 +948,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkTokens)
                           buildTile(
+                            'forkTokens',
                             Translations.get(lang, 'tokensShort'),
                             _formatNum(setup.forkTokens),
                             unitFor(
@@ -835,6 +975,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.forkHbo)
                           buildTile(
+                            'forkHbo',
                             'HBO',
                             _formatNum(setup.forkHbo),
                             unitFor(
@@ -860,25 +1001,22 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           ),
                         ...buildCustomFieldTiles(customCategory('fork')),
-                      ],
+                      ]),
                     ),
-                  ),
-                  buildCategoryNotes(customCategory('fork')),
+                    buildCategoryNotes(customCategory('fork')),
 
-                  // --- SHOCK ---
-                  buildSectionHeader(
-                    Translations.get(lang, 'shock'),
-                    svgPath: 'assets/icons/shock.svg',
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Wrap(
-                      spacing: 12.0,
-                      runSpacing: 12.0,
-                      children: [
+                    // --- SHOCK ---
+                    buildSectionHeader(
+                      Translations.get(lang, 'shock'),
+                      svgPath: 'assets/icons/shock.svg',
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: orderedFields('shock', [
                         if (!params.shockIsCoil) ...[
                           if (params.shockPsi)
                             buildTile(
+                              'shockPsi',
                               Translations.get(lang, 'airShock'),
                               _formatNum(setup.shockPsi),
                               unitFor('shockPsi', 'PSI'),
@@ -899,6 +1037,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           if (params.shockTokens)
                             buildTile(
+                              'shockTokens',
                               Translations.get(lang, 'tokensShort'),
                               _formatNum(setup.shockTokens),
                               unitFor(
@@ -926,6 +1065,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                         ] else ...[
                           if (params.shockRate)
                             buildTile(
+                              'shockRate',
                               Translations.get(lang, 'springShort'),
                               _formatNum(setup.shockRate),
                               unitFor('shockRate', 'lbs/in'),
@@ -946,6 +1086,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           if (params.shockPreload)
                             buildTile(
+                              'shockPreload',
                               Translations.get(lang, 'preloadShort'),
                               _formatNum(setup.shockPreload),
                               unitFor(
@@ -973,6 +1114,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                         ],
                         if (params.shockHsc)
                           buildTile(
+                            'shockHsc',
                             'HSC',
                             _formatNum(setup.shockHsc),
                             unitFor(
@@ -999,6 +1141,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.shockLsc)
                           buildTile(
+                            'shockLsc',
                             'LSC',
                             _formatNum(setup.shockLsc),
                             unitFor(
@@ -1025,6 +1168,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.shockHsr)
                           buildTile(
+                            'shockHsr',
                             'HSR',
                             _formatNum(setup.shockHsr),
                             unitFor(
@@ -1051,6 +1195,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.shockLsr)
                           buildTile(
+                            'shockLsr',
                             'LSR',
                             _formatNum(setup.shockLsr),
                             unitFor(
@@ -1077,6 +1222,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                           ),
                         if (params.shockHbo)
                           buildTile(
+                            'shockHbo',
                             'HBO',
                             _formatNum(setup.shockHbo),
                             unitFor(
@@ -1102,25 +1248,24 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                             ),
                           ),
                         ...buildCustomFieldTiles(customCategory('shock')),
-                      ],
+                      ]),
                     ),
-                  ),
-                  buildCategoryNotes(customCategory('shock')),
+                    buildCategoryNotes(customCategory('shock')),
 
-                  // --- TIRES ---
-                  if (params.tires ||
-                      (customCategory('tires')?.fields.isNotEmpty ?? false) ||
-                      (customCategory('tires')?.notesEnabled ?? false)) ...[
-                    buildSectionHeader(
-                      Translations.get(lang, 'tires'),
-                      svgPath: 'assets/icons/tire.svg',
-                    ),
-                    if (params.tires)
+                    // --- TIRES ---
+                    if (params.tires ||
+                        (customCategory('tires')?.fields.isNotEmpty ?? false) ||
+                        (customCategory('tires')?.notesEnabled ?? false)) ...[
+                      buildSectionHeader(
+                        Translations.get(lang, 'tires'),
+                        svgPath: 'assets/icons/tire.svg',
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Column(
-                          children: [
+                        child: orderedFields('tires', [
+                          if (params.tires) ...[
                             buildTireCard(
+                              'frontTire',
                               Translations.get(lang, 'front'),
                               setup.frontTire,
                               _formatNum(setup.frontPressure),
@@ -1156,6 +1301,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                               ),
                             ),
                             buildTireCard(
+                              'rearTire',
                               Translations.get(lang, 'rear'),
                               setup.rearTire,
                               _formatNum(setup.rearPressure),
@@ -1189,230 +1335,233 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
                               ),
                             ),
                           ],
-                        ),
+                          ...buildCustomFieldTiles(customCategory('tires')),
+                        ]),
                       ),
-                    if (customCategory('tires') case final category?)
+                      buildCategoryNotes(customCategory('tires')),
+                    ],
+
+                    for (final category in params.customCategories.where(
+                      (category) =>
+                          !const {
+                            'fork',
+                            'shock',
+                            'tires',
+                          }.contains(category.id) &&
+                          (category.fields.isNotEmpty || category.notesEnabled),
+                    )) ...[
+                      buildSectionHeader(
+                        category.name,
+                        icon: Icons.category_outlined,
+                      ),
                       buildCustomFields(category),
-                    buildCategoryNotes(customCategory('tires')),
-                  ],
+                      buildCategoryNotes(category),
+                    ],
 
-                  for (final category in params.customCategories.where(
-                    (category) =>
-                        !const {
-                          'fork',
-                          'shock',
-                          'tires',
-                        }.contains(category.id) &&
-                        (category.fields.isNotEmpty || category.notesEnabled),
-                  )) ...[
+                    // --- LOG ---
                     buildSectionHeader(
-                      category.name,
-                      icon: Icons.category_outlined,
+                      Translations.get(lang, 'history'),
+                      icon: Icons.history,
                     ),
-                    buildCustomFields(category),
-                    buildCategoryNotes(category),
-                  ],
-
-                  // --- LOG ---
-                  buildSectionHeader(
-                    Translations.get(lang, 'history'),
-                    icon: Icons.history,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: setup.logs.isEmpty
-                        ? Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              Translations.get(lang, 'noHistory'),
-                              style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: Colors.white.withOpacity(0.5),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: setup.logs.isEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                Translations.get(lang, 'noHistory'),
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.white.withOpacity(0.5),
+                                ),
                               ),
-                            ),
-                          )
-                        : ConstrainedBox(
-                            constraints: const BoxConstraints(maxHeight: 240),
-                            child: ShaderMask(
-                              shaderCallback: (Rect bounds) {
-                                return const LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: [
-                                    Colors.white,
-                                    Colors.white,
-                                    Colors.transparent,
-                                  ],
-                                  stops: [0.0, 0.75, 1.0],
-                                ).createShader(bounds);
-                              },
-                              blendMode: BlendMode.dstIn,
-                              child: ListView.builder(
-                                shrinkWrap: true,
-                                physics: const BouncingScrollPhysics(),
-                                padding: EdgeInsets.zero,
-                                itemCount: setup.logs.length,
-                                itemBuilder: (context, index) {
-                                  final log = setup.logs[index];
-                                  final isLast = index == setup.logs.length - 1;
+                            )
+                          : ConstrainedBox(
+                              constraints: const BoxConstraints(maxHeight: 240),
+                              child: ShaderMask(
+                                shaderCallback: (Rect bounds) {
+                                  return const LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white,
+                                      Colors.white,
+                                      Colors.transparent,
+                                    ],
+                                    stops: [0.0, 0.75, 1.0],
+                                  ).createShader(bounds);
+                                },
+                                blendMode: BlendMode.dstIn,
+                                child: ListView.builder(
+                                  shrinkWrap: true,
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: EdgeInsets.zero,
+                                  itemCount: setup.logs.length,
+                                  itemBuilder: (context, index) {
+                                    final log = setup.logs[index];
+                                    final isLast =
+                                        index == setup.logs.length - 1;
 
-                                  String mainText = log.parameters;
-                                  String diffBadge = '';
-                                  final regex = RegExp(r'(.*)\s\((.*)\)$');
-                                  final match = regex.firstMatch(
-                                    log.parameters,
-                                  );
-                                  if (match != null) {
-                                    mainText = match.group(1) ?? log.parameters;
-                                    diffBadge = match.group(2) ?? '';
-                                  }
+                                    String mainText = log.parameters;
+                                    String diffBadge = '';
+                                    final regex = RegExp(r'(.*)\s\((.*)\)$');
+                                    final match = regex.firstMatch(
+                                      log.parameters,
+                                    );
+                                    if (match != null) {
+                                      mainText =
+                                          match.group(1) ?? log.parameters;
+                                      diffBadge = match.group(2) ?? '';
+                                    }
 
-                                  return Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Column(
-                                        children: [
-                                          Container(
-                                            margin: const EdgeInsets.only(
-                                              top: 6,
-                                            ),
-                                            width: 10,
-                                            height: 10,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
-                                                color: colorScheme.primary,
-                                                width: 2,
-                                              ),
-                                              color: Theme.of(
-                                                context,
-                                              ).scaffoldBackgroundColor,
-                                            ),
-                                          ),
-                                          if (!isLast)
+                                    return Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Column(
+                                          children: [
                                             Container(
-                                              width: 1.5,
-                                              height: 50,
-                                              color: Colors.white.withOpacity(
-                                                0.1,
+                                              margin: const EdgeInsets.only(
+                                                top: 6,
                                               ),
-                                            )
-                                          else
-                                            const SizedBox(height: 10),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 16),
-                                      Expanded(
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 24.0,
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Expanded(
-                                                    child: Text(
-                                                      mainText,
-                                                      style: const TextStyle(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        fontSize: 14,
-                                                        color: Colors.white,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  if (diffBadge.isNotEmpty)
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 2,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: colorScheme
-                                                            .primaryContainer
-                                                            .withOpacity(0.8),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              12,
-                                                            ),
-                                                      ),
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                border: Border.all(
+                                                  color: colorScheme.primary,
+                                                  width: 2,
+                                                ),
+                                                color: Theme.of(
+                                                  context,
+                                                ).scaffoldBackgroundColor,
+                                              ),
+                                            ),
+                                            if (!isLast)
+                                              Container(
+                                                width: 1.5,
+                                                height: 50,
+                                                color: Colors.white.withOpacity(
+                                                  0.1,
+                                                ),
+                                              )
+                                            else
+                                              const SizedBox(height: 10),
+                                          ],
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          child: Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 24.0,
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.center,
+                                                  children: [
+                                                    Expanded(
                                                       child: Text(
-                                                        diffBadge,
-                                                        style: TextStyle(
-                                                          fontSize: 12,
+                                                        mainText,
+                                                        style: const TextStyle(
                                                           fontWeight:
-                                                              FontWeight.bold,
-                                                          color: colorScheme
-                                                              .onPrimaryContainer,
+                                                              FontWeight.w600,
+                                                          fontSize: 14,
+                                                          color: Colors.white,
                                                         ),
                                                       ),
                                                     ),
-                                                ],
-                                              ),
-                                              if (log.note.isNotEmpty) ...[
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  log.note,
-                                                  style: TextStyle(
-                                                    fontStyle: FontStyle.italic,
-                                                    color: Colors.white
-                                                        .withOpacity(0.5),
-                                                    fontSize: 13,
-                                                  ),
+                                                    if (diffBadge.isNotEmpty)
+                                                      Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 8,
+                                                              vertical: 2,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: colorScheme
+                                                              .primaryContainer
+                                                              .withOpacity(0.8),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                        ),
+                                                        child: Text(
+                                                          diffBadge,
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: colorScheme
+                                                                .onPrimaryContainer,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                  ],
                                                 ),
+                                                if (log.note.isNotEmpty) ...[
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    log.note,
+                                                    style: TextStyle(
+                                                      fontStyle:
+                                                          FontStyle.italic,
+                                                      color: Colors.white
+                                                          .withOpacity(0.5),
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ],
                                               ],
-                                            ],
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
-                                  );
-                                },
+                                      ],
+                                    );
+                                  },
+                                ),
                               ),
                             ),
-                          ),
-                  ),
+                    ),
 
-                  // --- NOTIZEN ---
-                  buildSectionHeader(
-                    Translations.get(lang, 'notes'),
-                    icon: Icons.edit_note,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: TextField(
-                      controller: _notesController,
-                      focusNode: _notesFocusNode,
-                      maxLines: 4,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: Translations.get(lang, 'notesHint'),
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.3),
+                    // --- NOTIZEN ---
+                    buildSectionHeader(
+                      Translations.get(lang, 'notes'),
+                      icon: Icons.edit_note,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: TextField(
+                        controller: _notesController,
+                        focusNode: _notesFocusNode,
+                        maxLines: 4,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          hintText: Translations.get(lang, 'notesHint'),
+                          hintStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.3),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest
+                              .withOpacity(0.3),
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: colorScheme.surfaceContainerHighest
-                            .withOpacity(0.3),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 60),
-                ],
+                    const SizedBox(height: 60),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

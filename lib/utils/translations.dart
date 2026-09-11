@@ -143,6 +143,20 @@ class Translations {
       'booleanNo': 'Nein',
       'customField': 'Eigenes Feld',
       'deleteCategory': 'Kategorie löschen',
+      'deleteCategoryConfirmTitle': 'Kategorie wirklich löschen?',
+      'deleteCategoryConfirmBody':
+          'Die Kategorie mit allen Feldern und gespeicherten Werten wird auch aus allen anderen Rädern und Setups entfernt. Wenn du die Felder nur ausblenden möchtest, deaktiviere sie stattdessen im jeweiligen Rad oder Setup.',
+      'renameCategory': 'Kategorie umbenennen',
+      'editFieldOrder': 'Felder anordnen',
+      'finishFieldOrder': 'Fertig',
+      'dragField': 'Zum Verschieben kurz gedrückt halten und ziehen',
+      'fieldOrderHint':
+          'Halte ein Feld kurz gedrückt und ziehe es an die gewünschte Stelle innerhalb seiner Kategorie.',
+      'applyFieldOrderTitle': 'Anordnung übernehmen?',
+      'applyFieldOrderBody':
+          'Diese Anordnung auch für die anderen Setups dieses Rads übernehmen? Werte und aktivierte Felder bleiben unverändert.',
+      'fieldOrderOnlyThis': 'Nur dieses Setup',
+      'fieldOrderApplyAll': 'Für alle übernehmen',
       'addCategory': 'Neue Kategorie hinzufügen',
       'changeUnit': 'Einheit ändern',
       'unit': 'Einheit',
@@ -321,6 +335,20 @@ class Translations {
       'booleanNo': 'No',
       'customField': 'Custom field',
       'deleteCategory': 'Delete category',
+      'deleteCategoryConfirmTitle': 'Delete category?',
+      'deleteCategoryConfirmBody':
+          'The category, including all fields and saved values, will also be removed from every other bike and setup. To only hide the fields, deactivate them in the respective bike or setup instead.',
+      'renameCategory': 'Rename category',
+      'editFieldOrder': 'Arrange fields',
+      'finishFieldOrder': 'Done',
+      'dragField': 'Briefly hold and drag to move',
+      'fieldOrderHint':
+          'Briefly hold a field and drag it to the desired position within its category.',
+      'applyFieldOrderTitle': 'Apply field order?',
+      'applyFieldOrderBody':
+          'Apply this order to the other setups of this bike as well? Values and enabled fields will stay unchanged.',
+      'fieldOrderOnlyThis': 'Only this setup',
+      'fieldOrderApplyAll': 'Apply to all',
       'addCategory': 'Add new category',
       'changeUnit': 'Change unit',
       'unit': 'Unit',

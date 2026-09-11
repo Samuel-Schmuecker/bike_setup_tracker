@@ -280,6 +280,78 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     setState(() => _customCategories.add(category));
   }
 
+  Future<void> _manageCustomCategory(CustomSetupCategory category) async {
+    final lang = context.read<LanguageProvider>().currentLanguage;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(Translations.get(lang, 'renameCategory')),
+              onTap: () => Navigator.pop(context, 'rename'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: Text(Translations.get(lang, 'deleteCategory')),
+              onTap: () => Navigator.pop(context, 'delete'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'rename') {
+      final name = await showDialog<String>(
+        context: context,
+        builder: (_) =>
+            _CustomCategoryDialog(lang: lang, initialName: category.name),
+      );
+      if (name == null || !mounted) return;
+      context.read<BikeProvider>().renameCustomCategoryTemplate(
+        category.id,
+        name,
+      );
+      setState(() {
+        _customCategories = _customCategories
+            .map(
+              (item) =>
+                  item.id == category.id ? item.copyWith(name: name) : item,
+            )
+            .toList();
+      });
+    } else if (action == 'delete') {
+      await _deleteCustomCategory(category.id);
+    }
+  }
+
+  Future<void> _deleteCustomCategory(String categoryId) async {
+    final lang = context.read<LanguageProvider>().currentLanguage;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(Translations.get(lang, 'deleteCategoryConfirmTitle')),
+        content: Text(Translations.get(lang, 'deleteCategoryConfirmBody')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(Translations.get(lang, 'cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(Translations.get(lang, 'delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    context.read<BikeProvider>().deleteCustomCategoryTemplate(categoryId);
+    setState(
+      () => _customCategories.removeWhere((item) => item.id == categoryId),
+    );
+  }
+
   void _removeCustomField(String categoryId, String fieldId) {
     setState(() {
       final index = _customCategories.indexWhere(
@@ -556,6 +628,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     String? svgPath,
     required List<Widget> children,
     bool initiallyExpanded = true,
+    VoidCallback? onLongPress,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -576,9 +649,13 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                 ),
               )
             : Icon(icon, color: colorScheme.primary),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        title: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: onLongPress,
+          child: Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
         ),
         childrenPadding: const EdgeInsets.only(bottom: 8),
         children: children,
@@ -826,6 +903,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
               buildSection(
                 storageKey: '${category.id}-section',
                 title: category.name,
+                onLongPress: () => _manageCustomCategory(category),
                 icon: Icons.category_outlined,
                 initiallyExpanded: false,
                 children: [
@@ -834,16 +912,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton.icon(
-                      onPressed: () {
-                        context
-                            .read<BikeProvider>()
-                            .deleteCustomCategoryTemplate(category.id);
-                        setState(
-                          () => _customCategories.removeWhere(
-                            (item) => item.id == category.id,
-                          ),
-                        );
-                      },
+                      onPressed: () => _deleteCustomCategory(category.id),
                       icon: const Icon(Icons.delete_outline),
                       label: Text(Translations.get(lang, 'deleteCategory')),
                     ),
@@ -945,16 +1014,23 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
 }
 
 class _CustomCategoryDialog extends StatefulWidget {
-  const _CustomCategoryDialog({required this.lang});
+  const _CustomCategoryDialog({required this.lang, this.initialName});
 
   final String lang;
+  final String? initialName;
 
   @override
   State<_CustomCategoryDialog> createState() => _CustomCategoryDialogState();
 }
 
 class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
-  final _controller = TextEditingController();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
 
   @override
   void dispose() {
@@ -973,7 +1049,12 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
     final dialog = AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
-      title: Text(Translations.get(widget.lang, 'newCategory')),
+      title: Text(
+        Translations.get(
+          widget.lang,
+          widget.initialName == null ? 'newCategory' : 'renameCategory',
+        ),
+      ),
       content: TextField(
         controller: _controller,
         autofocus: true,
@@ -990,7 +1071,12 @@ class _CustomCategoryDialogState extends State<_CustomCategoryDialog> {
         ),
         FilledButton(
           onPressed: _submit,
-          child: Text(Translations.get(widget.lang, 'create')),
+          child: Text(
+            Translations.get(
+              widget.lang,
+              widget.initialName == null ? 'create' : 'save',
+            ),
+          ),
         ),
       ],
     );

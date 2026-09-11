@@ -232,6 +232,35 @@ class BikeProvider extends ChangeNotifier {
     _saveCustomFieldCatalog();
   }
 
+  void renameCustomCategoryTemplate(String categoryId, String name) {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty ||
+        const {'fork', 'shock', 'tires'}.contains(categoryId)) {
+      return;
+    }
+    _customFieldCatalog = _customFieldCatalog
+        .map(
+          (category) => category.id == categoryId
+              ? category.copyWith(name: trimmedName)
+              : category,
+        )
+        .toList();
+    _transformAllParameters(
+      (parameters) => parameters.copyWith(
+        customCategories: parameters.customCategories
+            .map(
+              (category) => category.id == categoryId
+                  ? category.copyWith(name: trimmedName)
+                  : category,
+            )
+            .toList(),
+      ),
+    );
+    notifyListeners();
+    saveToDevice();
+    _saveCustomFieldCatalog();
+  }
+
   void deleteCustomCategoryTemplate(String categoryId) {
     _customFieldCatalog.removeWhere((item) => item.id == categoryId);
     _transformAllParameters((parameters) {
@@ -398,6 +427,32 @@ class BikeProvider extends ChangeNotifier {
         saveToDevice(); // AUTO-SAVE
       }
     }
+  }
+
+  void updateFieldOrders(
+    String bikeId,
+    String setupId,
+    Map<String, List<String>> orders, {
+    bool applyToAll = false,
+  }) {
+    final index = _bikes.indexWhere((bike) => bike.id == bikeId);
+    if (index == -1) return;
+    final bike = _bikes[index];
+    if (!bike.setups.any((setup) => setup.id == setupId)) return;
+    _bikes[index] = bike.copyWith(
+      setups: bike.setups.map((setup) {
+        if (!applyToAll && setup.id != setupId) return setup;
+        return setup.copyWith(
+          fieldOrders: {
+            ...setup.fieldOrders,
+            for (final entry in orders.entries)
+              entry.key: List<String>.of(entry.value),
+          },
+        );
+      }).toList(),
+    );
+    notifyListeners();
+    saveToDevice();
   }
 
   void deleteSetup(String bikeId, String setupId) {
