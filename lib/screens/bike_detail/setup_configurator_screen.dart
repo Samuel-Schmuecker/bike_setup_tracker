@@ -523,8 +523,9 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   List<Widget> _customFieldControls(
     String categoryId,
     String categoryName,
-    String lang,
-  ) {
+    String lang, {
+    bool insertsOnly = false,
+  }) {
     final selectedIndex = _customCategories.indexWhere(
       (category) => category.id == categoryId,
     );
@@ -539,16 +540,29 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
         ? const <CustomSetupField>[]
         : catalog[catalogIndex].fields;
     final fields = <CustomSetupField>[
+      if (categoryId == 'tires' &&
+          !catalogFields.any((field) => field.id == 'tireInserts') &&
+          !selectedFields.any((field) => field.id == 'tireInserts'))
+        const CustomSetupField(
+          id: 'tireInserts',
+          name: 'Inserts',
+          type: CustomFieldType.boolean,
+        ),
       ...catalogFields,
       ...selectedFields.where(
         (field) => !catalogFields.any((item) => item.id == field.id),
       ),
     ];
     return [
-      for (final field in fields)
+      for (final field in fields.where(
+        (field) =>
+            (categoryId == 'tires' && field.id == 'tireInserts') == insertsOnly,
+      ))
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onLongPress: () => _manageCustomField(categoryId, field),
+          onLongPress: field.id == 'tireInserts'
+              ? null
+              : () => _manageCustomField(categoryId, field),
           child: SwitchListTile(
             secondary: const Icon(Icons.tune),
             title: Text(field.name),
@@ -573,17 +587,18 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                 _toggleCustomField(categoryId, categoryName, field, selected),
           ),
         ),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
-          child: OutlinedButton.icon(
-            onPressed: () => _addCustomField(categoryId, categoryName),
-            icon: const Icon(Icons.add),
-            label: Text(Translations.get(lang, 'customField')),
+      if (!insertsOnly)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+            child: OutlinedButton.icon(
+              onPressed: () => _addCustomField(categoryId, categoryName),
+              icon: const Icon(Icons.add),
+              label: Text(Translations.get(lang, 'customField')),
+            ),
           ),
         ),
-      ),
     ];
   }
 
@@ -886,6 +901,12 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                   onChanged: (v) => setState(() => _tires = v),
                   unitKey: 'tirePressure',
                   defaultUnit: 'bar/PSI',
+                ),
+                ..._customFieldControls(
+                  'tires',
+                  _sectionName('tires', lang),
+                  lang,
+                  insertsOnly: true,
                 ),
                 _categoryNotesControl(
                   'tires',

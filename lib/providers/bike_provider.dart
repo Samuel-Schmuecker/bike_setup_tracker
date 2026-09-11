@@ -414,6 +414,18 @@ class BikeProvider extends ChangeNotifier {
     }
   }
 
+  void clearSetupHistory(String bikeId, String setupId) {
+    final bikeIndex = _bikes.indexWhere((bike) => bike.id == bikeId);
+    if (bikeIndex == -1) return;
+    final setupIndex = _bikes[bikeIndex].setups.indexWhere(
+      (setup) => setup.id == setupId,
+    );
+    if (setupIndex == -1) return;
+    final setup = _bikes[bikeIndex].setups[setupIndex];
+    if (setup.logs.isEmpty) return;
+    updateSetup(bikeId, setup.copyWith(logs: []));
+  }
+
   void updateSetup(String bikeId, TrailSetup updatedSetup) {
     final bikeIndex = _bikes.indexWhere((b) => b.id == bikeId);
     if (bikeIndex != -1) {
@@ -486,6 +498,23 @@ class BikeProvider extends ChangeNotifier {
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }
+  }
+
+  void reorderSetups(String bikeId, List<String> setupIds) {
+    final index = _bikes.indexWhere((bike) => bike.id == bikeId);
+    if (index == -1) return;
+    final bike = _bikes[index];
+    final byId = {for (final setup in bike.setups) setup.id: setup};
+    if (setupIds.length != byId.length ||
+        setupIds.toSet().length != byId.length ||
+        setupIds.any((id) => !byId.containsKey(id))) {
+      return;
+    }
+    _bikes[index] = bike.copyWith(
+      setups: setupIds.map((id) => byId[id]!).toList(),
+    );
+    notifyListeners();
+    saveToDevice();
   }
 
   void toggleSetupFavorite(String bikeId, String setupId) {

@@ -3,6 +3,9 @@
 class Translations {
   static const Map<String, Map<String, String>> texts = {
     'de': {
+      'orderSetups': 'Setups ordnen',
+      'favoritesStayFirst':
+          'Ziehe die Setups in die gewünschte Reihenfolge. Favoriten bleiben oben.',
       // HomeScreen & AddBike
       'myBikes': 'Meine Bikes',
       'tt_newBike': 'Neues Bike',
@@ -53,6 +56,10 @@ class Translations {
       'rearTireModel': 'Hinterreifen Model',
       'rearTirePressure': 'Hinterreifen-Druck',
       'history': 'Änderungsverlauf',
+      'clearHistory': 'Änderungsverlauf löschen',
+      'clearHistoryTitle': 'Änderungsverlauf löschen?',
+      'clearHistoryBody':
+          'Möchtest du wirklich den gesamten Änderungsverlauf dieses Setups löschen? Dies kann nicht rückgängig gemacht werden. Die aktuellen Setup-Werte bleiben erhalten.',
       'notes': 'Notizen',
       'notesHint':
           'Allgemeine Bemerkungen (z.B. Streckenbedingungen, Wetter...)',
@@ -198,6 +205,9 @@ class Translations {
       'gotIt': 'Los geht\'s!',
     },
     'en': {
+      'orderSetups': 'Reorder setups',
+      'favoritesStayFirst':
+          'Drag setups into your preferred order. Favorites stay at the top.',
       // HomeScreen & AddBike
       'myBikes': 'My Bikes',
       'tt_newBike': 'New Bike',
@@ -247,6 +257,10 @@ class Translations {
       'rearTireModel': 'Rear tire model',
       'rearTirePressure': 'Rear tire pressure',
       'history': 'History',
+      'clearHistory': 'Delete history',
+      'clearHistoryTitle': 'Delete history?',
+      'clearHistoryBody':
+          'Do you really want to delete the entire history of this setup? This cannot be undone. The current setup values will be kept.',
       'notes': 'Notes',
       'notesHint': 'General remarks (e.g., trail conditions, weather...)',
       'noHistory': 'No adjustments recorded yet.',

@@ -26,6 +26,12 @@ class Bike {
     this.setups = const [],
   });
 
+  /// Favorites stay first; manual order is preserved within each group.
+  List<TrailSetup> get orderedSetups => [
+    ...setups.where((setup) => setup.isFavorite),
+    ...setups.where((setup) => !setup.isFavorite),
+  ];
+
   Bike copyWith({
     String? id,
     String? brand,
