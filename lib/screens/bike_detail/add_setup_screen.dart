@@ -33,7 +33,7 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
       final newSetup = TrailSetup(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name.trim(),
-        customParameters: bike.availableParameters,
+        customParameters: bike.availableParameters?.copyWith(ranges: const {}),
       );
 
       // Speichern

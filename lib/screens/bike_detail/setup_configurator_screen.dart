@@ -1,3 +1,5 @@
+import '../../models/setting_range.dart';
+import '../../widgets/setting_range_widgets.dart';
 // lib/screens/bike_detail/setup_configurator_screen.dart
 
 import 'dart:convert';
@@ -58,6 +60,8 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   bool _tires = true;
   List<CustomSetupCategory> _customCategories = [];
   Map<String, String> _unitOverrides = {};
+  Map<String, SettingRange?> _ranges = {};
+  Map<String, SettingRange?> _rangeOverrides = {};
   late String _initialStateJson;
   bool _allowPop = false;
 
@@ -105,6 +109,16 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           )
           .toList();
       _unitOverrides = Map.of(p.unitOverrides);
+      _ranges = {...?bike.availableParameters?.ranges, ...p.ranges};
+      if (widget.setupId != null) {
+        _rangeOverrides = Map.of(
+          bike.setups
+                  .firstWhere((setup) => setup.id == widget.setupId)
+                  .customParameters
+                  ?.ranges ??
+              {},
+        );
+      }
     }
     _initialStateJson = jsonEncode(_currentParameters().toMap());
   }
@@ -132,6 +146,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       tires: _tires,
       customCategories: _customCategories,
       unitOverrides: _unitOverrides,
+      ranges: widget.setupId == null ? _ranges : _rangeOverrides,
     );
   }
 
@@ -557,7 +572,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       for (final field in fields.where(
         (field) =>
             (categoryId == 'tires' && field.id == 'tireInserts') == insertsOnly,
-      ))
+      )) ...[
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onLongPress: field.id == 'tireInserts'
@@ -587,6 +602,10 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                 _toggleCustomField(categoryId, categoryName, field, selected),
           ),
         ),
+        if (field.type == CustomFieldType.number &&
+            selectedFields.any((item) => item.id == field.id))
+          _rangeControl('custom:${field.id}', field.name, field.unit),
+      ],
       if (!insertsOnly)
         Align(
           alignment: Alignment.centerLeft,
@@ -624,14 +643,63 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     required String unitKey,
     required String defaultUnit,
   }) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onLongPress: () => _editUnit(unitKey, defaultUnit),
-      child: SwitchListTile(
-        title: Text(title),
-        subtitle: Text(_unitOverrides[unitKey] ?? defaultUnit),
-        value: value,
-        onChanged: onChanged,
+    return Column(
+      children: [
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onLongPress: () => _editUnit(unitKey, defaultUnit),
+          child: SwitchListTile(
+            title: Text(title),
+            subtitle: Text(_unitOverrides[unitKey] ?? defaultUnit),
+            value: value,
+            onChanged: onChanged,
+          ),
+        ),
+        if (value && unitKey != 'tirePressure')
+          _rangeControl(unitKey, title, _unitOverrides[unitKey] ?? defaultUnit),
+      ],
+    );
+  }
+
+  Widget _rangeControl(String key, String title, String unit) {
+    final de = context.read<LanguageProvider>().currentLanguage == 'de';
+    final range = _ranges[key];
+    final integerOnly =
+        !key.startsWith('custom:') &&
+        !const {
+          'forkPsi',
+          'forkOtt',
+          'shockPsi',
+          'shockRate',
+          'shockPreload',
+          'frontPressure',
+          'rearPressure',
+        }.contains(key);
+    return ListTile(
+      dense: true,
+      contentPadding: const EdgeInsets.only(left: 32, right: 16),
+      leading: const Icon(Icons.linear_scale, size: 20),
+      title: Text(
+        range == null
+            ? (de ? 'Einstellbereich hinzufügen' : 'Add adjustment range')
+            : '${SettingRange.format(range.min)}–${SettingRange.format(range.max)} $unit',
+      ),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: () => showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        builder: (_) => SettingRangeEditor(
+          initial: range,
+          title: title,
+          unit: unit,
+          de: de,
+          integerOnly: integerOnly,
+          onSave: (value) => setState(() {
+            _ranges[key] = value;
+            _rangeOverrides[key] = value;
+          }),
+        ),
       ),
     );
   }

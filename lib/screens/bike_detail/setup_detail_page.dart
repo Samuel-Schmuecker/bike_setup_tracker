@@ -1,3 +1,5 @@
+import '../../models/setting_range.dart';
+import '../../widgets/setting_range_widgets.dart';
 // lib/screens/bike_detail/setup_detail_screen.dart
 
 import 'package:bike_setup_tracker/providers/language_provider.dart';
@@ -229,7 +231,13 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
 
     // FIX 2: Absolut sicherer Fallback, auch für sehr alte Demo-Bikes
     final params =
-        setup.customParameters ?? bike.availableParameters ?? BikeParameters();
+        setup.customParameters ??
+        bike.availableParameters?.copyWith(ranges: const {}) ??
+        BikeParameters();
+    final ranges = {
+      ...?bike.availableParameters?.ranges,
+      ...?setup.customParameters?.ranges,
+    };
     String unitFor(String key, String fallback) =>
         params.unitOverrides[key] ?? fallback;
 
@@ -344,6 +352,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
     }
 
     void showStepperModal(
+      String fieldId,
       String title,
       String unit,
       String? currentValue,
@@ -358,7 +367,8 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
           unit: unit,
           initialValue: currentValue,
           isText: isText,
-          stepSize: stepSize,
+          stepSize: ranges[fieldId]?.step ?? stepSize,
+          range: isText ? null : ranges[fieldId],
           onSave: onSave,
         ),
       );
@@ -444,8 +454,11 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       String unit,
       VoidCallback onTap, {
       double? width = 85,
+      bool numeric = true,
     }) {
       final isSet = value != null && value != '-';
+      final range = numeric ? ranges[fieldId] : null;
+      final number = _parseDouble(value ?? '');
 
       return InkWell(
         key: ValueKey(fieldId),
@@ -483,7 +496,78 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 2),
+              if (range != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 1,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        SettingRange.format(range.min),
+                        style: TextStyle(
+                          fontSize: 8,
+                          height: 1,
+                          color: colorScheme.onSurface.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: SizedBox(
+                          height: 8,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                height: 1.5,
+                                decoration: BoxDecoration(
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.15,
+                                  ),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                              if (number != null)
+                                Align(
+                                  key: ValueKey('$fieldId-range-position'),
+                                  alignment: Alignment(
+                                    ((number - range.min) /
+                                                    (range.max - range.min))
+                                                .clamp(0, 1) *
+                                            2 -
+                                        1,
+                                    0,
+                                  ),
+                                  child: Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        SettingRange.format(range.max),
+                        style: TextStyle(
+                          fontSize: 8,
+                          height: 1,
+                          color: colorScheme.onSurface.withValues(alpha: 0.45),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                const SizedBox(height: 2),
               Text(
                 unit,
                 maxLines: 1,
@@ -684,6 +768,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
           field.value.isEmpty ? null : field.value,
           field.unit,
           () => showStepperModal(
+            'custom:${field.id}',
             field.name,
             field.unit,
             field.value.isEmpty ? null : field.value,
@@ -697,6 +782,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
               setupWithCustomValue(category.id, field.id, value),
             ),
           ),
+          numeric: field.type == CustomFieldType.number,
         );
       }).toList();
     }
@@ -726,7 +812,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       );
       final currentParameters =
           currentSetup.customParameters ??
-          currentBike.availableParameters ??
+          currentBike.availableParameters?.copyWith(ranges: const {}) ??
           BikeParameters();
       final categories = currentParameters.customCategories.map((category) {
         return category.id == categoryId
@@ -780,6 +866,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkPsi),
                   unitFor('forkPsi', 'PSI'),
                   () => showStepperModal(
+                    'forkPsi',
                     componentField('fork', 'mainShort'),
                     unitFor('forkPsi', 'PSI'),
                     _formatNum(setup.forkPsi),
@@ -801,6 +888,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkOtt),
                   unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
                   () => showStepperModal(
+                    'forkOtt',
                     componentField('fork', 'negativeChamberShort'),
                     unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
                     _formatNum(setup.forkOtt),
@@ -822,6 +910,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkHsc),
                   unitFor('forkHsc', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'forkHsc',
                     componentField('fork', 'hsc'),
                     unitFor('forkHsc', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.forkHsc),
@@ -843,6 +932,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkLsc),
                   unitFor('forkLsc', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'forkLsc',
                     componentField('fork', 'lsc'),
                     unitFor('forkLsc', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.forkLsc),
@@ -864,6 +954,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkHsr),
                   unitFor('forkHsr', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'forkHsr',
                     componentField('fork', 'hsr'),
                     unitFor('forkHsr', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.forkHsr),
@@ -885,6 +976,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkLsr),
                   unitFor('forkLsr', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'forkLsr',
                     componentField('fork', 'lsr'),
                     unitFor('forkLsr', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.forkLsr),
@@ -906,6 +998,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkTokens),
                   unitFor('forkTokens', Translations.get(lang, 'unitPieces')),
                   () => showStepperModal(
+                    'forkTokens',
                     componentField('fork', 'tokensShort'),
                     unitFor('forkTokens', Translations.get(lang, 'unitPieces')),
                     _formatNum(setup.forkTokens),
@@ -927,6 +1020,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.forkHbo),
                   unitFor('forkHbo', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'forkHbo',
                     componentField('fork', 'hbo'),
                     unitFor('forkHbo', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.forkHbo),
@@ -967,6 +1061,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     _formatNum(setup.shockPsi),
                     unitFor('shockPsi', 'PSI'),
                     () => showStepperModal(
+                      'shockPsi',
                       Translations.get(lang, 'shockAir'),
                       unitFor('shockPsi', 'PSI'),
                       _formatNum(setup.shockPsi),
@@ -991,6 +1086,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                       Translations.get(lang, 'unitPieces'),
                     ),
                     () => showStepperModal(
+                      'shockTokens',
                       componentField('shock', 'tokensShort'),
                       unitFor(
                         'shockTokens',
@@ -1016,6 +1112,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     _formatNum(setup.shockRate),
                     unitFor('shockRate', 'lbs/in'),
                     () => showStepperModal(
+                      'shockRate',
                       componentField('shock', 'springRate'),
                       unitFor('shockRate', 'lbs/in'),
                       _formatNum(setup.shockRate),
@@ -1040,6 +1137,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                       Translations.get(lang, 'unitTurns'),
                     ),
                     () => showStepperModal(
+                      'shockPreload',
                       componentField('shock', 'preload'),
                       unitFor(
                         'shockPreload',
@@ -1065,6 +1163,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.shockHsc),
                   unitFor('shockHsc', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'shockHsc',
                     componentField('shock', 'hsc'),
                     unitFor('shockHsc', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.shockHsc),
@@ -1086,6 +1185,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.shockLsc),
                   unitFor('shockLsc', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'shockLsc',
                     componentField('shock', 'lsc'),
                     unitFor('shockLsc', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.shockLsc),
@@ -1107,6 +1207,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.shockHsr),
                   unitFor('shockHsr', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'shockHsr',
                     componentField('shock', 'hsr'),
                     unitFor('shockHsr', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.shockHsr),
@@ -1128,6 +1229,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.shockLsr),
                   unitFor('shockLsr', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'shockLsr',
                     componentField('shock', 'lsr'),
                     unitFor('shockLsr', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.shockLsr),
@@ -1149,6 +1251,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   _formatNum(setup.shockHbo),
                   unitFor('shockHbo', Translations.get(lang, 'unitClicks')),
                   () => showStepperModal(
+                    'shockHbo',
                     componentField('shock', 'hbo'),
                     unitFor('shockHbo', Translations.get(lang, 'unitClicks')),
                     _formatNum(setup.shockHbo),
@@ -1188,6 +1291,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     setup.frontTire,
                     _formatNum(setup.frontPressure),
                     () => showStepperModal(
+                      '',
                       Translations.get(lang, 'frontTireModel'),
                       '',
                       setup.frontTire,
@@ -1202,6 +1306,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                       ),
                     ),
                     () => showStepperModal(
+                      '',
                       Translations.get(lang, 'frontTirePressure'),
                       unitFor('tirePressure', 'bar/PSI'),
                       _formatNum(setup.frontPressure),
@@ -1222,6 +1327,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     setup.rearTire,
                     _formatNum(setup.rearPressure),
                     () => showStepperModal(
+                      '',
                       Translations.get(lang, 'rearTireModel'),
                       '',
                       setup.rearTire,
@@ -1236,6 +1342,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                       ),
                     ),
                     () => showStepperModal(
+                      '',
                       Translations.get(lang, 'rearTirePressure'),
                       unitFor('tirePressure', 'bar/PSI'),
                       _formatNum(setup.rearPressure),
@@ -1758,6 +1865,7 @@ class _EditValueDialog extends StatefulWidget {
   final String? initialValue;
   final bool isText;
   final double stepSize;
+  final SettingRange? range;
   final Function(String, String) onSave;
 
   const _EditValueDialog({
@@ -1766,6 +1874,7 @@ class _EditValueDialog extends StatefulWidget {
     this.initialValue,
     required this.isText,
     required this.stepSize,
+    this.range,
     required this.onSave,
   });
 
@@ -1778,6 +1887,7 @@ class _EditValueDialogState extends State<_EditValueDialog> {
   late TextEditingController _noteCtrl;
   late FocusNode _valFocusNode;
   bool _manualEdit = false;
+  String? _error;
   double? _currentNum;
 
   @override
@@ -1808,10 +1918,12 @@ class _EditValueDialogState extends State<_EditValueDialog> {
 
   void _changeValue(double delta) {
     setState(() {
-      _currentNum = (_currentNum ?? 0) + delta;
-      _valCtrl.text = _currentNum == _currentNum!.toInt()
-          ? _currentNum!.toInt().toString()
-          : _currentNum!.toStringAsFixed(1);
+      final entered = double.tryParse(_valCtrl.text.replaceAll(',', '.'));
+      _currentNum =
+          widget.range?.next(entered, delta < 0 ? -1 : 1) ??
+          ((entered ?? 0) + delta);
+      _valCtrl.text = SettingRange.format(_currentNum!);
+      _error = null;
     });
   }
 
@@ -1925,6 +2037,12 @@ class _EditValueDialogState extends State<_EditValueDialog> {
                               fontWeight: FontWeight.bold,
                             ),
                             decoration: const InputDecoration(isDense: true),
+                            onChanged: (val) => setState(() {
+                              _currentNum = double.tryParse(
+                                val.replaceAll(',', '.'),
+                              );
+                              _error = null;
+                            }),
                             onSubmitted: (val) {
                               setState(() {
                                 _currentNum = double.tryParse(
@@ -1962,6 +2080,20 @@ class _EditValueDialogState extends State<_EditValueDialog> {
                   ),
                 ],
               ),
+            if (widget.range != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: SettingRangeScale(
+                  range: widget.range!,
+                  value: _currentNum,
+                  de: lang == 'de',
+                ),
+              ),
+            if (_error != null)
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             const SizedBox(height: 24),
             TextField(
               controller: _noteCtrl,
@@ -1983,9 +2115,41 @@ class _EditValueDialogState extends State<_EditValueDialog> {
         ),
         FilledButton(
           onPressed: () {
+            if (widget.range != null) {
+              final number = double.tryParse(
+                _valCtrl.text.replaceAll(',', '.'),
+              );
+              final unchanged = _valCtrl.text == widget.initialValue;
+              if (!unchanged &&
+                  (number == null ||
+                      !widget.range!.contains(number) ||
+                      (number != widget.range!.max &&
+                          ((number - widget.range!.min) / widget.range!.step -
+                                      ((number - widget.range!.min) /
+                                              widget.range!.step)
+                                          .round())
+                                  .abs() >
+                              0.000001))) {
+                setState(
+                  () => _error = lang == 'de'
+                      ? 'Wert muss im Bereich und auf einem Einstellschritt liegen'
+                      : 'Value must match the range and step size',
+                );
+                return;
+              }
+            }
             Navigator.pop(context);
             if (_valCtrl.text.isNotEmpty) {
-              widget.onSave(_valCtrl.text, _noteCtrl.text);
+              widget.onSave(
+                widget.range == null ||
+                        double.tryParse(_valCtrl.text.replaceAll(',', '.')) ==
+                            null
+                    ? _valCtrl.text
+                    : SettingRange.format(
+                        double.parse(_valCtrl.text.replaceAll(',', '.')),
+                      ),
+                _noteCtrl.text,
+              );
             }
           },
           child: Text(Translations.get(lang, 'save')),

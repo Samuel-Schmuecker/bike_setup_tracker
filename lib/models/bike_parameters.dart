@@ -1,3 +1,4 @@
+import 'setting_range.dart';
 // lib/models/bike_parameters.dart
 
 enum CustomFieldType { number, text, boolean }
@@ -139,6 +140,7 @@ class BikeParameters {
   final bool tires;
   final List<CustomSetupCategory> customCategories;
   final Map<String, String> unitOverrides;
+  final Map<String, SettingRange?> ranges;
 
   BikeParameters({
     this.forkPsi = true,
@@ -162,11 +164,13 @@ class BikeParameters {
     this.tires = true,
     this.customCategories = const [],
     this.unitOverrides = const {},
+    this.ranges = const {},
   });
 
   BikeParameters copyWith({
     List<CustomSetupCategory>? customCategories,
     Map<String, String>? unitOverrides,
+    Map<String, SettingRange?>? ranges,
   }) {
     return BikeParameters(
       forkPsi: forkPsi,
@@ -190,6 +194,7 @@ class BikeParameters {
       tires: tires,
       customCategories: customCategories ?? this.customCategories,
       unitOverrides: unitOverrides ?? this.unitOverrides,
+      ranges: ranges ?? this.ranges,
     );
   }
 
@@ -220,6 +225,7 @@ class BikeParameters {
           .map((category) => category.toMap())
           .toList(),
       'unitOverrides': unitOverrides,
+      'ranges': ranges.map((key, value) => MapEntry(key, value?.toMap())),
     };
   }
 
@@ -252,6 +258,9 @@ class BikeParameters {
             ),
           )
           .toList(),
+      ranges: (map['ranges'] as Map? ?? {}).map(
+        (key, value) => MapEntry(key.toString(), SettingRange.fromMap(value)),
+      ),
       unitOverrides: map['unitOverrides'] is Map
           ? Map<String, String>.from(map['unitOverrides'])
           : const {},
