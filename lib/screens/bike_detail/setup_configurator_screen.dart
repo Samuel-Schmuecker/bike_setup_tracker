@@ -572,40 +572,51 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       for (final field in fields.where(
         (field) =>
             (categoryId == 'tires' && field.id == 'tireInserts') == insertsOnly,
-      )) ...[
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onLongPress: field.id == 'tireInserts'
-              ? null
-              : () => _manageCustomField(categoryId, field),
-          child: SwitchListTile(
-            secondary: const Icon(Icons.tune),
-            title: Text(field.name),
-            subtitle: Text(
-              [
-                switch (field.type) {
-                  CustomFieldType.number => Translations.get(
-                    lang,
-                    'numberType',
-                  ),
-                  CustomFieldType.text => Translations.get(lang, 'textType'),
-                  CustomFieldType.boolean => Translations.get(
-                    lang,
-                    'booleanType',
-                  ),
-                },
-                if (field.unit.isNotEmpty) field.unit,
-              ].join(' · '),
+      ))
+        _parameterGroup(
+          enabled: selectedFields.any((item) => item.id == field.id),
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onLongPress: field.id == 'tireInserts'
+                  ? null
+                  : () => _manageCustomField(categoryId, field),
+              child: SwitchListTile(
+                secondary: const Icon(Icons.tune),
+                title: Text(field.name),
+                subtitle: Text(
+                  [
+                    switch (field.type) {
+                      CustomFieldType.number => Translations.get(
+                        lang,
+                        'numberType',
+                      ),
+                      CustomFieldType.text => Translations.get(
+                        lang,
+                        'textType',
+                      ),
+                      CustomFieldType.boolean => Translations.get(
+                        lang,
+                        'booleanType',
+                      ),
+                    },
+                    if (field.unit.isNotEmpty) field.unit,
+                  ].join(' · '),
+                ),
+                value: selectedFields.any((item) => item.id == field.id),
+                onChanged: (selected) => _toggleCustomField(
+                  categoryId,
+                  categoryName,
+                  field,
+                  selected,
+                ),
+              ),
             ),
-            value: selectedFields.any((item) => item.id == field.id),
-            onChanged: (selected) =>
-                _toggleCustomField(categoryId, categoryName, field, selected),
-          ),
+            if (field.type == CustomFieldType.number &&
+                selectedFields.any((item) => item.id == field.id))
+              _rangeControl('custom:${field.id}', field.name, field.unit),
+          ],
         ),
-        if (field.type == CustomFieldType.number &&
-            selectedFields.any((item) => item.id == field.id))
-          _rangeControl('custom:${field.id}', field.name, field.unit),
-      ],
       if (!insertsOnly)
         Align(
           alignment: Alignment.centerLeft,
@@ -643,7 +654,8 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     required String unitKey,
     required String defaultUnit,
   }) {
-    return Column(
+    return _parameterGroup(
+      enabled: value,
       children: [
         GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -658,6 +670,30 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
         if (value && unitKey != 'tirePressure')
           _rangeControl(unitKey, title, _unitOverrides[unitKey] ?? defaultUnit),
       ],
+    );
+  }
+
+  Widget _parameterGroup({
+    required bool enabled,
+    required List<Widget> children,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 180),
+      opacity: enabled ? 1 : 0.42,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        margin: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+        decoration: BoxDecoration(
+          color: colors.onSurface.withValues(alpha: enabled ? 0.045 : 0.015),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: colors.onSurface.withValues(alpha: enabled ? 0.07 : 0.025),
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(mainAxisSize: MainAxisSize.min, children: children),
+      ),
     );
   }
 
@@ -677,8 +713,15 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
         }.contains(key);
     return ListTile(
       dense: true,
-      contentPadding: const EdgeInsets.only(left: 32, right: 16),
-      leading: const Icon(Icons.linear_scale, size: 20),
+      contentPadding: const EdgeInsets.only(left: 16, right: 16),
+      visualDensity: const VisualDensity(vertical: -2),
+      minLeadingWidth: 16,
+      horizontalTitleGap: 8,
+      leading: Icon(
+        Icons.linear_scale,
+        size: 16,
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.65),
+      ),
       title: Text(
         range == null
             ? (de ? 'Einstellbereich hinzufügen' : 'Add adjustment range')
