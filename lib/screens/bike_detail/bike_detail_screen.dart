@@ -14,6 +14,7 @@ import '../../widgets/setup_card.dart';
 import '../../widgets/add_setup_card.dart';
 import 'setup_detail_screen.dart';
 import '../../utils/image_helper.dart';
+import '../../widgets/image_toolbar_contrast.dart';
 
 class BikeDetailScreen extends StatefulWidget {
   final String bikeId;
@@ -262,90 +263,101 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
       child: Scaffold(
         body: CustomScrollView(
           slivers: [
-            SliverAppBar(
-              expandedHeight: 240.0,
-              pinned: true,
-              centerTitle: false,
-              actions: [
-                if (_editing) ...[
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: Translations.get(lang, 'cancel'),
-                    onPressed: () => setState(() => _draftSetups = null),
-                  ),
-                  TextButton(
-                    onPressed: _finishOrdering,
-                    child: Text(Translations.get(lang, 'finishFieldOrder')),
-                  ),
-                ] else ...[
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: Translations.get(lang, 'orderSetups'),
-                    onPressed: () => setState(
-                      () => _draftSetups = List.of(bike.orderedSetups),
+            ImageToolbarContrast(
+              imagePath: ImageHelper.getDisplayImagePath(
+                bike.imagePath,
+                bike.category,
+              ),
+              expandedHeight: 240,
+              builder: (context, iconColor) => SliverAppBar(
+                iconTheme: IconThemeData(color: iconColor),
+                actionsIconTheme: IconThemeData(color: iconColor),
+                expandedHeight: 240.0,
+                pinned: true,
+                centerTitle: false,
+                actions: [
+                  if (_editing) ...[
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: Translations.get(lang, 'cancel'),
+                      onPressed: () => setState(() => _draftSetups = null),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    onPressed: () => _onAddSetupTap(context, bike),
-                    tooltip: Translations.get(lang, 'newSetup'),
-                  ),
+                    TextButton(
+                      onPressed: _finishOrdering,
+                      child: Text(Translations.get(lang, 'finishFieldOrder')),
+                    ),
+                  ] else ...[
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: Translations.get(lang, 'orderSetups'),
+                      onPressed: () => setState(
+                        () => _draftSetups = List.of(bike.orderedSetups),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => _onAddSetupTap(context, bike),
+                      tooltip: Translations.get(lang, 'newSetup'),
+                    ),
+                  ],
                 ],
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                expandedTitleScale: 1.15,
-                titlePadding: const EdgeInsets.only(left: 56.0, bottom: 16.0),
-                title: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      bike.model,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        shadows: [Shadow(color: Colors.black87, blurRadius: 4)],
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // ANGEPASST: Pfade zu den SVGs übergeben
-                        buildTravelChip(
-                          'assets/icons/fork.svg',
-                          '${bike.travelFront} mm ${Translations.get(lang, 'front')}',
+                flexibleSpace: FlexibleSpaceBar(
+                  expandedTitleScale: 1.15,
+                  titlePadding: const EdgeInsets.only(left: 56.0, bottom: 16.0),
+                  title: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        bike.model,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 4),
+                          ],
                         ),
-                        buildTravelChip(
-                          'assets/icons/shock.svg',
-                          '${bike.travelRear} mm ${Translations.get(lang, 'rear')}',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                background: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // 1. Hintergrundbild (NEU: Greift den DisplayPath ab)
-                    ImageHelper.buildImage(
-                      ImageHelper.getDisplayImagePath(
-                        bike.imagePath,
-                        bike.category,
                       ),
-                    ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // ANGEPASST: Pfade zu den SVGs übergeben
+                          buildTravelChip(
+                            'assets/icons/fork.svg',
+                            '${bike.travelFront} mm ${Translations.get(lang, 'front')}',
+                          ),
+                          buildTravelChip(
+                            'assets/icons/shock.svg',
+                            '${bike.travelRear} mm ${Translations.get(lang, 'rear')}',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  background: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      // 1. Hintergrundbild (NEU: Greift den DisplayPath ab)
+                      ImageHelper.buildImage(
+                        ImageHelper.getDisplayImagePath(
+                          bike.imagePath,
+                          bike.category,
+                        ),
+                      ),
 
-                    // 2. Abdunkelndes Overlay
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [Colors.black87, Colors.transparent],
+                      // 2. Abdunkelndes Overlay
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [Colors.black87, Colors.transparent],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -427,7 +439,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                             index: index,
                             child: Row(
                               children: [
-                                Expanded(child: IgnorePointer(child: card)),
+                                Expanded(child: AbsorbPointer(child: card)),
                                 Padding(
                                   padding: const EdgeInsets.only(right: 16),
                                   child: Icon(

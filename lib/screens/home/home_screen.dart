@@ -147,6 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        iconTheme: IconThemeData(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        actionsIconTheme: IconThemeData(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
         title: Text(Translations.get(lang, 'myBikes')),
         actions: [
           // NEU: Info-Button, um das Tutorial manuell aufzurufen

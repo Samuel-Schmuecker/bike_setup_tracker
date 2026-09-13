@@ -319,7 +319,14 @@ void main() {
       final destination = tester.getTopLeft(
         find.byKey(const ValueKey('category-fork')),
       );
-      final start = tester.getCenter(handle);
+      final start = tester.getCenter(
+        applyAll
+            ? find.descendant(
+                of: handle,
+                matching: find.byIcon(Icons.drag_indicator),
+              )
+            : handle,
+      );
       final gesture = await tester.startGesture(start);
       await tester.pump(const Duration(milliseconds: 600));
       for (var y = start.dy; y > destination.dy - 40; y -= 60) {

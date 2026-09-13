@@ -438,6 +438,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                 padding: const EdgeInsets.only(right: 16, top: 16),
                 child: Tooltip(
                   message: Translations.get(lang, 'dragCategory'),
+                  triggerMode: TooltipTriggerMode.manual,
                   child: Icon(Icons.drag_indicator, color: colorScheme.primary),
                 ),
               ),
