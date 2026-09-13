@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/bike.dart';
 import '../models/trail_setup.dart';
 import '../models/bike_parameters.dart';
+import '../data/demo_ohlins_ranges.dart';
 
 class BikeProvider extends ChangeNotifier {
   List<Bike> _bikes = [];
@@ -75,6 +76,22 @@ class BikeProvider extends ChangeNotifier {
             .whereType<Map>()
             .map((map) => Bike.fromMap(Map<String, dynamic>.from(map)))
             .toList();
+        if (prefs.getBool('demo_ohlins_ranges_v1') != true) {
+          _bikes = _bikes.map((bike) {
+            if (bike.id != '3' ||
+                bike.brand != 'Commencal' ||
+                bike.model != 'Supreme V5')
+              return bike;
+            final parameters = bike.availableParameters ?? BikeParameters();
+            return bike.copyWith(
+              availableParameters: parameters.copyWith(
+                ranges: {...demoOhlinsRanges, ...parameters.ranges},
+              ),
+            );
+          }).toList();
+          await saveToDevice();
+          await prefs.setBool('demo_ohlins_ranges_v1', true);
+        }
         _seedCatalogFromBikes();
         notifyListeners();
       } catch (e) {
@@ -305,6 +322,8 @@ class BikeProvider extends ChangeNotifier {
         travelRear: 200,
         imagePath: 'assets/images/commencal_v5.png',
         availableParameters: BikeParameters(
+          ranges: demoOhlinsRanges,
+          unitOverrides: const {'shockHsc': 'Stufe'},
           forkPsi: true,
           forkOtt: true,
           forkHsc: true,
@@ -314,13 +333,15 @@ class BikeProvider extends ChangeNotifier {
           forkTokens: false,
           forkHbo: false,
           shockIsCoil: true,
+          shockPsi: false,
+          shockTokens: false,
           shockRate: true,
           shockPreload: true,
           shockHsc: true,
           shockLsc: true,
           shockLsr: true,
           shockHsr: false,
-          shockHbo: true,
+          shockHbo: false,
           tires: true,
         ),
         setups: [
@@ -337,13 +358,12 @@ class BikeProvider extends ChangeNotifier {
             shockHsc: 2,
             shockLsc: 8,
             shockLsr: 6,
-            shockHbo: 3,
             frontTire: 'Maxxis Assegai',
             frontPressure: 1.8,
             rearTire: 'Maxxis Minion DHR II',
             rearPressure: 2.0,
             notes:
-                'Standard Setup für steile Parks. Öhlins DH38 und TTX22M Coil.',
+                'Standard Setup für steile Parks. Öhlins DH38 m.1 Air und TTX22m.2 Coil.',
             // --- NEU: Realistische Demo-Logs ---
             logs: [
               SetupLog(
