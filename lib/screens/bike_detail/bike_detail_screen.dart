@@ -288,7 +288,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                     ),
                   ] else ...[
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const Icon(Icons.swap_vert),
                       tooltip: Translations.get(lang, 'orderSetups'),
                       onPressed: () => setState(
                         () => _draftSetups = List.of(bike.orderedSetups),

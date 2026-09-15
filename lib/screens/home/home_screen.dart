@@ -10,6 +10,8 @@ import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart';
 import '../settings/appearance_screen.dart';
+import '../../models/bike.dart';
+import '../edit_bike/edit_bike_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -21,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  bool _orderingBikes = false;
 
   @override
   void initState() {
@@ -203,6 +206,52 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _showBikeMenu(Bike bike) async {
+    final lang = context.read<LanguageProvider>().currentLanguage;
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '${bike.brand} ${bike.model}',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: Text(Translations.get(lang, 'editBike')),
+              onTap: () => Navigator.pop(sheetContext, 'edit'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.swap_vert),
+              title: Text(Translations.get(lang, 'orderBikes')),
+              onTap: () => Navigator.pop(sheetContext, 'order'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || action == null) return;
+    if (action == 'order') {
+      FocusScope.of(context).unfocus();
+      setState(() {
+        _searchController.clear();
+        _searchQuery = '';
+        _orderingBikes = true;
+      });
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => EditBikeScreen(bike: bike)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>().currentLanguage;
@@ -224,53 +273,129 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: Text(Translations.get(lang, 'myBikes')),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            tooltip: Translations.get(lang, 'settings'),
-            onPressed: _showSettings,
-          ),
+          if (_orderingBikes)
+            TextButton(
+              onPressed: () => setState(() => _orderingBikes = false),
+              child: Text(Translations.get(lang, 'finishOrdering')),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: Translations.get(lang, 'settings'),
+              onPressed: _showSettings,
+            ),
         ],
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: Translations.get(lang, 'searchHint'),
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  borderSide: BorderSide.none,
+          if (_orderingBikes)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withValues(alpha: 0.4),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(Translations.get(lang, 'orderBikesHint')),
+                    ),
+                  ],
                 ),
               ),
-              onChanged: (value) => setState(() => _searchQuery = value),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: Translations.get(lang, 'searchHint'),
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  filled: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16.0),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value),
+              ),
             ),
-          ),
           Expanded(
             child: filteredBikes.isEmpty && _searchQuery.isNotEmpty
                 ? Center(child: Text(Translations.get(lang, 'noBikes')))
-                : ListView.builder(
-                    itemCount: filteredBikes.length + 1,
+                : ReorderableListView.builder(
+                    buildDefaultDragHandles: false,
+                    itemCount: filteredBikes.length,
+                    footer: _orderingBikes
+                        ? null
+                        : AddBikeCard(onTap: _onAddBikeTap),
+                    onReorder: (oldIndex, newIndex) {
+                      if (!_orderingBikes) return;
+                      final ids = allBikes.map((bike) => bike.id).toList();
+                      if (newIndex > oldIndex) newIndex--;
+                      ids.insert(newIndex, ids.removeAt(oldIndex));
+                      context.read<BikeProvider>().reorderBikes(ids);
+                    },
+                    proxyDecorator: (child, index, animation) => Material(
+                      color: Theme.of(context).colorScheme.surface,
+                      elevation: 8,
+                      borderRadius: BorderRadius.circular(12),
+                      child: child,
+                    ),
                     itemBuilder: (context, index) {
-                      if (index == filteredBikes.length) {
-                        return AddBikeCard(onTap: _onAddBikeTap);
-                      }
-                      return BikeCard(bike: filteredBikes[index]);
+                      final card = BikeCard(
+                        bike: filteredBikes[index],
+                        onLongPress: () => _showBikeMenu(filteredBikes[index]),
+                      );
+                      return Container(
+                        key: ValueKey('bike-${filteredBikes[index].id}'),
+                        child: !_orderingBikes
+                            ? card
+                            : ReorderableDelayedDragStartListener(
+                                index: index,
+                                child: Row(
+                                  children: [
+                                    Expanded(child: AbsorbPointer(child: card)),
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 16),
+                                      child: Icon(
+                                        Icons.drag_indicator,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                      );
                     },
                   ),
           ),

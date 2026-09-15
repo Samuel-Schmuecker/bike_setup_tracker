@@ -1409,7 +1409,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     )
                   else
                     IconButton(
-                      icon: const Icon(Icons.edit_outlined),
+                      icon: const Icon(Icons.swap_vert),
                       tooltip: Translations.get(lang, 'editFieldOrder'),
                       onPressed: () {
                         FocusScope.of(context).unfocus();

@@ -398,6 +398,18 @@ class BikeProvider extends ChangeNotifier {
     saveToDevice(); // AUTO-SAVE
   }
 
+  void reorderBikes(List<String> bikeIds) {
+    final byId = {for (final bike in _bikes) bike.id: bike};
+    if (bikeIds.length != _bikes.length ||
+        bikeIds.toSet().length != byId.length ||
+        bikeIds.any((id) => !byId.containsKey(id))) {
+      return;
+    }
+    _bikes = bikeIds.map((id) => byId[id]!).toList();
+    notifyListeners();
+    saveToDevice();
+  }
+
   void updateBike(Bike updatedBike) {
     final index = _bikes.indexWhere((bike) => bike.id == updatedBike.id);
     if (index != -1) {

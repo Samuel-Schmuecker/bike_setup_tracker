@@ -8,6 +8,10 @@ class Translations {
           'Ziehe die Setups in die gewünschte Reihenfolge. Favoriten bleiben oben.',
       // HomeScreen & AddBike
       'myBikes': 'Meine Bikes',
+      'orderBikes': 'Bikes sortieren',
+      'orderBikesHint':
+          'Halte eine Bike-Kachel gedrückt und ziehe sie an die gewünschte Stelle. Die anderen Bikes machen direkt Platz. Änderungen werden automatisch gespeichert.',
+      'finishOrdering': 'Fertig',
       'settings': 'Einstellungen',
       'appearance': 'Farben & Darstellung',
       'appearanceHint':
@@ -219,7 +223,7 @@ class Translations {
       'welcomeText1':
           'Ich habe dir ein Beispiel-Fahrrad angelegt, damit du die Funktionen direkt ausprobieren kannst.',
       'welcomeText2':
-          'WICHTIG: Du kannst dieses Beispiel (und jedes andere Rad) jederzeit bearbeiten oder löschen, indem du auf der Startseite LANGE auf die Kachel gedrückt hältst!',
+          'Halte auf der Startseite eine Bike-Kachel lange gedrückt. Im Menü kannst du das Bike bearbeiten oder die Bikes neu sortieren. Löschen findest du unter „Bike bearbeiten“.',
       'gotIt': 'Los geht\'s!',
     },
     'en': {
@@ -228,6 +232,10 @@ class Translations {
           'Drag setups into your preferred order. Favorites stay at the top.',
       // HomeScreen & AddBike
       'myBikes': 'My Bikes',
+      'orderBikes': 'Reorder bikes',
+      'orderBikesHint':
+          'Hold a bike card and drag it into position. The other bikes move aside as you drag. Changes are saved automatically.',
+      'finishOrdering': 'Done',
       'settings': 'Settings',
       'appearance': 'Colors & appearance',
       'appearanceHint':
@@ -436,7 +444,7 @@ class Translations {
       'welcomeText1':
           'I have created a demo bike for you so you can try out the features right away.',
       'welcomeText2':
-          'IMPORTANT: You can edit or delete this demo (and any other bike) at any time by LONG-PRESSING the bike card on the home screen!',
+          'Long-press a bike card on the home screen to open the menu. Choose to edit the bike or reorder your bikes. To delete a bike, choose “Edit Bike”.',
       'gotIt': 'Let\'s go!',
     },
   };
