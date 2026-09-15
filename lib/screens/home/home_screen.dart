@@ -10,6 +10,8 @@ import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart';
 import '../settings/appearance_screen.dart';
+import '../settings/account_screen.dart';
+import '../../cloud/cloud_provider.dart';
 import '../../models/bike.dart';
 import '../edit_bike/edit_bike_screen.dart';
 
@@ -70,6 +72,12 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               Translations.get(lang, 'welcomeText1'),
               style: const TextStyle(fontSize: 16, height: 1.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              lang == 'de'
+                  ? 'Deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ deine E-Mail für die Wiederherstellung nach Geräteverlust.'
+                  : 'Your data is saved automatically in a private cloud. Link your email under Account & backup to restore access after losing your device.',
             ),
             const SizedBox(height: 16),
             Container(
@@ -155,6 +163,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(Icons.cloud_outlined),
+                    title: Text(
+                      lang == 'de'
+                          ? 'Konto & Datensicherung'
+                          : 'Account & backup',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        this.context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AccountScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   ListTile(
                     leading: const Icon(Icons.language),
                     title: Text(Translations.get(lang, 'language')),
@@ -254,6 +280,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cloud = context.watch<CloudProvider?>();
     final lang = context.watch<LanguageProvider>().currentLanguage;
     final allBikes = context.watch<BikeProvider>().bikes;
 
@@ -288,6 +315,28 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
+          if (cloud != null &&
+              (cloud.status == 'conflict' ||
+                  cloud.status == 'local' ||
+                  cloud.status == 'session'))
+            MaterialBanner(
+              content: Text(
+                lang == 'de'
+                    ? 'Die Datensicherung benötigt deine Aufmerksamkeit.'
+                    : 'Your backup needs attention.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AccountScreen(),
+                    ),
+                  ),
+                  child: Text(lang == 'de' ? 'Anzeigen' : 'View'),
+                ),
+              ],
+            ),
           if (_orderingBikes)
             Padding(
               padding: const EdgeInsets.all(16),

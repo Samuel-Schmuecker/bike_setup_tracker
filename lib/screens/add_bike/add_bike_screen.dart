@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../providers/bike_provider.dart';
 import '../../providers/language_provider.dart'; 
@@ -82,7 +83,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
       _formKey.currentState!.save();
 
       final newBike = Bike(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(),
         brand: _brandController.text.trim(),
         model: _modelName.trim(), 
         category: _category,

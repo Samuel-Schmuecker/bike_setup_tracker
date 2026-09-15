@@ -27,7 +27,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.tap(find.byIcon(Icons.swap_vert));
     await tester.pumpAndSettle();
     final source = tester.getCenter(find.text('Setup 0'));
     final target = tester.getCenter(find.byKey(const ValueKey('setup-a-1')));

@@ -8,24 +8,63 @@ import '../models/bike.dart';
 import '../models/trail_setup.dart';
 import '../models/bike_parameters.dart';
 import '../data/demo_ohlins_ranges.dart';
+import '../cloud/local_store.dart';
+import '../cloud/sync_documents.dart';
+import 'package:uuid/uuid.dart';
 
 class BikeProvider extends ChangeNotifier {
   List<Bike> _bikes = [];
   List<CustomSetupCategory> _customFieldCatalog = [];
   Future<void> _pendingSave = Future.value();
+  final LocalStore? localStore;
+  late final Future<void> ready;
+  String? storageError;
 
   UnmodifiableListView<Bike> get bikes => UnmodifiableListView(_bikes);
   UnmodifiableListView<CustomSetupCategory> get customFieldCatalog =>
       UnmodifiableListView(_customFieldCatalog);
 
   // KONSTRUKTOR: Lädt die Daten direkt beim App-Start
-  BikeProvider() {
-    loadFromDevice();
+  BikeProvider({this.localStore}) {
+    ready = loadFromDevice();
+  }
+
+  Json get exportPayload => {
+    'bikes': _bikes.map((bike) => bike.toMap()).toList(),
+    'catalog': _customFieldCatalog.map((item) => item.toMap()).toList(),
+  };
+
+  void applyStoredPayload() {
+    final payload = localStore!.payload;
+    final bikes = (payload['bikes'] as List)
+        .map((value) => Bike.fromMap(Map<String, dynamic>.from(value as Map)))
+        .toList();
+    final catalog = (payload['catalog'] as List)
+        .map(
+          (value) => CustomSetupCategory.fromMap(
+            Map<String, dynamic>.from(value as Map),
+          ),
+        )
+        .toList();
+    _bikes = bikes;
+    _customFieldCatalog = catalog;
+    notifyListeners();
+  }
+
+  Future<void> _saveLocalStore() async {
+    try {
+      await localStore!.savePayload(exportPayload);
+      storageError = null;
+    } catch (_) {
+      storageError = 'local_save_failed';
+    }
+    notifyListeners();
   }
 
   // --- PERSISTENCE (SPEICHERN & LADEN) ---
 
   Future<void> saveToDevice() {
+    if (localStore != null) return _saveLocalStore();
     // Capture the current state and serialize writes so an older async save can
     // never overwrite a newer one.
     final encodedData = jsonEncode(_bikes.map((b) => b.toMap()).toList());
@@ -44,6 +83,17 @@ class BikeProvider extends ChangeNotifier {
   }
 
   Future<void> loadFromDevice() async {
+    if (localStore != null) {
+      if (localStore!.initialized) {
+        applyStoredPayload();
+      } else {
+        _loadDemoBikes();
+      }
+      // Also recover the field library for older installations.
+      _seedCatalogFromBikes();
+      await saveToDevice();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final encodedCatalog = prefs.getString('custom_field_catalog');
     if (encodedCatalog != null) {
@@ -150,6 +200,10 @@ class BikeProvider extends ChangeNotifier {
   }
 
   Future<void> _saveCustomFieldCatalog() async {
+    if (localStore != null) {
+      await _saveLocalStore();
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
       'custom_field_catalog',
@@ -520,7 +574,7 @@ class BikeProvider extends ChangeNotifier {
       final bike = _bikes[bikeIndex];
       final originalSetup = bike.setups.firstWhere((s) => s.id == setupId);
       final duplicatedSetup = originalSetup.copyWith(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(),
         name: '${originalSetup.name} $copySuffix',
         isFavorite: false,
       );

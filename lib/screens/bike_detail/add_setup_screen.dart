@@ -1,6 +1,7 @@
 // lib/screens/bike_detail/add_setup_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 import 'package:provider/provider.dart';
 import '../../providers/bike_provider.dart';
 import '../../models/trail_setup.dart';
@@ -31,7 +32,7 @@ class _AddSetupScreenState extends State<AddSetupScreen> {
 
       // Neues Setup erstellen (alles außer Name ist null/-)
       final newSetup = TrailSetup(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: const Uuid().v4(),
         name: _name.trim(),
         customParameters: bike.availableParameters?.copyWith(ranges: const {}),
       );

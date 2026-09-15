@@ -49,7 +49,7 @@ void main() {
     await tester.drag(find.byType(PageView), const Offset(320, 0));
     await tester.pumpAndSettle();
     expect(currentPage(), 0);
-    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.tap(find.byIcon(Icons.swap_vert));
     await tester.pumpAndSettle();
     await tester.drag(find.byType(PageView), const Offset(-320, 0));
     await tester.pumpAndSettle();
