@@ -9,6 +9,7 @@ import '../../utils/translations.dart';
 import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
 import '../add_bike/add_bike_screen.dart';
+import '../settings/appearance_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -142,43 +143,59 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context, languageProvider, child) {
           final lang = languageProvider.currentLanguage;
           return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  Translations.get(lang, 'settings'),
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.language),
-                  title: Text(Translations.get(lang, 'language')),
-                  trailing: DropdownButton<String>(
-                    value: lang,
-                    items: Translations.supportedLanguageCodes
-                        .map(
-                          (code) => DropdownMenuItem(
-                            value: code,
-                            child: Text(code == 'de' ? 'Deutsch' : 'English'),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) languageProvider.setLanguage(value);
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    Translations.get(lang, 'settings'),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(Icons.language),
+                    title: Text(Translations.get(lang, 'language')),
+                    trailing: DropdownButton<String>(
+                      value: lang,
+                      items: Translations.supportedLanguageCodes
+                          .map(
+                            (code) => DropdownMenuItem(
+                              value: code,
+                              child: Text(code == 'de' ? 'Deutsch' : 'English'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) languageProvider.setLanguage(value);
+                      },
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.palette_outlined),
+                    title: Text(Translations.get(lang, 'appearance')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        this.context,
+                        MaterialPageRoute<void>(
+                          builder: (_) => const AppearanceScreen(),
+                        ),
+                      );
                     },
                   ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.info_outline),
-                  title: Text(Translations.get(lang, 'tutorialInfo')),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _showOnboardingDialog();
-                  },
-                ),
-                const SizedBox(height: 16),
-              ],
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: Text(Translations.get(lang, 'tutorialInfo')),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _showOnboardingDialog();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           );
         },

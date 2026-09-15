@@ -1,23 +1,24 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'providers/theme_provider.dart';
+import 'theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/bike_provider.dart';
 import 'providers/language_provider.dart'; // NEU
 import 'screens/home/home_screen.dart';
 
-
-
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final preferences = await SharedPreferences.getInstance();
 
   runApp(
     // NEU: MultiProvider erlaubt uns beliebig viele Provider
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider(preferences)),
         ChangeNotifierProvider(create: (_) => BikeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageProvider()), // NEU
       ],
@@ -34,21 +35,9 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Bike Setup Tracker',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal,
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
-        pageTransitionsTheme: PageTransitionsTheme(
-          builders: <TargetPlatform, PageTransitionsBuilder>{
-            TargetPlatform.android: const CupertinoPageTransitionsBuilder(),
-            TargetPlatform.iOS: kIsWeb
-                ? const FadeUpwardsPageTransitionsBuilder()
-                : const CupertinoPageTransitionsBuilder(),
-            TargetPlatform.macOS: const CupertinoPageTransitionsBuilder(),
-          },
-        ),
+      theme: AppTheme.build(
+        background: context.watch<ThemeProvider>().background,
+        accent: context.watch<ThemeProvider>().accent,
       ),
       home: const HomeScreen(),
     );
