@@ -134,6 +134,58 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _showSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => Consumer<LanguageProvider>(
+        builder: (context, languageProvider, child) {
+          final lang = languageProvider.currentLanguage;
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  Translations.get(lang, 'settings'),
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.language),
+                  title: Text(Translations.get(lang, 'language')),
+                  trailing: DropdownButton<String>(
+                    value: lang,
+                    items: Translations.supportedLanguageCodes
+                        .map(
+                          (code) => DropdownMenuItem(
+                            value: code,
+                            child: Text(code == 'de' ? 'Deutsch' : 'English'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) languageProvider.setLanguage(value);
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline),
+                  title: Text(Translations.get(lang, 'tutorialInfo')),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _showOnboardingDialog();
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>().currentLanguage;
@@ -155,27 +207,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         title: Text(Translations.get(lang, 'myBikes')),
         actions: [
-          // NEU: Info-Button, um das Tutorial manuell aufzurufen
           IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: Translations.get(lang, 'tutorialInfo'),
-            onPressed: () => _showOnboardingDialog(isFirstStart: false),
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: Translations.get(lang, 'settings'),
+            onPressed: _showSettings,
           ),
-          // SPRACH-UMSCHALTER
-          TextButton(
-            onPressed: () {
-              final newLang = Translations.nextLanguageCode(lang);
-              context.read<LanguageProvider>().setLanguage(newLang);
-            },
-            child: Text(
-              lang.toUpperCase(),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          IconButton(icon: const Icon(Icons.add), onPressed: _onAddBikeTap),
         ],
       ),
       body: Column(

@@ -1719,24 +1719,30 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                                     ),
                                   ),
                                 ),
-                          if (setup.logs.isNotEmpty)
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: IconButton(
-                                tooltip: Translations.get(lang, 'clearHistory'),
-                                icon: const Icon(Icons.delete_outline),
-                                onPressed: _clearHistory,
-                              ),
-                            ),
                         ],
                       ),
                     ),
 
                     // --- NOTIZEN ---
-                    buildSectionHeader(
-                      Translations.get(lang, 'notes'),
-                      icon: Icons.edit_note,
+                    Stack(
+                      children: [
+                        buildSectionHeader(
+                          Translations.get(lang, 'notes'),
+                          icon: Icons.edit_note,
+                        ),
+                        if (setup.logs.isNotEmpty)
+                          Positioned(
+                            right: 16,
+                            top: 0,
+                            height: 40,
+                            width: 48,
+                            child: IconButton(
+                              tooltip: Translations.get(lang, 'clearHistory'),
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: _clearHistory,
+                            ),
+                          ),
+                      ],
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
