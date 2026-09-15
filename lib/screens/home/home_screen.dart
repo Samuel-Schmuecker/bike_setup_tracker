@@ -76,8 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
             Text(
               lang == 'de'
-                  ? 'Deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ deine E-Mail für die Wiederherstellung nach Geräteverlust.'
-                  : 'Your data is saved automatically in a private cloud. Link your email under Account & backup to restore access after losing your device.',
+                  ? 'Deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
+                  : 'Your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
             ),
             const SizedBox(height: 16),
             Container(

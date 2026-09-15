@@ -29,8 +29,11 @@ class FakeCloud {
   bool failNextUploadResponse = false;
   bool anonymousAuth = false;
   bool passwordUpdated = false;
+  bool googleAuth = false;
+  String authId = 'user-1';
   String authEmail = 'test@example.com';
   int uploads = 0;
+  final documentAuthorizations = <String?>[];
   late final client = SupabaseClient(
     'https://test.supabase.co',
     'public-test-key',
@@ -53,11 +56,14 @@ class FakeCloud {
       'role': 'authenticated',
       'email': authEmail,
       'is_anonymous': anonymousAuth,
-      'app_metadata': {},
+      'app_metadata': {
+        'providers': googleAuth ? ['google'] : ['email'],
+      },
       'user_metadata': {},
       'created_at': '2026-09-15T00:00:00Z',
     };
     if (path == '/auth/v1/user') {
+      if (request.method == 'GET') return json(authUser(authId));
       final body = jsonDecode(request.body) as Map;
       if (body['email'] != null) authEmail = body['email'] as String;
       if (body['password'] != null) passwordUpdated = true;
@@ -100,8 +106,9 @@ class FakeCloud {
           (jsonDecode(request.body) as Map)['email'] == 'second@example.com'
           ? 'user-2'
           : 'user-1';
+      authId = userId;
       return json({
-        'access_token': 'test-token',
+        'access_token': 'test-token-$userId',
         'refresh_token': 'refresh',
         'token_type': 'bearer',
         'expires_in': 3600,
@@ -110,6 +117,7 @@ class FakeCloud {
     }
     if (path == '/rest/v1/bike_documents') return json(rows.values.toList());
     if (path == '/rest/v1/rpc/save_bike_document') {
+      documentAuthorizations.add(request.headers['authorization']);
       final body = jsonDecode(request.body) as Map;
       final key = body['p_document_id'] as String;
       uploads++;
@@ -185,6 +193,30 @@ void main() {
       expect(decideSync({'a': 1}, {'a': 1}, null), SyncAction.download);
       expect(decideSync(null, {'a': 1}, {'a': 1}), SyncAction.unchanged);
       expect(sameJson({'a': 1, 'b': 2}, {'b': 2, 'a': 1}), isTrue);
+    },
+  );
+
+  test(
+    'OAuth session change during upload never applies another account',
+    () async {
+      await initialize([bike('guest')]);
+      server.uploadStarted = Completer<void>();
+      server.releaseUpload = Completer<void>();
+      final pass = cloud.sync();
+      await server.uploadStarted!.future;
+      await server.client.auth.signInWithPassword(
+        email: 'second@example.com',
+        password: 'testpassword',
+      );
+      server.releaseUpload!.complete();
+      await pass;
+      expect(
+        server.documentAuthorizations,
+        everyElement('Bearer test-token-user-1'),
+      );
+      expect(store.owner, 'user-1');
+      expect(store.state['base'], isEmpty);
+      expect(cloud.status, 'session');
     },
   );
 
@@ -438,6 +470,126 @@ void main() {
     await store.switchOwner('user-1');
     expect(await store.savedWorkspaces(), isNotEmpty);
   });
+
+  Future<void> googleIntent(String kind, {bool sourceAnonymous = true}) =>
+      store.mutate((state) {
+        state['googleIntent'] = {
+          'id': 'attempt-1',
+          'kind': kind,
+          'sourceOwner': state['owner'],
+          'sourceAnonymous': sourceAnonymous,
+          'createdAt': DateTime.now().microsecondsSinceEpoch,
+        };
+      });
+
+  test(
+    'Google linking preserves UID, bikes and cloud revision after redirect',
+    () async {
+      await initialize([bike('a')]);
+      await cloud.sync();
+      final revision = server.rows['bike:a']!['revision'];
+      await googleIntent('link');
+      server.googleAuth = true;
+      await server.client.auth.signInWithPassword(
+        email: 'test@example.com',
+        password: 'password',
+      );
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(cloud.googleLinked, isTrue);
+      expect(store.owner, 'user-1');
+      expect(bikes.bikes.single.id, 'a');
+      expect(server.rows['bike:a']!['revision'], revision);
+      expect(store.state['googleIntent'], isNull);
+    },
+  );
+
+  test(
+    'Google login switches account and archives guest data exactly once',
+    () async {
+      await initialize([bike('guest')]);
+      await cloud.sync();
+      await googleIntent('login');
+      server.googleAuth = true;
+      await server.client.auth.signInWithPassword(
+        email: 'second@example.com',
+        password: 'password',
+      );
+      server.rows.clear();
+      server.rows['bike:existing'] = {
+        'document_id': 'bike:existing',
+        'revision': 1,
+        'payload': bike('existing'),
+      };
+      await cloud.sync();
+      expect(store.owner, 'user-2');
+      expect(bikes.bikes.single.id, 'existing');
+      final backups = await store.savedWorkspaces();
+      expect(backups.length, 1);
+      expect(
+        (backups.single['payload']['bikes'] as List).single['id'],
+        'guest',
+      );
+      await cloud.sync();
+      expect((await store.savedWorkspaces()).length, 1);
+      expect(server.rows.containsKey('bike:guest'), isFalse);
+    },
+  );
+
+  test('Google linking to a different UID never moves local data', () async {
+    await initialize([bike('guest')]);
+    await cloud.sync();
+    await googleIntent('link');
+    server.googleAuth = true;
+    await server.client.auth.signInWithPassword(
+      email: 'second@example.com',
+      password: 'password',
+    );
+    final uploads = server.uploads;
+    await cloud.sync();
+    expect(cloud.status, 'google');
+    expect(store.owner, 'user-1');
+    expect(bikes.bikes.single.id, 'guest');
+    expect(server.uploads, uploads);
+  });
+
+  test(
+    'Google intent survives restart and can be cancelled without deleting data',
+    () async {
+      await initialize([bike('guest')]);
+      await store.bindOwner('user-1');
+      await googleIntent('login');
+      final reopened = LocalStore(store.database);
+      await reopened.initialize(await SharedPreferences.getInstance());
+      expect(reopened.state['googleIntent']['kind'], 'login');
+      reopened.dispose();
+      await cloud.cancelGoogle();
+      expect(store.state['googleIntent'], isNull);
+      expect(bikes.bikes.single.id, 'guest');
+    },
+  );
+
+  test(
+    'expired Google intent blocks account switching and retains guest data',
+    () async {
+      await initialize([bike('guest')]);
+      await cloud.sync();
+      await googleIntent('login');
+      await store.mutate(
+        (state) => state['googleIntent']['createdAt'] = DateTime.now()
+            .subtract(const Duration(hours: 1))
+            .microsecondsSinceEpoch,
+      );
+      server.googleAuth = true;
+      await server.client.auth.signInWithPassword(
+        email: 'second@example.com',
+        password: 'password',
+      );
+      await cloud.sync();
+      expect(cloud.status, 'google');
+      expect(store.owner, 'user-1');
+    },
+  );
 
   test('stale browser workspace cannot overwrite another tab', () async {
     await initialize([bike('a')]);

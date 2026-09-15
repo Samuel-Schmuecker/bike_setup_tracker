@@ -85,11 +85,12 @@ class LocalStore extends ChangeNotifier {
     });
   }
 
-  Future<void> bindOwner(String uid) => mutate((state) {
+  Future<void> bindOwner(String uid, {bool? anonymous}) => mutate((state) {
     if (state['owner'] != null && state['owner'] != uid) {
       throw StateError('Account switch requires an explicit workspace switch');
     }
     state['owner'] = uid;
+    if (anonymous != null) state['anonymousOwner'] = anonymous;
   });
 
   Future<void> switchOwner(String? uid) {
@@ -154,5 +155,59 @@ class LocalStore extends ChangeNotifier {
         'reason': 'guest-before-sign-in',
       },
     );
+  }
+
+  /// Finish a redirect in one transaction so restart/retry cannot duplicate a transfer.
+  Future<void> finishGoogleLogin(String uid) {
+    final result = _queue.then((_) async {
+      final intent = _state['googleIntent'] as Map?;
+      if (intent == null) return;
+      if (intent['sourceOwner'] != owner) {
+        throw StateError('GOOGLE_OWNER_CHANGED');
+      }
+      if (intent['kind'] == 'link' && uid != owner) {
+        throw StateError('GOOGLE_LINK_MISMATCH');
+      }
+      Json? next;
+      await database.transaction((txn) async {
+        final persisted = await _record.record('active').get(txn);
+        if (persisted?['localRevision'] != _state['localRevision']) {
+          throw StateError('Another tab changed the workspace. Reload first.');
+        }
+        if (uid == owner) {
+          next = cloneJson(_state);
+        } else {
+          final previous = cloneJson(_state)..remove('googleIntent');
+          await _record
+              .record('account:${owner ?? 'local'}')
+              .put(txn, previous);
+          final saved = await _record.record('account:$uid').get(txn);
+          next = saved == null
+              ? {
+                  'version': 1,
+                  'owner': uid,
+                  'payload': {'bikes': [], 'catalog': []},
+                  'base': {},
+                  'initialized': true,
+                }
+              : Map<String, dynamic>.from(saved);
+          if (intent['sourceAnonymous'] == true) {
+            await _record.record('backup:${intent['createdAt']}').put(txn, {
+              'owner': uid,
+              'payload': previous['payload'],
+              'reason': 'guest-before-google-login',
+            });
+          }
+        }
+        next!.remove('googleIntent');
+        next!['anonymousOwner'] = false;
+        next!['localRevision'] = (_state['localRevision'] as int? ?? 0) + 1;
+        await _record.record('active').put(txn, next!);
+      });
+      _state = next!;
+      notifyListeners();
+    });
+    _queue = result.catchError((Object _) {});
+    return result;
   }
 }

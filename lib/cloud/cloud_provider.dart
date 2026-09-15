@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/bike_provider.dart';
@@ -10,6 +12,7 @@ import 'cloud_config.dart';
 import 'image_bytes.dart';
 import 'local_store.dart';
 import 'sync_documents.dart';
+import 'oauth_return.dart';
 
 class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   CloudProvider(
@@ -32,6 +35,15 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _timer;
   Timer? _debounce;
   StreamSubscription<AuthState>? _authEvents;
+  OAuthReturn? _oauthReturn;
+  String? googleIssue;
+  bool get googlePending => store.state['googleIntent'] != null;
+  bool get googleLinked => _hasGoogle(user);
+  bool _hasGoogle(User? value) =>
+      value != null &&
+      ((value.identities?.any((identity) => identity.provider == 'google') ??
+              false) ||
+          (value.appMetadata['providers'] as List? ?? []).contains('google'));
   bool busy = false;
   bool accountOperation = false;
   bool _disposed = false;
@@ -73,6 +85,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     await Supabase.initialize(
       url: CloudConfig.url,
       publishableKey: CloudConfig.key,
+      authOptions: const FlutterAuthClientOptions(
+        authFlowType: AuthFlowType.pkce,
+      ),
     );
     _client = Supabase.instance.client;
     _authEvents = _client!.auth.onAuthStateChange.listen(
@@ -82,6 +97,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         _debounce = Timer(const Duration(seconds: 1), sync);
       },
       onError: (Object _) {
+        if (googlePending) googleIssue = 'google_failed';
         status = 'session';
         _emit();
       },
@@ -90,6 +106,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _identity(SupabaseClient client) async {
+    await _resumeGoogle(client);
     if (client.auth.currentSession == null) {
       if (store.owner != null) throw StateError('SESSION_MISSING');
       await client.auth.signInAnonymously();
@@ -98,10 +115,11 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (store.owner != null && store.owner != uid) {
       throw StateError('SESSION_MISSING');
     }
-    await store.bindOwner(uid);
+    await store.bindOwner(uid, anonymous: user!.isAnonymous);
   }
 
   String _errorStatus(Object error) {
+    if (error.toString().contains('GOOGLE_')) return 'google';
     if (error is PostgrestException &&
         error.message.contains('SYNC_CONFLICT')) {
       return 'retry';
@@ -129,6 +147,10 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       final client = await _ensureClient();
       await _identity(client);
       final uid = user!.id;
+      if (store.owner != uid) throw StateError('SESSION_MISSING');
+      // OAuth can replace the session while image/network work is awaiting.
+      // Pin document requests to this pass's account, especially the UID-based RPC.
+      final authorization = 'Bearer ${client.auth.currentSession!.accessToken}';
       final remote = <String, Json>{};
       for (var start = 0; ; start += 500) {
         final rows = await client
@@ -136,7 +158,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
             .select()
             .eq('user_id', uid)
             .order('document_id')
-            .range(start, start + 499);
+            .range(start, start + 499)
+            .setHeader('Authorization', authorization);
         for (final row in rows) {
           remote[row['document_id'] as String] = row;
         }
@@ -174,20 +197,23 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         Object? downloaded;
         if (action == SyncAction.upload) {
           accepted = Map<String, dynamic>.from(
-            await client.rpc(
-                  'save_bike_document',
-                  params: {
-                    'p_document_id': key,
-                    'p_expected_revision': baseline?['revision'] ?? 0,
-                    'p_payload': portable,
-                  },
-                )
+            await client
+                    .rpc(
+                      'save_bike_document',
+                      params: {
+                        'p_document_id': key,
+                        'p_expected_revision': baseline?['revision'] ?? 0,
+                        'p_payload': portable,
+                      },
+                    )
+                    .setHeader('Authorization', authorization)
                 as Map,
           );
         } else if (action == SyncAction.download) {
           downloaded = await _fromCloud(key, row?['payload'], uid);
         }
         // Never replace an edit made while the network request was in flight.
+        if (user?.id != uid) throw StateError('SESSION_MISSING');
         var applied = false;
         await store.mutate((state) {
           if (state['owner'] != uid) throw StateError('SESSION_MISSING');
@@ -233,6 +259,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
               state['lastSync'] = DateTime.now().toUtc().toIso8601String(),
         );
       }
+      if (googlePending && status == 'synced') status = 'google_waiting';
     } catch (error, stack) {
       lastError = error;
       lastErrorStack = stack;
@@ -345,6 +372,103 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     await client.auth.updateUser(UserAttributes(email: email.trim()));
   });
 
+  Future<void> startGoogle({required bool link}) => _auth((client) async {
+    googleIssue = null;
+    if (link) {
+      // Resolve any old attempt before starting a new one.
+      await store.mutate((state) => state.remove('googleIntent'));
+      await _identity(client);
+      if (googleLinked) return;
+    }
+    await _oauthReturn?.close();
+    final attempt = const Uuid().v4();
+    _oauthReturn = await OAuthReturn.open(attempt, (uri) async {
+      try {
+        await client.auth.getSessionFromUrl(uri);
+        await sync();
+      } catch (_) {
+        googleIssue = 'google_failed';
+        _emit();
+        rethrow;
+      }
+    });
+    await store.backup('before-google');
+    await store.mutate(
+      (state) => state['googleIntent'] = {
+        'id': attempt,
+        'kind': link ? 'link' : 'login',
+        'sourceOwner': state['owner'],
+        'sourceAnonymous':
+            state['owner'] == null ||
+            state['anonymousOwner'] == true ||
+            (anonymous && user?.id == state['owner']),
+        'createdAt': DateTime.now().microsecondsSinceEpoch,
+      },
+    );
+    try {
+      final redirect = _oauthReturn!.redirect;
+      final response = link
+          ? await client.auth.getLinkIdentityUrl(
+              OAuthProvider.google,
+              redirectTo: redirect,
+              queryParams: {'prompt': 'select_account'},
+            )
+          : await client.auth.getOAuthSignInUrl(
+              provider: OAuthProvider.google,
+              redirectTo: redirect,
+              queryParams: {'prompt': 'select_account'},
+            );
+      final opened = await launchUrl(
+        Uri.parse(response.url),
+        mode: kIsWeb
+            ? LaunchMode.platformDefault
+            : LaunchMode.externalApplication,
+        webOnlyWindowName: '_self',
+      );
+      if (!opened) throw StateError('GOOGLE_BROWSER_FAILED');
+    } catch (_) {
+      await _oauthReturn?.close();
+      await store.mutate((state) => state.remove('googleIntent'));
+      rethrow;
+    }
+  });
+
+  Future<void> _resumeGoogle(SupabaseClient client) async {
+    final intent = store.state['googleIntent'] as Map?;
+    if (intent == null) return;
+    final created = DateTime.fromMicrosecondsSinceEpoch(
+      intent['createdAt'] as int,
+    );
+    if (DateTime.now().difference(created) > const Duration(minutes: 15)) {
+      throw StateError('GOOGLE_EXPIRED');
+    }
+    if (user == null || anonymous || !_hasGoogle(user)) return;
+    final verified = (await client.auth.getUser()).user;
+    if (verified == null || verified.isAnonymous || !_hasGoogle(verified)) {
+      return;
+    }
+    accountOperation = true;
+    _emit();
+    try {
+      await store.finishGoogleLogin(verified.id);
+      conflicts.clear();
+      bikes.applyStoredPayload();
+      googleIssue = null;
+    } finally {
+      accountOperation = false;
+      _emit();
+    }
+  }
+
+  Future<void> cancelGoogle() async {
+    if (busy) return;
+    await _oauthReturn?.close();
+    await store.mutate((state) => state.remove('googleIntent'));
+    googleIssue = null;
+    _emit();
+    await sync();
+  }
+
   Future<void> confirmEmail(String email, String code, String password) =>
       _auth((client) async {
         final uid = user!.id;
@@ -385,7 +509,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   });
 
   Future<void> signOut() => _auth((client) async {
-    if (anonymous) throw StateError('Link an email before signing out');
+    if (anonymous) throw StateError('Link Google before signing out');
     await store.backup('before-sign-out');
     await client.auth.signOut(scope: SignOutScope.local);
     await store.switchOwner(null);
@@ -578,6 +702,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     _timer?.cancel();
     _debounce?.cancel();
     _authEvents?.cancel();
+    _oauthReturn?.close();
     store.removeListener(_localChanged);
     bikes.removeListener(_bikeStatusChanged);
     WidgetsBinding.instance.removeObserver(this);

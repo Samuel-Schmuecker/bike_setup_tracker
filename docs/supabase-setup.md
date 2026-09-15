@@ -12,39 +12,18 @@ Datenbankpasswort in die Flutter-App übernehmen.
    `supabase/migrations/202609150001_accounts_and_sync.sql` einfügen.
 3. **Run** ausführen. Das Skript legt Tabellen, private Bildablage,
    Zugriffsregeln und die Funktion für versionsgeprüfte Schreibzugriffe an.
-4. In Authentication anonyme Anmeldung und E-Mail-Anmeldung aktivieren;
-   E-Mail-Bestätigung eingeschaltet lassen.
+4. In Authentication anonyme Anmeldung aktivieren. Google anschließend wie
+   in Abschnitt 2 beschrieben einrichten; E-Mail-Anmeldung ist dafür nicht nötig.
 
 Die Tabellen brauchen keine manuelle Bearbeitung. Direkte Schreibzugriffe
 aus dem Client sind gesperrt. Nur die Funktion `save_bike_document` schreibt
 mit der geprüften Nutzer-ID aus dem Anmeldetoken. Anonyme angemeldete Nutzer
 verwenden wie registrierte Nutzer die Datenbankrolle `authenticated`.
 
-## 2. E-Mail-Codes einrichten
+## 2. Google-Anmeldung einrichten
 
-Die App verwendet eingegebene Codes, damit die Verknüpfung auch ohne
-App-Links auf Android, iOS, Desktop und Web funktioniert.
-
-Unter **Authentication → Email → Templates** in den Vorlagen
-**Change Email Address** und **Reset Password** den Code anzeigen:
-
-```html
-<h2>Bike Setup Tracker</h2>
-<p>Dein Bestätigungscode lautet:</p>
-<p><strong>{{ .Token }}</strong></p>
-<p>Gib diesen Code in der App ein. Teile ihn nicht mit anderen Personen.</p>
-```
-
-Vorhandene Betreffzeilen können erhalten bleiben. Einen Bestätigungslink
-benötigt dieser Ablauf nicht. In der App zunächst den Code anfordern und dann
-Code und gewünschtes Passwort eingeben. Beim Verknüpfen bleibt die Nutzer-ID
-unverändert. Scheitert nur das Setzen des Passworts nach bestätigter E-Mail,
-kann es auf der Kontoseite erneut gesetzt werden.
-
-Für echte Nutzer **Custom SMTP** konfigurieren. Der Supabase-Testversand ist
-eingeschränkt und reicht nicht für öffentliche Registrierung. Den Dienst,
-Absender und Zugangsdaten richtet der Projektinhaber im Dashboard ein;
-SMTP-Zugangsdaten gehören nicht in die App.
+Die App verwendet jetzt Google statt E-Mail-Codes. Folge der Anleitung in
+[google-login-setup.md](google-login-setup.md). Dafür ist kein SMTP erforderlich.
 
 ## 3. App starten und kontrollieren
 
@@ -55,17 +34,16 @@ da neue Plattform-Plugins hinzugekommen sind).
 2. **Jetzt synchronisieren** wählen; der Status soll auf **Mit Cloud
    synchronisiert** wechseln. Bei fehlendem SQL bleibt die App lokal benutzbar.
 3. Ein Bike, ein Setup und ein eigenes Bild anlegen; erneut synchronisieren.
-4. E-Mail verknüpfen, Code bestätigen und Passwort speichern.
+4. Google über **Mit Google absichern** verknüpfen.
 5. Auf einem zweiten Gerät oder in einem getrennten Browserprofil
-   **Ich habe bereits ein Konto** wählen und anmelden. Gastimport deaktiviert
-   lassen, wenn dort nur die Demo-Bikes vorhanden sind.
+   **Mit Google anmelden** wählen. Vorhandene Gastdaten werden separat als lokale Sicherung aufbewahrt.
 6. Bike, Setup, eigene Felder, Historie und Bild prüfen.
 7. Offline ändern, Verbindung wiederherstellen und die Übertragung prüfen.
 8. Dasselbe Bike auf zwei Geräten offline unterschiedlich bearbeiten: Bei einem
    Konflikt **Beide Fassungen behalten** testen.
 9. Datei exportieren und auf einem anderen Gerät als Kopien importieren.
 
-Diese Prüfung benötigt eingerichtete Tabellen und funktionierenden E-Mail-Versand.
+Diese Prüfung benötigt eingerichtete Tabellen und eingerichteten Google-Provider.
 Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
 
 ## Datenmodell und Grenzen dieser Version
@@ -95,8 +73,8 @@ Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
   lokale Änderungen nicht überschreiben und muss nach Export eventueller
   ungespeicherter Änderungen neu geladen werden.
 - Ein verlorenes anonymes Anmeldetoken ist nicht durch die UID ersetzbar.
-  Ohne verknüpfte E-Mail bleiben Daten nach Geräteverlust eventuell unerreichbar.
-- Konto-Selbstlöschung, Google/Apple-Anmeldung und automatisierte externe
+  Ohne verknüpftes Google-Konto bleiben Daten nach Geräteverlust eventuell unerreichbar.
+- Konto-Selbstlöschung, Apple-Anmeldung und automatisierte externe
   Betreiber-Backups sind noch nicht Bestandteil dieser ersten Version.
   Vor öffentlicher Veröffentlichung Kontolöschung und Betreiber-Backups ergänzen.
 - Der lokale Versionsbestand und verwaiste Bilder werden noch nicht automatisch
@@ -107,7 +85,7 @@ Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
 
 - Mit zwei realen Nutzern prüfen, dass Daten- und Bildzugriffe des anderen
   Kontos abgewiesen werden. RPC-Konflikttest ebenfalls gegen Supabase ausführen.
-- E-Mail-Versand, Ratenlimits und Schutz vor massenhaften anonymen Anmeldungen
+- Google-Zielgruppe, Ratenlimits und Schutz vor massenhaften anonymen Anmeldungen
   konfigurieren. Falls CAPTCHA aktiviert wird, muss dessen Token-Übergabe in
   der App ergänzt werden; diese Version hat noch keine CAPTCHA-Oberfläche.
 - Separate Backups von Datenbank **und Bilddateien** einrichten und eine
@@ -115,7 +93,7 @@ Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
 - Kostenloses Supabase-Projekt: Inaktivitätspausen und Speicher-/Traffic-Limits
   beachten. Ein kostenloser Nutzeraccount muss nicht bedeuten, dass der
   App-Betrieb dauerhaft kostenlos bleibt.
-- Native Zielplattformen einschließlich E-Mail-Codes und Dateifreigabe auf
+- Native Zielplattformen einschließlich Google-Rückleitung und Dateifreigabe auf
   echten Geräten prüfen. Ein Web-Build beweist keine iOS-/Android-Funktion.
 
 ## Quellen

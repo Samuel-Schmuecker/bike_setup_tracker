@@ -15,23 +15,10 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  final _email = TextEditingController();
-  final _password = TextEditingController();
-  final _code = TextEditingController();
-  String _mode = 'link';
   String? _message;
   bool _working = false;
-  bool _importGuest = false;
   bool get de => context.read<LanguageProvider>().currentLanguage == 'de';
   String t(String german, String english) => de ? german : english;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    _code.dispose();
-    super.dispose();
-  }
 
   Future<void> run(Future<void> Function() work, {String? success}) async {
     if (_working) return;
@@ -249,6 +236,14 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   String statusText(String status) => switch (status) {
+    'google_waiting' => t(
+      'Cloud synchronisiert; Google-Anmeldung noch offen.',
+      'Cloud synced; Google sign-in pending.',
+    ),
+    'google' => t(
+      'Google-Anmeldung konnte nicht zugeordnet werden oder ist abgelaufen. Bitte abbrechen und erneut anmelden.',
+      'Google sign-in could not be matched or expired. Please cancel and sign in again.',
+    ),
     'syncing' => t('Daten werden synchronisiert …', 'Syncing data …'),
     'synced' => t('Mit Cloud synchronisiert', 'Synced with cloud'),
     'conflict' => t(
@@ -323,8 +318,8 @@ class _AccountScreenState extends State<AccountScreen> {
                           padding: const EdgeInsets.only(top: 12),
                           child: Text(
                             t(
-                              'Verknüpfe deine E-Mail-Adresse, um nach Geräteverlust oder gelöschten App-Daten wieder Zugriff zu erhalten. Die anonyme Anmeldung allein ermöglicht das nicht.',
-                              'Link your email to regain access after losing a device or clearing app data. Anonymous sign-in alone cannot provide this.',
+                              'Verknüpfe dein Google-Konto, um nach Geräteverlust oder gelöschten App-Daten wieder Zugriff zu erhalten. Die anonyme Anmeldung allein ermöglicht das nicht.',
+                              'Link Google to regain access after losing a device or clearing app data. Anonymous sign-in alone cannot provide this.',
                             ),
                           ),
                         ),
@@ -418,215 +413,81 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
               ],
               const SizedBox(height: 20),
-              if (cloud.anonymous ||
-                  _mode == 'recovery' ||
-                  cloud.status == 'session') ...[
-                DropdownButtonFormField<String>(
-                  initialValue: _mode,
-                  decoration: InputDecoration(
-                    labelText: t('Anmeldung', 'Sign-in'),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: 'link',
-                      child: Text(
-                        t(
-                          'Daten dauerhaft absichern',
-                          'Secure access to your data',
-                        ),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'login',
-                      child: Text(
-                        t(
-                          'Ich habe bereits ein Konto',
-                          'I already have an account',
-                        ),
-                      ),
-                    ),
-                    DropdownMenuItem(
-                      value: 'recovery',
-                      child: Text(t('Passwort vergessen', 'Forgot password')),
-                    ),
-                  ],
-                  onChanged: disabled
-                      ? null
-                      : (value) => setState(() {
-                          _mode = value!;
-                          _message = null;
-                        }),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _email,
-                  enabled: !disabled,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  decoration: InputDecoration(
-                    labelText: t('E-Mail-Adresse', 'Email address'),
+              Text(
+                t('Google-Konto', 'Google account'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 12),
+              if (!cloud.googleLinked) ...[
+                Text(
+                  t(
+                    'Verknüpfe Google, um deine Bikes nach einem Gerätewechsel wiederzufinden. Dafür brauchst du kein zusätzliches Passwort.',
+                    'Link Google to restore your bikes after changing devices. No additional password is needed.',
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _password,
-                  enabled: !disabled,
-                  obscureText: true,
-                  autocorrect: false,
-                  decoration: InputDecoration(
-                    labelText: t(
-                      'Passwort (mindestens 8 Zeichen)',
-                      'Password (at least 8 characters)',
-                    ),
-                  ),
-                ),
-                if (_mode != 'login') ...[
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: disabled
-                        ? null
-                        : () => run(
-                            () async {
-                              if (!_email.text.contains('@')) {
-                                throw const FormatException(
-                                  'Email address required',
-                                );
-                              }
-                              if (_mode == 'link') {
-                                await cloud.linkEmail(_email.text);
-                              } else {
-                                await cloud.sendRecovery(_email.text);
-                              }
-                            },
-                            success: t(
-                              'Code angefordert. Bitte E-Mail-Postfach prüfen.',
-                              'Code requested. Please check your inbox.',
-                            ),
-                          ),
-                    child: Text(
-                      t('E-Mail-Code anfordern', 'Request email code'),
-                    ),
-                  ),
-                  TextField(
-                    controller: _code,
-                    enabled: !disabled,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      labelText: t('Code aus der E-Mail', 'Code from email'),
-                    ),
-                  ),
-                ],
-                if (_mode == 'login' && cloud.anonymous)
-                  CheckboxListTile(
-                    contentPadding: EdgeInsets.zero,
-                    value: _importGuest,
-                    onChanged: disabled
-                        ? null
-                        : (value) => setState(() => _importGuest = value!),
-                    title: Text(
-                      t(
-                        'Lokale Bikes als Kopien in das Konto übernehmen',
-                        'Copy local bikes into the account',
-                      ),
-                    ),
-                    subtitle: Text(
-                      t(
-                        'Ohne Auswahl bleibt der lokale Bestand separat auf diesem Gerät erhalten.',
-                        'Otherwise local data remains separately on this device.',
-                      ),
-                    ),
-                  ),
                 const SizedBox(height: 12),
                 FilledButton(
-                  onPressed: disabled
+                  onPressed: disabled || cloud.googlePending
                       ? null
-                      : () => run(
-                          () async {
-                            if (_password.text.isEmpty ||
-                                (_mode != 'login' &&
-                                    _password.text.length < 8)) {
-                              throw const FormatException(
-                                'Password needs at least 8 characters',
-                              );
-                            }
-                            if (_mode == 'login') {
-                              await cloud.signIn(
-                                _email.text,
-                                _password.text,
-                                importGuest: _importGuest && cloud.anonymous,
-                              );
-                            } else if (_mode == 'link') {
-                              await cloud.confirmEmail(
-                                _email.text,
-                                _code.text,
-                                _password.text,
-                              );
-                            } else {
-                              await cloud.recover(
-                                _email.text,
-                                _code.text,
-                                _password.text,
-                              );
-                            }
-                            _password.clear();
-                            _code.clear();
-                            if (mounted) setState(() => _mode = 'link');
-                          },
-                          success: t(
-                            'Anmeldung aktualisiert.',
-                            'Sign-in updated.',
-                          ),
-                        ),
+                      : () => run(() => cloud.startGoogle(link: true)),
                   child: Text(
-                    _mode == 'login'
-                        ? t('Anmelden', 'Sign in')
-                        : t(
-                            'Bestätigen und Passwort speichern',
-                            'Confirm and save password',
-                          ),
+                    t(
+                      'Mit Google absichern',
+                      'Link Google to secure your data',
+                    ),
                   ),
                 ),
               ] else ...[
                 Text(
                   t(
-                    'Dein Konto ist verknüpft. Auf einem anderen Gerät kannst du dich mit E-Mail und Passwort anmelden.',
-                    'Your account is linked. Sign in with email and password on another device.',
+                    'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
+                    'Google is linked. Sign in with the same Google account on other devices.',
                   ),
                 ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _password,
-                  enabled: !disabled,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    labelText: t(
-                      'Passwort setzen oder ändern',
-                      'Set or change password',
-                    ),
-                  ),
-                ),
+              ],
+              if (cloud.anonymous ||
+                  cloud.status == 'session' ||
+                  cloud.status == 'google') ...[
                 OutlinedButton(
-                  onPressed: disabled
+                  onPressed: disabled || cloud.googlePending
                       ? null
-                      : () => run(
-                          () async {
-                            if (_password.text.length < 8) {
-                              throw const FormatException(
-                                'Password needs at least 8 characters',
-                              );
-                            }
-                            await cloud.updatePassword(_password.text);
-                            _password.clear();
-                          },
-                          success: t(
-                            'Passwort gespeichert.',
-                            'Password saved.',
-                          ),
+                      : () => run(() async {
+                          if (await confirm(
+                            t('Mit Google anmelden?', 'Sign in with Google?'),
+                            t(
+                              'Dein Google-Konto wird geöffnet. Bisherige Gastdaten bleiben separat als lokale Sicherung erhalten und können danach als Kopien übernommen werden.',
+                              'Your Google account will be opened. Guest data remains as a separate local backup and can then be imported as copies.',
+                            ),
+                          )) {
+                            await cloud.startGoogle(link: false);
+                          }
+                        }),
+                  child: Text(t('Mit Google anmelden', 'Sign in with Google')),
+                ),
+              ],
+              if (cloud.googlePending || cloud.googleIssue != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  cloud.googleIssue == null
+                      ? t(
+                          'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Mit Google anmelden“ wählen.',
+                          'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Sign in with Google.',
+                        )
+                      : t(
+                          'Google-Anmeldung nicht abgeschlossen. Bitte abbrechen und erneut versuchen. Prüfe bei wiederholten Fehlern die Google-Einstellungen in Supabase.',
+                          'Google sign-in did not complete. Cancel and retry. If it keeps failing, check Google settings in Supabase.',
                         ),
-                  child: Text(t('Passwort speichern', 'Save password')),
                 ),
                 OutlinedButton(
-                  onPressed: disabled
+                  onPressed: disabled ? null : () => run(cloud.cancelGoogle),
+                  child: Text(
+                    t('Google-Anmeldung abbrechen', 'Cancel Google sign-in'),
+                  ),
+                ),
+              ],
+              if (!cloud.anonymous)
+                OutlinedButton(
+                  onPressed: disabled || cloud.googlePending
                       ? null
                       : () => run(() async {
                           if (await confirm(
@@ -641,7 +502,6 @@ class _AccountScreenState extends State<AccountScreen> {
                         }),
                   child: Text(t('Abmelden', 'Sign out')),
                 ),
-              ],
               if (_working || cloud.busy)
                 const Padding(
                   padding: EdgeInsets.all(16),
