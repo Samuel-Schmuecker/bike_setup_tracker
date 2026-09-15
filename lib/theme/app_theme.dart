@@ -1,3 +1,6 @@
+// Required by newer Flutter versions; older SDKs export the builder via Material.
+// ignore: unused_import
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
