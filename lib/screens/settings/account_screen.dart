@@ -493,6 +493,40 @@ class _AccountScreenState extends State<AccountScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(statusText(cloud.status)),
+                      if (cloud.sessionUnavailable) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          t(
+                            'Deine gespeicherte Anmeldung ist nicht mehr gültig. Das Konto wurde möglicherweise außerhalb der App gelöscht. Deine lokalen Daten sind noch vorhanden.',
+                            'Your saved session is no longer valid. The account may have been deleted outside the app. Your local data is still available.',
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: disabled
+                              ? null
+                              : () async {
+                                  if (await confirm(
+                                    t(
+                                      'Lokale Daten neu verbinden?',
+                                      'Reconnect local data?',
+                                    ),
+                                    t(
+                                      'Es wird ein neues Gastkonto erstellt. Deine vorhandenen lokalen Daten werden dorthin übertragen. Anschließend kannst du Google verbinden oder dich anmelden.',
+                                      'A new guest account will be created and your existing local data uploaded to it. You can then link Google or sign in.',
+                                    ),
+                                  )) {
+                                    await run(cloud.reconnectLocalData);
+                                  }
+                                },
+                          label: Text(
+                            t(
+                              'Lokale Daten neu verbinden',
+                              'Reconnect local data',
+                            ),
+                          ),
+                        ),
+                      ],
                       if (cloud.store.lastSync != null)
                         Text(
                           '${t('Letzte Synchronisierung', 'Last sync')}: ${cloud.store.lastSync!.toLocal()}',

@@ -40,7 +40,19 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   OAuthReturn? _oauthReturn;
   String? googleIssue;
   bool get googlePending => store.state['googleIntent'] != null;
-  bool get googleLinked => _hasGoogle(user);
+  bool get googleLinked => !sessionUnavailable && _hasGoogle(user);
+  bool sessionUnavailable = false;
+
+  bool _invalidSession(Object error) =>
+      error is AuthException &&
+      {
+        'user_not_found',
+        'session_not_found',
+        'refresh_token_not_found',
+        'refresh_token_already_used',
+        'bad_jwt',
+        'session_expired',
+      }.contains(error.code);
   bool _hasGoogle(User? value) =>
       value != null &&
       ((value.identities?.any((identity) => identity.provider == 'google') ??
@@ -103,6 +115,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         _debounce = Timer(const Duration(seconds: 1), sync);
       },
       onError: (Object error) {
+        if (_invalidSession(error)) sessionUnavailable = true;
         if (googlePending) googleIssue = googleAuthErrorCode(error);
         status = 'session';
         _emit();
@@ -114,17 +127,34 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> _identity(SupabaseClient client) async {
     await _resumeGoogle(client);
     if (client.auth.currentSession == null) {
-      if (store.owner != null) throw StateError('SESSION_MISSING');
+      if (store.owner != null) {
+        sessionUnavailable = true;
+        throw StateError('SESSION_MISSING');
+      }
       await client.auth.signInAnonymously();
+    }
+    // A cached JWT can outlive a user deleted through the Supabase dashboard.
+    // Verify before comparing cloud data, so an empty response cannot erase local bikes.
+    try {
+      final verified = (await client.auth.getUser()).user;
+      if (verified == null) {
+        throw const AuthException('User missing', code: 'user_not_found');
+      }
+    } catch (error) {
+      if (_invalidSession(error)) sessionUnavailable = true;
+      rethrow;
     }
     final uid = client.auth.currentUser!.id;
     if (store.owner != null && store.owner != uid) {
+      sessionUnavailable = true;
       throw StateError('SESSION_MISSING');
     }
+    sessionUnavailable = false;
     await store.bindOwner(uid, anonymous: user!.isAnonymous);
   }
 
   String _errorStatus(Object error) {
+    if (_invalidSession(error)) return 'session';
     if (error.toString().contains('GOOGLE_')) return 'google';
     if (error is PostgrestException &&
         error.message.contains('SYNC_CONFLICT')) {
@@ -398,6 +428,13 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         throw StateError('Local data must be saved before switching accounts');
       }
       await work(await _ensureClient());
+    } catch (error) {
+      if (_invalidSession(error) ||
+          error.toString().contains('SESSION_MISSING')) {
+        sessionUnavailable = true;
+        status = 'session';
+      }
+      rethrow;
     } finally {
       busy = false;
       accountOperation = false;
@@ -409,6 +446,39 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<void> linkEmail(String email) => _auth((client) async {
     await _identity(client);
     await client.auth.updateUser(UserAttributes(email: email.trim()));
+  });
+
+  /// Explicit recovery only: never recreate an administratively deleted account silently.
+  Future<void> reconnectLocalData() => _auth((client) async {
+    if (guestCleanupPending) {
+      throw StateError('Gastkonto-Bereinigung zuerst prüfen.');
+    }
+    if (client.auth.currentSession != null) {
+      try {
+        await _identity(client);
+        return;
+      } catch (error) {
+        if (!_invalidSession(error) &&
+            !error.toString().contains('SESSION_MISSING')) {
+          rethrow;
+        }
+      }
+    }
+    await store.backup('before-session-recovery');
+    await client.auth.signOut(scope: SignOutScope.local);
+    await store.mutate((state) {
+      state['owner'] = null;
+      state['base'] = <String, dynamic>{};
+      state['anonymousOwner'] = true;
+      state.remove('googleIntent');
+      state.remove('lastSync');
+    });
+    _uploaded.clear();
+    _downloaded.clear();
+    conflicts.clear();
+    googleIssue = null;
+    sessionUnavailable = false;
+    await _identity(client);
   });
 
   Future<void> startGoogle({required bool link, String? guestChoice}) async {

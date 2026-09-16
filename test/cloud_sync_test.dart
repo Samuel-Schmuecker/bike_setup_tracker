@@ -38,6 +38,9 @@ class FakeCloud {
   int guestDeletionCalls = 0;
   bool failGuestDeletion = false;
   int signupCalls = 0;
+  final deletedUsers = <String>{};
+  bool userLookupOffline = false;
+  String signupUserId = 'user-1';
   final documentAuthorizations = <String?>[];
   late final client = SupabaseClient(
     'https://test.supabase.co',
@@ -83,7 +86,15 @@ class FakeCloud {
       'created_at': '2026-09-15T00:00:00Z',
     };
     if (path == '/auth/v1/user') {
-      if (request.method == 'GET') return json(authUser(authId));
+      if (request.method == 'GET') {
+        if (userLookupOffline) throw http.ClientException('Offline');
+        if (deletedUsers.contains(authId))
+          return json({
+              'error_code': 'user_not_found',
+            'msg': 'User from sub claim in JWT does not exist',
+          }, 403);
+        return json(authUser(authId));
+      }
       final body = jsonDecode(request.body) as Map;
       if (body['email'] != null) authEmail = body['email'] as String;
       if (body['password'] != null) passwordUpdated = true;
@@ -125,8 +136,9 @@ class FakeCloud {
         anonymousAuth = true;
       }
       if (path == '/auth/v1/verify') anonymousAuth = false;
-      final userId =
-          (jsonDecode(request.body) as Map)['email'] == 'second@example.com'
+      final userId = path == '/auth/v1/signup'
+          ? signupUserId
+          : (jsonDecode(request.body) as Map)['email'] == 'second@example.com'
           ? 'user-2'
           : 'user-1';
       authId = userId;
@@ -736,6 +748,47 @@ void main() {
       await cloud.sync();
       expect(cloud.status, 'google');
       expect(store.owner, 'user-1');
+    },
+  );
+
+  test(
+    'dashboard deletion retains bikes and requires explicit recovery',
+    () async {
+      await initialize([bike('local-bike')]);
+      await cloud.sync();
+      server.deletedUsers.add('user-1');
+      server.rows.clear();
+      await cloud.sync();
+      expect(cloud.status, 'session');
+      expect(cloud.sessionUnavailable, isTrue);
+      expect(store.owner, 'user-1');
+      expect(bikes.bikes.single.id, 'local-bike');
+      expect(server.signupCalls, 0);
+      server.signupUserId = 'replacement-guest';
+      await cloud.reconnectLocalData();
+      while (cloud.busy) {
+        await Future<void>.delayed(const Duration(milliseconds: 5));
+      }
+      expect(cloud.sessionUnavailable, isFalse);
+      expect(store.owner, 'replacement-guest');
+      expect(server.signupCalls, 1);
+      expect(bikes.bikes.single.id, 'local-bike');
+      expect(server.rows['bike:local-bike']?['revision'], 1);
+    },
+  );
+
+  test(
+    'network failure never replaces an account or discards local data',
+    () async {
+      await initialize([bike('offline-bike')]);
+      await cloud.sync();
+      server.userLookupOffline = true;
+      await cloud.sync();
+      expect(cloud.sessionUnavailable, isFalse);
+      await expectLater(cloud.reconnectLocalData(), throwsA(anything));
+      expect(store.owner, 'user-1');
+      expect(bikes.bikes.single.id, 'offline-bike');
+      expect(server.signupCalls, 0);
     },
   );
 
