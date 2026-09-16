@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../cloud/cloud_provider.dart';
+import '../../cloud/google_auth_error.dart';
 import '../../cloud/sync_documents.dart';
 import '../../providers/language_provider.dart';
 
@@ -473,11 +474,10 @@ class _AccountScreenState extends State<AccountScreen> {
                           'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Mit Google anmelden“ wählen.',
                           'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Sign in with Google.',
                         )
-                      : t(
-                          'Google-Anmeldung nicht abgeschlossen. Bitte abbrechen und erneut versuchen. Prüfe bei wiederholten Fehlern die Google-Einstellungen in Supabase.',
-                          'Google sign-in did not complete. Cancel and retry. If it keeps failing, check Google settings in Supabase.',
-                        ),
+                      : googleAuthErrorHelp(cloud.googleIssue!, german: de),
                 ),
+                if (cloud.googleIssue != null)
+                  SelectableText('Code: ${cloud.googleIssue}'),
                 OutlinedButton(
                   onPressed: disabled ? null : () => run(cloud.cancelGoogle),
                   child: Text(

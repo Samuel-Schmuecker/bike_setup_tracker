@@ -13,6 +13,7 @@ import 'image_bytes.dart';
 import 'local_store.dart';
 import 'sync_documents.dart';
 import 'oauth_return.dart';
+import 'google_auth_error.dart';
 
 class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   CloudProvider(
@@ -96,8 +97,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         _debounce?.cancel();
         _debounce = Timer(const Duration(seconds: 1), sync);
       },
-      onError: (Object _) {
-        if (googlePending) googleIssue = 'google_failed';
+      onError: (Object error) {
+        if (googlePending) googleIssue = googleAuthErrorCode(error);
         status = 'session';
         _emit();
       },
@@ -386,8 +387,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       try {
         await client.auth.getSessionFromUrl(uri);
         await sync();
-      } catch (_) {
-        googleIssue = 'google_failed';
+      } catch (error) {
+        googleIssue = googleAuthErrorCode(error);
         _emit();
         rethrow;
       }
