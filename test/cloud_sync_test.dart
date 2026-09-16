@@ -35,6 +35,8 @@ class FakeCloud {
   int uploads = 0;
   bool failDeletion = false;
   int deletionCalls = 0;
+  int guestDeletionCalls = 0;
+  bool failGuestDeletion = false;
   int signupCalls = 0;
   final documentAuthorizations = <String?>[];
   late final client = SupabaseClient(
@@ -54,6 +56,14 @@ class FakeCloud {
     );
     final path = request.url.path;
     if (path == '/functions/v1/delete-account') {
+      final body = jsonDecode(request.body) as Map;
+      if (body['action'] == 'finish_guest') {
+        guestDeletionCalls++;
+        if (failGuestDeletion) return json({'error': 'guest_changed'}, 409);
+        return json({'deleted': true});
+      }
+      if (body['action'] == 'prepare_guest')
+        return json({'ticket': 'guest-ticket'});
       deletionCalls++;
       if (failDeletion) return json({'error': 'image_delete_failed'}, 500);
       rows.clear();
@@ -603,6 +613,74 @@ void main() {
       await cloud.sync();
       expect((await store.savedWorkspaces()).length, 1);
       expect(server.rows.containsKey('bike:guest'), isFalse);
+    },
+  );
+
+  Future<void> switchGuestWithChoice(String choice) async {
+    await initialize([bike('guest')]);
+    await cloud.sync();
+    await googleIntent('login');
+    await store.mutate((state) {
+      state['googleIntent']['guestTicket'] = 'guest-ticket';
+      state['googleIntent']['guestChoice'] = choice;
+    });
+    server.googleAuth = true;
+    await server.client.auth.signInWithPassword(
+      email: 'second@example.com',
+      password: 'password',
+    );
+    server.rows.clear();
+  }
+
+  test(
+    'guest import uploads copies before cleanup, retry does not duplicate',
+    () async {
+      await switchGuestWithChoice('import');
+      server.failNextUploadResponse = true;
+      await cloud.sync();
+      expect(server.guestDeletionCalls, 0);
+      expect(cloud.guestCleanupPending, isTrue);
+      final copiedId = bikes.bikes.single.id;
+      expect(copiedId, isNot('guest'));
+      server.failGuestDeletion = true;
+      await cloud.sync();
+      expect(server.rows['bike:$copiedId']?['payload'], isNotNull);
+      expect(cloud.guestCleanupPending, isTrue);
+      expect((await store.savedWorkspaces()), isNotEmpty);
+      server.failGuestDeletion = false;
+      await cloud.sync();
+      expect(cloud.guestCleanupPending, isFalse);
+      expect(bikes.bikes.single.id, copiedId);
+      expect(await store.savedWorkspaces(), isEmpty);
+      expect(store.owner, 'user-2');
+      expect(server.deletionCalls, 0);
+    },
+  );
+
+  test(
+    'explicit discard never uploads guest bikes to Google account',
+    () async {
+      await switchGuestWithChoice('discard');
+      await cloud.sync();
+      expect(bikes.bikes, isEmpty);
+      expect(server.rows.keys.where((key) => key.startsWith('bike:')), isEmpty);
+      expect(server.guestDeletionCalls, 1);
+      expect(cloud.guestCleanupPending, isFalse);
+      expect(store.owner, 'user-2');
+    },
+  );
+
+  test(
+    'guest import completion survives restart without importing twice',
+    () async {
+      await switchGuestWithChoice('import');
+      await store.finishGoogleLogin('user-2');
+      final reopened = LocalStore(store.database);
+      await reopened.initialize(await SharedPreferences.getInstance());
+      await reopened.finishGoogleLogin('user-2');
+      expect((reopened.payload['bikes'] as List).length, 1);
+      expect(reopened.state['guestCleanup']['ticket'], 'guest-ticket');
+      reopened.dispose();
     },
   );
 

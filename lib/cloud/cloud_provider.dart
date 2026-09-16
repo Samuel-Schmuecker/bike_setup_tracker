@@ -62,6 +62,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get canSync => bikes.storageError == null;
   bool get cloudPaused => store.state['cloudPaused'] == true;
   bool get deletionPending => store.state['deletionPending'] == true;
+  bool get guestCleanupPending => store.state['guestCleanup'] != null;
+  String? guestCleanupError;
 
   void _emit() {
     if (!_disposed) notifyListeners();
@@ -155,6 +157,10 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       if (!canSync) throw StateError('LOCAL_SAVE_FAILED');
       final client = await _ensureClient();
       await _identity(client);
+      if (store.state['googleIntent']?['guestTicket'] != null && anonymous) {
+        status = 'google_waiting';
+        return;
+      }
       final uid = user!.id;
       if (store.owner != uid) throw StateError('SESSION_MISSING');
       // OAuth can replace the session while image/network work is awaiting.
@@ -269,6 +275,27 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
       }
       if (googlePending && status == 'synced') status = 'google_waiting';
+      if (status == 'synced' && guestCleanupPending) {
+        try {
+          final response = await client.functions.invoke(
+            'delete-account',
+            body: {
+              'action': 'finish_guest',
+              'confirm': 'DELETE',
+              'ticket': store.state['guestCleanup']['ticket'],
+            },
+          );
+          if (response.data is! Map || response.data['deleted'] != true) {
+            throw StateError('GUEST_CLEANUP_PENDING');
+          }
+          await store.finishGuestCleanup();
+          _uploaded.clear();
+          _downloaded.clear();
+          guestCleanupError = null;
+        } catch (_) {
+          guestCleanupError = 'guest_cleanup_pending';
+        }
+      }
     } catch (error, stack) {
       lastError = error;
       lastErrorStack = stack;
@@ -384,66 +411,105 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     await client.auth.updateUser(UserAttributes(email: email.trim()));
   });
 
-  Future<void> startGoogle({required bool link}) => _auth((client) async {
-    googleIssue = null;
-    if (link) {
-      // Resolve any old attempt before starting a new one.
-      await store.mutate((state) => state.remove('googleIntent'));
-      await _identity(client);
-      if (googleLinked) return;
+  Future<void> startGoogle({required bool link, String? guestChoice}) async {
+    if (guestCleanupPending) {
+      throw StateError('Gastkonto-Bereinigung zuerst abschließen.');
     }
-    await _oauthReturn?.close();
-    final attempt = const Uuid().v4();
-    _oauthReturn = await OAuthReturn.open(attempt, (uri) async {
+    if (!link && anonymous && store.owner != null) {
+      if (!{'import', 'discard'}.contains(guestChoice)) {
+        throw StateError('Choose what to do with guest data');
+      }
+      await sync();
+      if (status != 'synced') {
+        throw StateError(
+          'Gastdaten zuerst vollständig synchronisieren und Konflikte lösen.',
+        );
+      }
+    }
+    await _auth((client) async {
+      googleIssue = null;
+      if (link) {
+        // Resolve any old attempt before starting a new one.
+        await store.mutate((state) => state.remove('googleIntent'));
+        await _identity(client);
+        if (googleLinked) return;
+      }
+      await _oauthReturn?.close();
+      final attempt = const Uuid().v4();
+      _oauthReturn = await OAuthReturn.open(attempt, (uri) async {
+        try {
+          await client.auth.getSessionFromUrl(uri);
+          await sync();
+        } catch (error) {
+          googleIssue = googleAuthErrorCode(error);
+          _emit();
+          rethrow;
+        }
+      });
+      await store.backup('before-google');
+      String? guestTicket;
+      if (!link &&
+          anonymous &&
+          user?.id == store.owner &&
+          store.owner != null) {
+        final response = await client.functions.invoke(
+          'delete-account',
+          body: {
+            'action': 'prepare_guest',
+            'revisions': {
+              for (final entry in (store.state['base'] as Map).entries)
+                if ((entry.value['revision'] as num) > 0)
+                  entry.key: entry.value['revision'],
+            },
+          },
+        );
+        if (response.data is! Map || response.data['ticket'] is! String) {
+          throw StateError('Gastwechsel konnte nicht vorbereitet werden.');
+        }
+        guestTicket = response.data['ticket'] as String;
+      }
+      await store.mutate(
+        (state) => state['googleIntent'] = {
+          'id': attempt,
+          'kind': link ? 'link' : 'login',
+          'guestTicket': guestTicket,
+          'guestChoice': guestChoice,
+          'sourceOwner': state['owner'],
+          'sourceAnonymous':
+              state['owner'] == null ||
+              state['anonymousOwner'] == true ||
+              (anonymous && user?.id == state['owner']),
+          'createdAt': DateTime.now().microsecondsSinceEpoch,
+        },
+      );
       try {
-        await client.auth.getSessionFromUrl(uri);
-        await sync();
-      } catch (error) {
-        googleIssue = googleAuthErrorCode(error);
-        _emit();
+        final redirect = _oauthReturn!.redirect;
+        final response = link
+            ? await client.auth.getLinkIdentityUrl(
+                OAuthProvider.google,
+                redirectTo: redirect,
+                queryParams: {'prompt': 'select_account'},
+              )
+            : await client.auth.getOAuthSignInUrl(
+                provider: OAuthProvider.google,
+                redirectTo: redirect,
+                queryParams: {'prompt': 'select_account'},
+              );
+        final opened = await launchUrl(
+          Uri.parse(response.url),
+          mode: kIsWeb
+              ? LaunchMode.platformDefault
+              : LaunchMode.externalApplication,
+          webOnlyWindowName: '_self',
+        );
+        if (!opened) throw StateError('GOOGLE_BROWSER_FAILED');
+      } catch (_) {
+        await _oauthReturn?.close();
+        await store.mutate((state) => state.remove('googleIntent'));
         rethrow;
       }
     });
-    await store.backup('before-google');
-    await store.mutate(
-      (state) => state['googleIntent'] = {
-        'id': attempt,
-        'kind': link ? 'link' : 'login',
-        'sourceOwner': state['owner'],
-        'sourceAnonymous':
-            state['owner'] == null ||
-            state['anonymousOwner'] == true ||
-            (anonymous && user?.id == state['owner']),
-        'createdAt': DateTime.now().microsecondsSinceEpoch,
-      },
-    );
-    try {
-      final redirect = _oauthReturn!.redirect;
-      final response = link
-          ? await client.auth.getLinkIdentityUrl(
-              OAuthProvider.google,
-              redirectTo: redirect,
-              queryParams: {'prompt': 'select_account'},
-            )
-          : await client.auth.getOAuthSignInUrl(
-              provider: OAuthProvider.google,
-              redirectTo: redirect,
-              queryParams: {'prompt': 'select_account'},
-            );
-      final opened = await launchUrl(
-        Uri.parse(response.url),
-        mode: kIsWeb
-            ? LaunchMode.platformDefault
-            : LaunchMode.externalApplication,
-        webOnlyWindowName: '_self',
-      );
-      if (!opened) throw StateError('GOOGLE_BROWSER_FAILED');
-    } catch (_) {
-      await _oauthReturn?.close();
-      await store.mutate((state) => state.remove('googleIntent'));
-      rethrow;
-    }
-  });
+  }
 
   Future<void> _resumeGoogle(SupabaseClient client) async {
     final intent = store.state['googleIntent'] as Map?;
@@ -521,6 +587,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   });
 
   Future<void> signOut() => _auth((client) async {
+    if (guestCleanupPending) {
+      throw StateError('Gastkonto-Bereinigung zuerst abschließen.');
+    }
     if (anonymous) throw StateError('Link Google before signing out');
     await store.backup('before-sign-out');
     await client.auth.signOut(scope: SignOutScope.local);
@@ -530,6 +599,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   });
 
   Future<void> deleteAccount() async {
+    if (guestCleanupPending) {
+      throw StateError('Gastkonto-Bereinigung zuerst abschließen.');
+    }
     if (busy) throw StateError('Please wait for the current operation');
     busy = true;
     accountOperation = true;

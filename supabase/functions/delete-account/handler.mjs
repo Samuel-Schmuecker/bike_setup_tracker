@@ -23,17 +23,45 @@ export const createDeleteHandler = (createAdmin, url) => async (request) => {
         claims.iss !== `${url}/auth/v1`) {
       return reply(401, { error: "invalid_session" });
     }
-    const uid = claims.sub;
+    let uid = claims.sub;
+    const body = await request.json();
     const existing = await admin.auth.admin.getUserById(uid);
     // A repeated request after a lost success response is harmless.
     if (existing.error?.status === 404 || existing.error?.code === "user_not_found") {
+      if (body.action != null) return reply(401, { error: 'target_session_missing' });
       return reply(200, { deleted: true });
     }
     if (existing.error || !existing.data.user) throw new Error("user_lookup_failed");
     const verified = await admin.auth.getUser(token);
     if (verified.error || verified.data.user?.id !== uid) return reply(401, { error: "invalid_session" });
-    const body = await request.json();
+    if (body.action === 'prepare_guest') {
+      if (verified.data.user.is_anonymous !== true) return reply(403, { error: 'guest_required' });
+      const prepared = await admin.rpc('prepare_guest_transfer', {
+        p_source: uid, p_revisions: body.revisions,
+      });
+      if (prepared.error) return reply(409, { error: 'guest_changed_or_setup_missing' });
+      return reply(200, { ticket: prepared.data });
+    }
     if (body.confirm !== "DELETE") return reply(400, { error: "confirmation_required" });
+    if (body.action === 'finish_guest') {
+      if (verified.data.user.is_anonymous !== false ||
+          !verified.data.user.identities?.some((identity) => identity.provider === 'google')) {
+        return reply(403, { error: 'google_login_required' });
+      }
+      if (typeof body.ticket !== 'string') return reply(400, { error: 'ticket_required' });
+      const claimed = await admin.rpc('claim_guest_transfer', { p_ticket: body.ticket, p_target: uid });
+      if (claimed.error) return reply(409, { error: 'guest_transfer_requires_review' });
+      uid = claimed.data;
+      const source = await admin.auth.admin.getUserById(uid);
+      if (source.error?.status === 404 || source.error?.code === 'user_not_found') {
+        return reply(200, { deleted: true });
+      }
+      if (source.error || source.data.user?.is_anonymous !== true) {
+        return reply(409, { error: 'source_no_longer_guest' });
+      }
+    } else if (body.action != null) {
+      return reply(400, { error: 'unknown_action' });
+    }
     const locked = await admin.rpc("begin_account_deletion", { p_user_id: uid });
     if (locked.error) throw new Error("deletion_setup_failed");
 

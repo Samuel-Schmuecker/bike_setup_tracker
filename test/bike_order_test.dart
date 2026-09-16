@@ -8,6 +8,40 @@ import 'package:bike_setup_tracker/widgets/bike_card.dart';
 import 'field_order_test.dart' show loadProvider;
 
 void main() {
+  testWidgets('Delete from bike menu requires confirmation and persists', (
+    tester,
+  ) async {
+    final provider = await loadProvider();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('hasSeenOnboarding', true);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: provider),
+          ChangeNotifierProvider(create: (_) => LanguageProvider()),
+        ],
+        child: MaterialApp(theme: ThemeData.dark(), home: const HomeScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final confirm in [false, true]) {
+      await tester.longPress(find.byType(BikeCard).first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Bike löschen'));
+      await tester.pumpAndSettle();
+      expect(find.text('Bike löschen?'), findsOneWidget);
+      expect(provider.bikes.length, 2);
+      await tester.tap(find.text(confirm ? 'Löschen' : 'Abbrechen'));
+      await tester.pumpAndSettle();
+      expect(provider.bikes.length, confirm ? 1 : 2);
+    }
+    await provider.saveToDevice();
+    await provider.loadFromDevice();
+    expect(provider.bikes.map((bike) => bike.id), ['b']);
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('Bike order persists and invalid orders cannot remove bikes', () async {
     final provider = await loadProvider();
     provider.reorderBikes(['b', 'a']);

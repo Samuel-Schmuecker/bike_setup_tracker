@@ -22,6 +22,72 @@ class _AccountScreenState extends State<AccountScreen> {
   bool get de => context.read<LanguageProvider>().currentLanguage == 'de';
   String t(String german, String english) => de ? german : english;
 
+  Future<void> signInWithGuestChoice(CloudProvider cloud) async {
+    String? choice;
+    if (cloud.anonymous && cloud.store.owner != null) {
+      choice = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(
+            t(
+              'Was soll mit deinen Gastdaten passieren?',
+              'What should happen to your guest data?',
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  t(
+                    'Nach erfolgreicher Google-Anmeldung wird das bisherige Gastkonto gelöscht. Übernommene Daten werden vorher vollständig synchronisiert.',
+                    'After successful Google sign-in, the old guest account is deleted. Imported data is fully synced first.',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'import'),
+                  child: Text(
+                    t('Daten als Kopien übernehmen', 'Import data as copies'),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => run(() => export(cloud)),
+                  child: Text(t('Sicherung exportieren', 'Export backup')),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, 'discard'),
+                  child: Text(t('Gastdaten verwerfen', 'Discard guest data')),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: Text(t('Abbrechen', 'Cancel')),
+            ),
+          ],
+        ),
+      );
+      if (choice == null || !mounted) return;
+      if (choice == 'discard' &&
+          !await confirm(
+            t('Gastdaten wirklich verwerfen?', 'Discard guest data?'),
+            t(
+              'Nach erfolgreicher Anmeldung werden das alte Gastkonto, seine Cloud-Daten und lokalen Sicherungen gelöscht. Exportierte Dateien bleiben erhalten.',
+              'After successful sign-in, the old guest account, its cloud data and local backups are deleted. Exported files remain.',
+            ),
+          )) {
+        return;
+      }
+    }
+    if (mounted) {
+      await run(() => cloud.startGoogle(link: false, guestChoice: choice));
+    }
+  }
+
   Future<void> requestDeletion(CloudProvider cloud) async {
     final controller = TextEditingController();
     final accepted = await showDialog<bool>(
@@ -618,28 +684,15 @@ class _AccountScreenState extends State<AccountScreen> {
                         const SizedBox(height: 6),
                         Text(
                           t(
-                            'Melde dich mit dem bereits verwendeten Google-Konto an. Gastdaten bleiben separat gesichert.',
-                            'Sign in with the Google account you used before. Guest data is backed up separately.',
+                            'Melde dich mit deinem bestehenden Google-Konto an. Du entscheidest vorher, ob deine Gastdaten übernommen oder verworfen werden.',
+                            'Sign in with your existing Google account. First choose whether to import or discard your guest data.',
                           ),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton(
                           onPressed: disabled || cloud.googlePending
                               ? null
-                              : () => run(() async {
-                                  if (await confirm(
-                                    t(
-                                      'Mit Google anmelden?',
-                                      'Sign in with Google?',
-                                    ),
-                                    t(
-                                      'Dein Google-Konto wird geöffnet. Bisherige Gastdaten bleiben separat als lokale Sicherung erhalten und können danach als Kopien übernommen werden.',
-                                      'Your Google account will be opened. Guest data remains as a separate local backup and can then be imported as copies.',
-                                    ),
-                                  )) {
-                                    await cloud.startGoogle(link: false);
-                                  }
-                                }),
+                              : () => signInWithGuestChoice(cloud),
                           child: Text(
                             t('Mit Google anmelden', 'Sign in with Google'),
                           ),
@@ -714,6 +767,31 @@ class _AccountScreenState extends State<AccountScreen> {
                   child: SelectableText(_message!),
                 ),
               const Divider(height: 40),
+              if (cloud.guestCleanupPending) ...[
+                Text(
+                  t(
+                    'Bisheriges Gastkonto bereinigen',
+                    'Clean up previous guest account',
+                  ),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                Text(
+                  cloud.guestCleanupError == null
+                      ? t(
+                          'Die Gastdaten werden abgeglichen. Erst danach wird das alte Gastkonto gelöscht.',
+                          'Guest data is being synced. The old guest account is deleted afterwards.',
+                        )
+                      : t(
+                          'Das alte Gastkonto konnte noch nicht gelöscht werden. Deine Google-Daten bleiben erhalten. Bitte erneut versuchen. Wenn der Fehler bleibt, muss der Gastbestand geprüft werden.',
+                          'The old guest account could not be deleted yet. Your Google data remains. Retry; if this persists, the guest data needs review.',
+                        ),
+                ),
+                OutlinedButton(
+                  onPressed: disabled ? null : cloud.sync,
+                  child: Text(t('Erneut versuchen', 'Retry')),
+                ),
+                const Divider(height: 24),
+              ],
               Text(
                 t('Sicherungsdateien', 'Backup files'),
                 style: Theme.of(context).textTheme.titleLarge,

@@ -223,7 +223,7 @@ class Translations {
       'welcomeText1':
           'Ich habe dir ein Beispiel-Fahrrad angelegt, damit du die Funktionen direkt ausprobieren kannst.',
       'welcomeText2':
-          'Halte auf der Startseite eine Bike-Kachel lange gedrückt. Im Menü kannst du das Bike bearbeiten oder die Bikes neu sortieren. Löschen findest du unter „Bike bearbeiten“.',
+          'Halte auf der Startseite eine Bike-Kachel lange gedrückt. Im Menü kannst du das Bike bearbeiten, löschen oder die Bikes neu sortieren.',
       'gotIt': 'Los geht\'s!',
     },
     'en': {
@@ -444,7 +444,7 @@ class Translations {
       'welcomeText1':
           'I have created a demo bike for you so you can try out the features right away.',
       'welcomeText2':
-          'Long-press a bike card on the home screen to open the menu. Choose to edit the bike or reorder your bikes. To delete a bike, choose “Edit Bike”.',
+          'Long-press a bike card on the home screen to open the menu. Choose to edit or delete the bike, or reorder your bikes.',
       'gotIt': 'Let\'s go!',
     },
   };

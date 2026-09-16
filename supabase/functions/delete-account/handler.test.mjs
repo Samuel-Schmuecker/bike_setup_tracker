@@ -3,20 +3,26 @@ import assert from 'node:assert/strict';
 import { createDeleteHandler } from './handler.mjs';
 
 const url = 'https://project.supabase.co';
-function fixture({ invalid = false, storageError = false, missing = false } = {}) {
+function fixture({ invalid = false, storageError = false, missing = false,
+  anonymous = false, claimError = false, sourceRegistered = false } = {}) {
   const calls = [];
   let batches = 0;
   const admin = {
     auth: {
       getClaims: async () => ({ data: { claims: { sub: 'own-id', role: 'authenticated', iss: url + '/auth/v1' } }, error: invalid ? {} : null }),
-      getUser: async () => ({ data: { user: { id: 'own-id' } } }),
+      getUser: async () => ({ data: { user: { id: 'own-id', is_anonymous: anonymous, identities: anonymous ? [] : [{ provider: 'google' }] } } }),
       admin: {
-        getUserById: async (id) => { calls.push(['lookup', id]); return missing ? { error: { status: 404 } } : { data: { user: { id } } }; },
+        getUserById: async (id) => { calls.push(['lookup', id]); return missing ? { error: { status: 404 } } : { data: { user: { id, is_anonymous: id === 'guest-id' && !sourceRegistered } } }; },
         deleteUser: async (id) => { calls.push(['delete', id]); return {}; },
       },
     },
     rpc: async (name, args) => {
       calls.push([name, args.p_user_id]);
+      if (name === 'prepare_guest_transfer') return { data: 'ticket' };
+      if (name === 'claim_guest_transfer') {
+        calls.push(['target', args.p_target]);
+        return { data: 'guest-id', error: claimError ? {} : null };
+      }
       return { data: name === 'account_deletion_images' && batches++ === 0 ? [{ name: 'own-id/nested/photo' }] : [] };
     },
     storage: { from: () => ({ remove: async (names) => { calls.push(['images', names]); return { error: storageError ? {} : null }; } }) },
@@ -52,4 +58,27 @@ test('retry after successful deletion returns success for verified own UID', asy
   const { handler, calls } = fixture({ missing: true });
   assert.deepEqual(await (await handler(request())).json(), { deleted: true });
   assert.deepEqual(calls, [['lookup', 'own-id']]);
+});
+
+test('only anonymous users can prepare a guest transfer', async () => {
+  const body = { action: 'prepare_guest', revisions: {} };
+  assert.equal((await fixture().handler(request('valid', body))).status, 403);
+  const guest = fixture({ anonymous: true });
+  assert.deepEqual(await (await guest.handler(request('valid', body))).json(), { ticket: 'ticket' });
+  assert.ok(!guest.calls.some(([name]) => name === 'delete'));
+});
+test('guest cleanup uses server-authorized source and verified target', async () => {
+  const { handler, calls } = fixture();
+  const response = await handler(request('valid', { action: 'finish_guest', confirm: 'DELETE', ticket: 'ticket', source: 'victim' }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(calls.find(([name]) => name === 'target'), ['target', 'own-id']);
+  assert.deepEqual(calls.at(-1), ['delete', 'guest-id']);
+});
+test('invalid ticket, changed source or anonymous target never delete anyone', async () => {
+  for (const options of [{ claimError: true }, { sourceRegistered: true }, { anonymous: true }]) {
+    const { handler, calls } = fixture(options);
+    const response = await handler(request('valid', { action: 'finish_guest', confirm: 'DELETE', ticket: 'ticket' }));
+    assert.ok([403, 409].includes(response.status));
+    assert.ok(!calls.some(([name]) => name === 'delete' || name === 'images'));
+  }
 });

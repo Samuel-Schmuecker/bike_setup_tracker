@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'sync_documents.dart';
 import 'erase_images.dart';
+import 'package:uuid/uuid.dart';
 
 /// One transactional record contains both user data and its sync baseline.
 /// The legacy preferences are retained unchanged as a migration backup.
@@ -262,6 +263,50 @@ class LocalStore extends ChangeNotifier {
               'payload': previous['payload'],
               'reason': 'guest-before-google-login',
             });
+            if (intent['guestTicket'] is String && previous['owner'] != null) {
+              next!['guestCleanup'] = {
+                'ticket': intent['guestTicket'],
+                'source': previous['owner'],
+                'backupKey': 'backup:${intent['createdAt']}',
+                'mode': intent['guestChoice'],
+              };
+              if (intent['guestChoice'] == 'import') {
+                final ids = <String, String>{};
+                void collect(Object? value) {
+                  if (value is Map) {
+                    final id = value['id'];
+                    if (id is String &&
+                        !{'fork', 'shock', 'tires'}.contains(id)) {
+                      ids.putIfAbsent(id, () => const Uuid().v4());
+                    }
+                    value.values.forEach(collect);
+                  } else if (value is List) {
+                    value.forEach(collect);
+                  }
+                }
+
+                collect(previous['payload']);
+                Object? remap(Object? value) {
+                  if (value is String) return ids[value] ?? value;
+                  if (value is List) return value.map(remap).toList();
+                  if (value is Map) {
+                    return {
+                      for (final e in value.entries)
+                        ids[e.key] ?? e.key: remap(e.value),
+                    };
+                  }
+                  return value;
+                }
+
+                final imported = remap(previous['payload']) as Map;
+                for (final field in ['bikes', 'catalog']) {
+                  (next!['payload'][field] as List).addAll(
+                    imported[field] as List,
+                  );
+                }
+                next!['editVersion'] = (next!['editVersion'] as int? ?? 0) + 1;
+              }
+            }
           }
         }
         next!.remove('googleIntent');
@@ -270,6 +315,61 @@ class LocalStore extends ChangeNotifier {
         await _record.record('active').put(txn, next!);
       });
       _state = next!;
+      notifyListeners();
+    });
+    _queue = result.catchError((Object _) {});
+    return result;
+  }
+
+  Future<void> finishGuestCleanup() {
+    final result = _queue.then((_) async {
+      final cleanup = _state['guestCleanup'] as Map?;
+      if (cleanup == null) return;
+      final removedImages = <String>{};
+      final retainedImages = <String>{};
+      void collect(Object? value, Set<String> paths) {
+        if (value is Map) {
+          if (value['imagePath'] is String) {
+            paths.add(value['imagePath'] as String);
+          }
+          for (final child in value.values) {
+            collect(child, paths);
+          }
+        } else if (value is List) {
+          for (final child in value) {
+            collect(child, paths);
+          }
+        }
+      }
+
+      final rows = await _record.find(database);
+      bool remove(RecordSnapshot<String, Json> row) =>
+          row.value['owner'] == cleanup['source'] ||
+          row.key == cleanup['backupKey'] ||
+          row.key == 'legacy-backup';
+      for (final row in rows) {
+        collect(row.value, remove(row) ? removedImages : retainedImages);
+      }
+      await eraseAccountImages(removedImages.difference(retainedImages));
+      final preferences = await SharedPreferences.getInstance();
+      for (final key in ['bikes_data', 'custom_field_catalog']) {
+        if (!await preferences.remove(key)) {
+          throw StateError('LOCAL_ERASURE_FAILED');
+        }
+      }
+      final next = cloneJson(_state)..remove('guestCleanup');
+      await database.transaction((txn) async {
+        final persisted = await _record.record('active').get(txn);
+        if (persisted?['localRevision'] != _state['localRevision']) {
+          throw StateError('Reload before cleanup');
+        }
+        for (final row in rows.where(remove)) {
+          await _record.record(row.key).delete(txn);
+        }
+        next['localRevision'] = (_state['localRevision'] as int? ?? 0) + 1;
+        await _record.record('active').put(txn, next);
+      });
+      _state = next;
       notifyListeners();
     });
     _queue = result.catchError((Object _) {});

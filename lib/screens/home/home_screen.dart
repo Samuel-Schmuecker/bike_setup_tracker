@@ -265,11 +265,46 @@ class _HomeScreenState extends State<HomeScreen> {
               title: Text(Translations.get(lang, 'orderBikes')),
               onTap: () => Navigator.pop(sheetContext, 'order'),
             ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              iconColor: Theme.of(sheetContext).colorScheme.error,
+              textColor: Theme.of(sheetContext).colorScheme.error,
+              title: Text(Translations.get(lang, 'deleteBike')),
+              onTap: () => Navigator.pop(sheetContext, 'delete'),
+            ),
           ],
         ),
       ),
     );
     if (!mounted || action == null) return;
+    if (action == 'delete') {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(Translations.get(lang, 'deleteBikeTitle')),
+          content: Text(
+            '${Translations.get(lang, 'deleteBikeBody')}\n\n"${bike.brand} ${bike.model}"',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(Translations.get(lang, 'cancel')),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(dialogContext).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(Translations.get(lang, 'delete')),
+            ),
+          ],
+        ),
+      );
+      if (mounted && confirmed == true) {
+        context.read<BikeProvider>().deleteBike(bike.id);
+      }
+      return;
+    }
     if (action == 'order') {
       FocusScope.of(context).unfocus();
       setState(() {
