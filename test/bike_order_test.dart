@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:bike_setup_tracker/providers/bike_provider.dart';
 import 'package:bike_setup_tracker/providers/language_provider.dart';
 import 'package:bike_setup_tracker/screens/home/home_screen.dart';
 import 'package:bike_setup_tracker/widgets/bike_card.dart';

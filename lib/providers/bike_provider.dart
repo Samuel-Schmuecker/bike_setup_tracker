@@ -365,6 +365,17 @@ class BikeProvider extends ChangeNotifier {
     }).toList();
   }
 
+  Future<void> restoreDemoAfterDeletion() async {
+    if (localStore?.state['cloudPaused'] != true || localStore?.owner != null) {
+      throw StateError('Demo reset requires a deleted account');
+    }
+    _customFieldCatalog = [];
+    _loadDemoBikes();
+    _seedCatalogFromBikes();
+    await saveToDevice();
+    if (storageError != null) throw StateError('LOCAL_SAVE_FAILED');
+  }
+
   void _loadDemoBikes() {
     _bikes = [
       Bike(

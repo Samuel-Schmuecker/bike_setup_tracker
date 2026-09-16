@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/bike_provider.dart';
 import 'cloud_config.dart';
 import 'image_bytes.dart';
@@ -577,7 +578,20 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> resumeAfterDeletion() async {
     if (!cloudPaused || busy) return;
-    await store.mutate((state) => state.remove('cloudPaused'));
+    busy = true;
+    _emit();
+    try {
+      // Prepare the first-run experience before remounting the home screen.
+      await bikes.restoreDemoAfterDeletion();
+      final preferences = await SharedPreferences.getInstance();
+      if (!await preferences.setBool('hasSeenOnboarding', false)) {
+        throw StateError('LOCAL_SAVE_FAILED');
+      }
+      await store.mutate((state) => state.remove('cloudPaused'));
+    } finally {
+      busy = false;
+      _emit();
+    }
     await sync();
   }
 

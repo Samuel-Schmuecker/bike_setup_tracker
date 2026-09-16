@@ -256,6 +256,15 @@ void main() {
       reopened.dispose();
       await cloud.resumeAfterDeletion();
       expect(server.signupCalls, 1);
+      expect(bikes.bikes.single.model, 'Supreme V5');
+      expect((store.payload['bikes'] as List).single['model'], 'Supreme V5');
+      expect(
+        (await SharedPreferences.getInstance()).getBool('hasSeenOnboarding'),
+        isFalse,
+      );
+      await cloud.resumeAfterDeletion();
+      expect(bikes.bikes.length, 1);
+      expect(server.signupCalls, 1);
     },
   );
 
