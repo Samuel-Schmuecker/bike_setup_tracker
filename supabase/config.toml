@@ -1,0 +1,3 @@
+[functions.delete-account]
+# The handler validates the user JWT itself, including signature and issuer.
+verify_jwt = false

@@ -12,6 +12,7 @@ import 'screens/home/home_screen.dart';
 import 'cloud/local_database.dart';
 import 'cloud/local_store.dart';
 import 'cloud/cloud_provider.dart';
+import 'screens/settings/account_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,6 +69,10 @@ class MyApp extends StatelessWidget {
       title: 'Bike Setup Tracker',
       debugShowCheckedModeBanner: false,
       builder: (context, child) {
+        final cloud = context.watch<CloudProvider?>();
+        if (cloud != null && (cloud.cloudPaused || cloud.deletionPending)) {
+          return const AccountScreen();
+        }
         final switching =
             context.watch<CloudProvider?>()?.accountOperation ?? false;
         return PopScope(

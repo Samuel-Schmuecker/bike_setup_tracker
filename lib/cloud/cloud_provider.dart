@@ -59,6 +59,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool get anonymous => user?.isAnonymous ?? true;
   String? get email => user?.email;
   bool get canSync => bikes.storageError == null;
+  bool get cloudPaused => store.state['cloudPaused'] == true;
+  bool get deletionPending => store.state['deletionPending'] == true;
 
   void _emit() {
     if (!_disposed) notifyListeners();
@@ -136,6 +138,11 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> sync() async {
     if (busy || _disposed) return;
+    if (cloudPaused || deletionPending) {
+      status = cloudPaused ? 'paused' : 'deleting';
+      _emit();
+      return;
+    }
     busy = true;
     lastError = null;
     status = 'syncing';
@@ -349,6 +356,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> _auth(Future<void> Function(SupabaseClient) work) async {
+    if (deletionPending || cloudPaused) {
+      throw StateError('ACCOUNT_DELETION_PENDING');
+    }
     if (busy) throw StateError('Please wait for the current operation');
     busy = true;
     accountOperation = true;
@@ -517,6 +527,59 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     conflicts.clear();
     bikes.applyStoredPayload();
   });
+
+  Future<void> deleteAccount() async {
+    if (busy) throw StateError('Please wait for the current operation');
+    busy = true;
+    accountOperation = true;
+    _emit();
+    try {
+      await bikes.ready;
+      await store.flush();
+      final uid = store.owner;
+      if (uid == null) throw StateError('SESSION_MISSING');
+      final client = await _ensureClient();
+      if (store.state['deletionCloudDone'] != true) {
+        if (client.auth.currentUser?.id != uid) {
+          throw StateError('SESSION_MISSING');
+        }
+        await store.mutate((state) {
+          state['deletionPending'] = true;
+          state.remove('googleIntent');
+        });
+        await _oauthReturn?.close();
+        final response = await client.functions.invoke(
+          'delete-account',
+          body: {'confirm': 'DELETE'},
+        );
+        if (response.data is! Map || response.data['deleted'] != true) {
+          throw StateError(
+            'Löschung noch nicht abgeschlossen. Bitte erneut versuchen.',
+          );
+        }
+        await store.mutate((state) => state['deletionCloudDone'] = true);
+      }
+      // Keep a durable completion marker if local sign-out or erasure fails.
+      await client.auth.signOut(scope: SignOutScope.local);
+      await store.eraseAccount(uid);
+      conflicts.clear();
+      _uploaded.clear();
+      _downloaded.clear();
+      googleIssue = null;
+      bikes.applyStoredPayload();
+      status = 'paused';
+    } finally {
+      busy = false;
+      accountOperation = false;
+      _emit();
+    }
+  }
+
+  Future<void> resumeAfterDeletion() async {
+    if (!cloudPaused || busy) return;
+    await store.mutate((state) => state.remove('cloudPaused'));
+    await sync();
+  }
 
   Future<void> sendRecovery(String email) => _auth((client) async {
     await client.auth.resetPasswordForEmail(email.trim());

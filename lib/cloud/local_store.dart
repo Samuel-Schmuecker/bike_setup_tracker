@@ -3,6 +3,7 @@ import 'package:sembast/sembast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'sync_documents.dart';
+import 'erase_images.dart';
 
 /// One transactional record contains both user data and its sync baseline.
 /// The legacy preferences are retained unchanged as a migration backup.
@@ -133,6 +134,70 @@ class LocalStore extends ChangeNotifier {
   }
 
   Future<void> flush() => _queue;
+
+  /// Erase this account's snapshots; retain workspaces of other accounts.
+  Future<void> eraseAccount(String uid) {
+    final result = _queue.then((_) async {
+      final preferences = await SharedPreferences.getInstance();
+      final removedImages = <String>{};
+      final retainedImages = <String>{};
+      void collect(Object? value, Set<String> paths) {
+        if (value is Map) {
+          if (value['imagePath'] is String) {
+            paths.add(value['imagePath'] as String);
+          }
+          for (final child in value.values) {
+            collect(child, paths);
+          }
+        } else if (value is List) {
+          for (final child in value) {
+            collect(child, paths);
+          }
+        }
+      }
+
+      for (final row in await _record.find(database)) {
+        collect(
+          row.value,
+          row.value['owner'] == uid ? removedImages : retainedImages,
+        );
+      }
+      await eraseAccountImages(removedImages.difference(retainedImages));
+      // Old migration copies have no reliable owner. Remove them to prevent resurrection.
+      for (final key in ['bikes_data', 'custom_field_catalog']) {
+        if (!await preferences.remove(key)) {
+          throw StateError('LOCAL_ERASURE_FAILED');
+        }
+      }
+      late Json next;
+      await database.transaction((txn) async {
+        final persisted = await _record.record('active').get(txn);
+        if (persisted?['localRevision'] != _state['localRevision'] ||
+            owner != uid) {
+          throw StateError('Another tab changed the data. Reload first.');
+        }
+        for (final row in await _record.find(txn)) {
+          if (row.value['owner'] == uid || row.key == 'legacy-backup') {
+            await _record.record(row.key).delete(txn);
+          }
+        }
+        next = {
+          'version': 1,
+          'owner': null,
+          'payload': {'bikes': [], 'catalog': []},
+          'base': {},
+          'initialized': true,
+          'cloudPaused': true,
+          'localRevision': (_state['localRevision'] as int? ?? 0) + 1,
+        };
+        await _record.record('active').put(txn, next);
+      });
+      _state = next;
+      notifyListeners();
+    });
+    _queue = result.catchError((Object _) {});
+    return result;
+  }
 
   Future<List<Json>> savedWorkspaces() async {
     await _queue;

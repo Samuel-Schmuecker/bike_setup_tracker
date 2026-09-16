@@ -22,6 +22,63 @@ class _AccountScreenState extends State<AccountScreen> {
   bool get de => context.read<LanguageProvider>().currentLanguage == 'de';
   String t(String german, String english) => de ? german : english;
 
+  Future<void> requestDeletion(CloudProvider cloud) async {
+    final controller = TextEditingController();
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, update) => AlertDialog(
+          title: Text(
+            t('Konto endgültig löschen?', 'Permanently delete account?'),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  t(
+                    'Dein App-Konto, Cloud-Daten, Bilder und frühere Versionen sowie die lokalen Sicherungen dieses Kontos werden gelöscht. Dein Google-Konto bleibt bestehen. Exportierte Dateien und Kopien auf anderen Geräten bleiben erhalten. Anbieter-Backups unterliegen deren Aufbewahrungsfristen. Dieser Vorgang kann nicht rückgängig gemacht werden.',
+                    'Your app account, cloud data, images, previous versions and this account’s local backups will be deleted. Your Google account remains. Exported files and copies on other devices remain. Provider backups follow their retention periods. This cannot be undone.',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: controller,
+                  onChanged: (_) => update(() {}),
+                  decoration: InputDecoration(
+                    labelText: t(
+                      'Zur Bestätigung DELETE eingeben',
+                      'Type DELETE to confirm',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(t('Abbrechen', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: controller.text == 'DELETE'
+                  ? () => Navigator.pop(context, true)
+                  : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: Text(t('Endgültig löschen', 'Delete permanently')),
+            ),
+          ],
+        ),
+      ),
+    );
+    // The dialog may still be animating out; its controller is disposed afterwards.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    controller.dispose();
+    if (accepted == true && mounted) await run(cloud.deleteAccount);
+  }
+
   Future<void> run(Future<void> Function() work, {String? success}) async {
     if (_working) return;
     setState(() {
@@ -280,6 +337,68 @@ class _AccountScreenState extends State<AccountScreen> {
     context.watch<LanguageProvider>();
     final cloud = context.watch<CloudProvider>();
     final disabled = cloud.busy || _working;
+    if (cloud.cloudPaused || cloud.deletionPending) {
+      return Scaffold(
+        appBar: AppBar(title: Text(t('Konto löschen', 'Delete account'))),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 550),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    cloud.cloudPaused
+                        ? Icons.check_circle_outline
+                        : Icons.delete_outline,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    cloud.cloudPaused
+                        ? t(
+                            'Dein Konto wurde gelöscht. Es wird kein neues Gastkonto angelegt, bis du die App erneut nutzt.',
+                            'Your account has been deleted. No new guest account is created until you start again.',
+                          )
+                        : t(
+                            'Die Kontolöschung wurde gestartet. Die Synchronisierung ist gesperrt. Bei einem Verbindungsfehler kannst du die Löschung erneut versuchen.',
+                            'Account deletion has started. Sync is blocked. If the connection fails, retry deletion.',
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  if (disabled) const LinearProgressIndicator(),
+                  if (_message != null) SelectableText(_message!),
+                  if (!cloud.cloudPaused)
+                    TextButton(
+                      onPressed: disabled
+                          ? null
+                          : () => run(() => export(cloud)),
+                      child: Text(
+                        t('Lokale Daten exportieren', 'Export local data'),
+                      ),
+                    ),
+                  FilledButton(
+                    onPressed: disabled
+                        ? null
+                        : () => run(
+                            cloud.cloudPaused
+                                ? cloud.resumeAfterDeletion
+                                : cloud.deleteAccount,
+                          ),
+                    child: Text(
+                      cloud.cloudPaused
+                          ? t('Neu als Gast starten', 'Start again as guest')
+                          : t('Löschung erneut versuchen', 'Retry deletion'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         title: Text(t('Konto & Datensicherung', 'Account & backup')),
@@ -329,12 +448,14 @@ class _AccountScreenState extends State<AccountScreen> {
                             ),
                           ),
                         ),
-                      const SizedBox(height: 8),
-                      OutlinedButton.icon(
-                        onPressed: disabled ? null : cloud.sync,
-                        icon: const Icon(Icons.sync),
-                        label: Text(t('Jetzt synchronisieren', 'Sync now')),
-                      ),
+                      if (!cloud.anonymous) ...[
+                        const SizedBox(height: 8),
+                        OutlinedButton.icon(
+                          onPressed: disabled ? null : cloud.sync,
+                          icon: const Icon(Icons.sync),
+                          label: Text(t('Jetzt synchronisieren', 'Sync now')),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -419,94 +540,169 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
               ],
               const SizedBox(height: 20),
-              Text(
-                t('Google-Konto', 'Google account'),
-                style: Theme.of(context).textTheme.titleLarge,
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            cloud.googleLinked
+                                ? Icons.verified_user_outlined
+                                : Icons.account_circle_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              cloud.googleLinked
+                                  ? t(
+                                      'Google ist verbunden',
+                                      'Google is connected',
+                                    )
+                                  : t('Google-Konto', 'Google account'),
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (!cloud.googleLinked) ...[
+                        Text(
+                          t(
+                            'Deine Gastdaten absichern',
+                            'Secure your guest data',
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          t(
+                            'Verbinde deine vorhandenen Bikes und Setups mit Google. So erhältst du auf anderen Geräten wieder Zugriff – ohne zusätzliches Passwort.',
+                            'Connect your existing bikes and setups to Google to access them on other devices. No extra password needed.',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: disabled || cloud.googlePending
+                              ? null
+                              : () => run(() => cloud.startGoogle(link: true)),
+                          child: Text(
+                            t(
+                              'Mit Google absichern',
+                              'Link Google to secure your data',
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          t(
+                            'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
+                            'Google is linked. Sign in with the same Google account on other devices.',
+                          ),
+                        ),
+                      ],
+                      if (cloud.anonymous ||
+                          cloud.status == 'session' ||
+                          cloud.status == 'google') ...[
+                        const Divider(height: 32),
+                        Text(
+                          t(
+                            'Schon ein Konto vorhanden?',
+                            'Already have an account?',
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          t(
+                            'Melde dich mit dem bereits verwendeten Google-Konto an. Gastdaten bleiben separat gesichert.',
+                            'Sign in with the Google account you used before. Guest data is backed up separately.',
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        OutlinedButton(
+                          onPressed: disabled || cloud.googlePending
+                              ? null
+                              : () => run(() async {
+                                  if (await confirm(
+                                    t(
+                                      'Mit Google anmelden?',
+                                      'Sign in with Google?',
+                                    ),
+                                    t(
+                                      'Dein Google-Konto wird geöffnet. Bisherige Gastdaten bleiben separat als lokale Sicherung erhalten und können danach als Kopien übernommen werden.',
+                                      'Your Google account will be opened. Guest data remains as a separate local backup and can then be imported as copies.',
+                                    ),
+                                  )) {
+                                    await cloud.startGoogle(link: false);
+                                  }
+                                }),
+                          child: Text(
+                            t('Mit Google anmelden', 'Sign in with Google'),
+                          ),
+                        ),
+                      ],
+                      if (cloud.googlePending || cloud.googleIssue != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          cloud.googleIssue == null
+                              ? t(
+                                  'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Mit Google anmelden“ wählen.',
+                                  'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Sign in with Google.',
+                                )
+                              : googleAuthErrorHelp(
+                                  cloud.googleIssue!,
+                                  german: de,
+                                ),
+                        ),
+                        if (cloud.googleIssue != null)
+                          SelectableText('Code: ${cloud.googleIssue}'),
+                        OutlinedButton(
+                          onPressed: disabled
+                              ? null
+                              : () => run(cloud.cancelGoogle),
+                          child: Text(
+                            t(
+                              'Google-Anmeldung abbrechen',
+                              'Cancel Google sign-in',
+                            ),
+                          ),
+                        ),
+                      ],
+                      if (!cloud.anonymous)
+                        OutlinedButton(
+                          onPressed: disabled || cloud.googlePending
+                              ? null
+                              : () => run(() async {
+                                  if (await confirm(
+                                    t('Abmelden?', 'Sign out?'),
+                                    t(
+                                      'Der lokale Kontobestand bleibt separat erhalten. Noch nicht synchronisierte Änderungen sind nur auf diesem Gerät vorhanden.',
+                                      'Your local account data is retained separately. Unsynced changes exist only on this device.',
+                                    ),
+                                  )) {
+                                    await cloud.signOut();
+                                  }
+                                }),
+                          child: Text(t('Abmelden', 'Sign out')),
+                        ),
+                      if (cloud.anonymous) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          t(
+                            'Google ist optional. Du kannst die App weiter als Gast nutzen.',
+                            'Google is optional. You can keep using the app as a guest.',
+                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 12),
-              if (!cloud.googleLinked) ...[
-                Text(
-                  t(
-                    'Verknüpfe Google, um deine Bikes nach einem Gerätewechsel wiederzufinden. Dafür brauchst du kein zusätzliches Passwort.',
-                    'Link Google to restore your bikes after changing devices. No additional password is needed.',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                FilledButton(
-                  onPressed: disabled || cloud.googlePending
-                      ? null
-                      : () => run(() => cloud.startGoogle(link: true)),
-                  child: Text(
-                    t(
-                      'Mit Google absichern',
-                      'Link Google to secure your data',
-                    ),
-                  ),
-                ),
-              ] else ...[
-                Text(
-                  t(
-                    'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
-                    'Google is linked. Sign in with the same Google account on other devices.',
-                  ),
-                ),
-              ],
-              if (cloud.anonymous ||
-                  cloud.status == 'session' ||
-                  cloud.status == 'google') ...[
-                OutlinedButton(
-                  onPressed: disabled || cloud.googlePending
-                      ? null
-                      : () => run(() async {
-                          if (await confirm(
-                            t('Mit Google anmelden?', 'Sign in with Google?'),
-                            t(
-                              'Dein Google-Konto wird geöffnet. Bisherige Gastdaten bleiben separat als lokale Sicherung erhalten und können danach als Kopien übernommen werden.',
-                              'Your Google account will be opened. Guest data remains as a separate local backup and can then be imported as copies.',
-                            ),
-                          )) {
-                            await cloud.startGoogle(link: false);
-                          }
-                        }),
-                  child: Text(t('Mit Google anmelden', 'Sign in with Google')),
-                ),
-              ],
-              if (cloud.googlePending || cloud.googleIssue != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  cloud.googleIssue == null
-                      ? t(
-                          'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Mit Google anmelden“ wählen.',
-                          'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Sign in with Google.',
-                        )
-                      : googleAuthErrorHelp(cloud.googleIssue!, german: de),
-                ),
-                if (cloud.googleIssue != null)
-                  SelectableText('Code: ${cloud.googleIssue}'),
-                OutlinedButton(
-                  onPressed: disabled ? null : () => run(cloud.cancelGoogle),
-                  child: Text(
-                    t('Google-Anmeldung abbrechen', 'Cancel Google sign-in'),
-                  ),
-                ),
-              ],
-              if (!cloud.anonymous)
-                OutlinedButton(
-                  onPressed: disabled || cloud.googlePending
-                      ? null
-                      : () => run(() async {
-                          if (await confirm(
-                            t('Abmelden?', 'Sign out?'),
-                            t(
-                              'Der lokale Kontobestand bleibt separat erhalten. Noch nicht synchronisierte Änderungen sind nur auf diesem Gerät vorhanden.',
-                              'Your local account data is retained separately. Unsynced changes exist only on this device.',
-                            ),
-                          )) {
-                            await cloud.signOut();
-                          }
-                        }),
-                  child: Text(t('Abmelden', 'Sign out')),
-                ),
               if (_working || cloud.busy)
                 const Padding(
                   padding: EdgeInsets.all(16),
@@ -556,6 +752,38 @@ class _AccountScreenState extends State<AccountScreen> {
                     child: Text(t('Lokale Sicherungen', 'Local backups')),
                   ),
                 ],
+              ),
+              const Divider(height: 40),
+              Text(
+                t('Konto löschen', 'Delete account'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                t(
+                  'Entfernt dein App-Konto und die zugehörigen Daten dauerhaft. Exportiere vorher eine Sicherung, wenn du deine Daten behalten möchtest.',
+                  'Permanently removes your app account and its data. Export a backup first if you want to keep your data.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: disabled ? null : () => run(() => export(cloud)),
+                icon: const Icon(Icons.download),
+                label: Text(
+                  t('Vorher Sicherung exportieren', 'Export backup first'),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: disabled || cloud.user == null || cloud.googlePending
+                    ? null
+                    : () => requestDeletion(cloud),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.error,
+                ),
+                icon: const Icon(Icons.delete_forever_outlined),
+                label: Text(
+                  t('Konto und Daten löschen', 'Delete account and data'),
+                ),
               ),
             ],
           ),

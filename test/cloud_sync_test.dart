@@ -33,6 +33,9 @@ class FakeCloud {
   String authId = 'user-1';
   String authEmail = 'test@example.com';
   int uploads = 0;
+  bool failDeletion = false;
+  int deletionCalls = 0;
+  int signupCalls = 0;
   final documentAuthorizations = <String?>[];
   late final client = SupabaseClient(
     'https://test.supabase.co',
@@ -50,6 +53,13 @@ class FakeCloud {
       request: request,
     );
     final path = request.url.path;
+    if (path == '/functions/v1/delete-account') {
+      deletionCalls++;
+      if (failDeletion) return json({'error': 'image_delete_failed'}, 500);
+      rows.clear();
+      images.clear();
+      return json({'deleted': true});
+    }
     Json authUser(String id) => {
       'id': id,
       'aud': 'authenticated',
@@ -100,7 +110,10 @@ class FakeCloud {
     if (path == '/auth/v1/token' ||
         path == '/auth/v1/signup' ||
         path == '/auth/v1/verify') {
-      if (path == '/auth/v1/signup') anonymousAuth = true;
+      if (path == '/auth/v1/signup') {
+        signupCalls++;
+        anonymousAuth = true;
+      }
       if (path == '/auth/v1/verify') anonymousAuth = false;
       final userId =
           (jsonDecode(request.body) as Map)['email'] == 'second@example.com'
@@ -217,6 +230,54 @@ void main() {
       expect(store.owner, 'user-1');
       expect(store.state['base'], isEmpty);
       expect(cloud.status, 'session');
+    },
+  );
+
+  test(
+    'deletion erases local account backups and prevents automatic guest creation',
+    () async {
+      await initialize([bike('delete-me')]);
+      await cloud.sync();
+      await store.backup('before-test');
+      await cloud.deleteAccount();
+      expect(cloud.cloudPaused, isTrue);
+      expect(store.payload['bikes'], isEmpty);
+      expect(await store.savedWorkspaces(), isEmpty);
+      expect(
+        (await SharedPreferences.getInstance()).getString('bikes_data'),
+        isNull,
+      );
+      expect(server.deletionCalls, 1);
+      await cloud.sync();
+      expect(server.signupCalls, 0);
+      final reopened = LocalStore(store.database);
+      await reopened.initialize(await SharedPreferences.getInstance());
+      expect(reopened.state['cloudPaused'], isTrue);
+      reopened.dispose();
+      await cloud.resumeAfterDeletion();
+      expect(server.signupCalls, 1);
+    },
+  );
+
+  test(
+    'failed deletion retains local data, blocks sync and allows retry',
+    () async {
+      await initialize([bike('keep-until-success')]);
+      await cloud.sync();
+      server.failDeletion = true;
+      await expectLater(
+        cloud.deleteAccount(),
+        throwsA(isA<FunctionException>()),
+      );
+      expect(cloud.deletionPending, isTrue);
+      expect((store.payload['bikes'] as List).length, 1);
+      final uploads = server.uploads;
+      await cloud.sync();
+      expect(server.uploads, uploads);
+      await expectLater(cloud.signOut(), throwsStateError);
+      server.failDeletion = false;
+      await cloud.deleteAccount();
+      expect(cloud.cloudPaused, isTrue);
     },
   );
 
