@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../cloud/cloud_provider.dart';
+import '../../widgets/privacy_policy_link.dart';
 import '../../cloud/google_auth_error.dart';
 import '../../cloud/sync_documents.dart';
 import '../../providers/language_provider.dart';
@@ -282,6 +283,10 @@ class _AccountScreenState extends State<AccountScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(t('Konto & Datensicherung', 'Account & backup')),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: PrivacyPolicyLink(german: de),
+        ),
       ),
       body: Center(
         child: ConstrainedBox(

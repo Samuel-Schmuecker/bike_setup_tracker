@@ -8,6 +8,7 @@ import '../../providers/language_provider.dart';
 import '../../utils/translations.dart';
 import '../../widgets/bike_card.dart';
 import '../../widgets/add_bike_card.dart';
+import '../../widgets/privacy_policy_link.dart';
 import '../add_bike/add_bike_screen.dart';
 import '../settings/appearance_screen.dart';
 import '../settings/account_screen.dart';
@@ -65,55 +66,60 @@ class _HomeScreenState extends State<HomeScreen> {
           Translations.get(lang, 'welcomeTitle'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              Translations.get(lang, 'welcomeText1'),
-              style: const TextStyle(fontSize: 16, height: 1.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              lang == 'de'
-                  ? 'Deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
-                  : 'Your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.primaryContainer.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
-                ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                Translations.get(lang, 'welcomeText1'),
+                style: const TextStyle(fontSize: 16, height: 1.5),
               ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.touch_app,
-                    color: Theme.of(context).colorScheme.primary,
+              const SizedBox(height: 16),
+              Text(
+                lang == 'de'
+                    ? 'Deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
+                    : 'Your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.5),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      Translations.get(lang, 'welcomeText2'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w500,
-                        height: 1.4,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.touch_app,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        Translations.get(lang, 'welcomeText2'),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
+          PrivacyPolicyLink(german: lang == 'de'),
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -222,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _showOnboardingDialog();
                     },
                   ),
+                  PrivacyPolicyLink(german: lang == 'de'),
                   const SizedBox(height: 16),
                 ],
               ),
