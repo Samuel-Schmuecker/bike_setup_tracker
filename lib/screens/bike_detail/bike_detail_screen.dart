@@ -15,11 +15,17 @@ import '../../widgets/add_setup_card.dart';
 import 'setup_detail_screen.dart';
 import '../../utils/image_helper.dart';
 import '../../widgets/image_toolbar_contrast.dart';
+import '../../services/onboarding_tour_service.dart';
 
 class BikeDetailScreen extends StatefulWidget {
   final String bikeId;
+  final OnboardingTourService? onboardingTour;
 
-  const BikeDetailScreen({super.key, required this.bikeId});
+  const BikeDetailScreen({
+    super.key,
+    required this.bikeId,
+    this.onboardingTour,
+  });
 
   @override
   State<BikeDetailScreen> createState() => _BikeDetailScreenState();
@@ -29,6 +35,133 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   String get bikeId => widget.bikeId;
   List<TrailSetup>? _draftSetups;
   bool get _editing => _draftSetups != null;
+  final _setupTourKey = GlobalKey(debugLabel: 'tour-setup-card');
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.onboardingTour != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _showTour());
+    }
+  }
+
+  final _favoriteTourKey = GlobalKey(debugLabel: 'tour-favorite');
+
+  @override
+  void dispose() {
+    widget.onboardingTour?.cancelFor(context);
+    super.dispose();
+  }
+
+  Future<void> _tourSetupMenu() async {
+    final tour = widget.onboardingTour!;
+    final bike = context.read<BikeProvider>().bikes.firstWhere(
+      (b) => b.id == bikeId,
+    );
+    tour.suspend();
+    await _showSetupOptions(
+      context,
+      bike,
+      bike.orderedSetups.first,
+      context.read<LanguageProvider>().currentLanguage,
+      touring: true,
+    );
+    if (mounted) tour.complete('setupMenu');
+  }
+
+  Future<void> _showTour() async {
+    if (!mounted) return;
+    final tour = widget.onboardingTour!;
+    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    try {
+      if (!await tour.showStep(
+        context: context,
+        target: _setupTourKey,
+        step: 3,
+        event: 'setupMenu',
+        german: german,
+        title: german ? 'Setup lange drücken' : 'Press and hold a setup',
+        description: german
+            ? 'Halte die Karte gedrückt. Im Menü kannst du umbenennen oder duplizieren. Schließe das Menü danach wieder. Löschen üben wir nicht.'
+            : 'Press and hold the card. You can rename or duplicate it in the menu. Then close the menu. We will not practice deletion.',
+        onNext: _tourSetupMenu,
+      ))
+        return;
+      if (!mounted) return;
+      if (!await tour.showStep(
+        context: context,
+        target: _setupTourKey,
+        step: 4,
+        event: 'openSetup',
+        german: german,
+        title: german ? 'Setup öffnen' : 'Open setup',
+        description: german
+            ? 'Tippe die Setup-Karte kurz an. Damit öffnest du die Einstellwerte.'
+            : 'Tap the setup card to open its settings.',
+      ))
+        return;
+      if (!mounted) return;
+      final bike = context.read<BikeProvider>().bikes.firstWhere(
+        (b) => b.id == bikeId,
+      );
+      final advanced = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => SetupDetailScreen(
+            bikeId: bikeId,
+            setupId: bike.orderedSetups.first.id,
+            onboardingTour: tour,
+          ),
+        ),
+      );
+      if (!mounted || advanced != true) return;
+      if (!await tour.showStep(
+        context: context,
+        target: _favoriteTourKey,
+        step: 5,
+        total: 5,
+        advanced: true,
+        event: 'favorite',
+        german: german,
+        title: german ? 'Favoriten markieren' : 'Mark favorites',
+        description: german
+            ? 'Tippe auf den Stern. Favorisierte Setups stehen immer zuerst; ein weiterer Tipp entfernt die Markierung.'
+            : 'Tap the star. Favorite setups stay first; tap again to remove the favorite.',
+      ))
+        return;
+      if (mounted)
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(german ? 'Tour abgeschlossen' : 'Tour complete'),
+            content: Text(
+              german
+                  ? 'Du kennst jetzt die wichtigsten Gesten. Über Anleitung / Informationen kannst du jederzeit wieder üben.'
+                  : 'You now know the main gestures. Restart the tour anytime from Tutorial / Information.',
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(german ? 'Fertig' : 'Done'),
+              ),
+            ],
+          ),
+        );
+    } catch (_) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              german
+                  ? 'Die Tour wurde unterbrochen. Bitte erneut starten.'
+                  : 'Please restart the tour.',
+            ),
+          ),
+        );
+    } finally {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true)
+        Navigator.pop(context);
+    }
+  }
 
   void _finishOrdering() {
     context.read<BikeProvider>().reorderSetups(
@@ -59,13 +192,15 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   }
 
   // 1. Zeigt das BottomSheet mit den 3 Optionen an
-  void _showSetupOptions(
+  Future<void> _showSetupOptions(
     BuildContext context,
     Bike bike,
     TrailSetup setup,
-    String lang,
-  ) {
-    showModalBottomSheet(
+    String lang, {
+    bool touring = false,
+  }) async {
+    Future<void>? followUp;
+    await showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -90,7 +225,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                 title: Text(Translations.get(lang, 'rename')),
                 onTap: () {
                   Navigator.pop(ctx); // BottomSheet schließen
-                  _showRenameDialog(context, bike, setup, lang);
+                  followUp = _showRenameDialog(context, bike, setup, lang);
                 },
               ),
               ListTile(
@@ -114,21 +249,40 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                   Translations.get(lang, 'delete'),
                   style: TextStyle(color: Colors.redAccent),
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showDeleteConfirmDialog(context, bike, setup, lang);
-                },
+                onTap: touring
+                    ? null
+                    : () {
+                        Navigator.pop(ctx);
+                        _showDeleteConfirmDialog(context, bike, setup, lang);
+                      },
               ),
               const SizedBox(height: 8),
+              if (touring) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    lang == 'de'
+                        ? 'Umbenennen ändert den Namen, Duplizieren erzeugt eine Kopie. Löschen ist während der Tour deaktiviert.'
+                        : 'Rename changes the name; Duplicate creates a copy. Deletion is disabled during the tour.',
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    lang == 'de' ? 'Zurück zur Tour' : 'Back to tour',
+                  ),
+                ),
+              ],
             ],
           ),
         );
       },
     );
+    await followUp;
   }
 
   // 2. Dialog zum Umbenennen
-  void _showRenameDialog(
+  Future<void> _showRenameDialog(
     BuildContext context,
     Bike bike,
     TrailSetup setup,
@@ -136,7 +290,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   ) {
     final nameController = TextEditingController(text: setup.name);
 
-    showDialog(
+    return showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(Translations.get(lang, 'rename')),
@@ -319,19 +473,23 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // ANGEPASST: Pfade zu den SVGs übergeben
-                          buildTravelChip(
-                            'assets/icons/fork.svg',
-                            '${bike.travelFront} mm ${Translations.get(lang, 'front')}',
-                          ),
-                          buildTravelChip(
-                            'assets/icons/shock.svg',
-                            '${bike.travelRear} mm ${Translations.get(lang, 'rear')}',
-                          ),
-                        ],
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // ANGEPASST: Pfade zu den SVGs übergeben
+                            buildTravelChip(
+                              'assets/icons/fork.svg',
+                              '${bike.travelFront} mm ${Translations.get(lang, 'front')}',
+                            ),
+                            buildTravelChip(
+                              'assets/icons/shock.svg',
+                              '${bike.travelRear} mm ${Translations.get(lang, 'rear')}',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -403,9 +561,16 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                 itemBuilder: (context, index) {
                   final setup = setups[index];
                   final card = SetupCard(
+                    favoriteKey: index == 0 ? _favoriteTourKey : null,
+                    key: index == 0 ? _setupTourKey : null,
                     setup: setup,
                     bike: bike,
                     onTap: () {
+                      if (widget.onboardingTour?.waitingFor('setupMenu') ==
+                          true)
+                        return;
+                      if (widget.onboardingTour?.complete('openSetup') == true)
+                        return;
                       if (_editing) return;
                       Navigator.push(
                         context,
@@ -418,6 +583,11 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                       );
                     },
                     onLongPress: () {
+                      if (widget.onboardingTour?.waitingFor('setupMenu') ==
+                          true) {
+                        _tourSetupMenu();
+                        return;
+                      }
                       if (!_editing) {
                         _showSetupOptions(context, bike, setup, lang);
                       }
@@ -428,6 +598,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                           bike.id,
                           setup.id,
                         );
+                        widget.onboardingTour?.complete('favorite');
                       }
                     },
                   );

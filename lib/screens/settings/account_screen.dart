@@ -398,6 +398,76 @@ class _AccountScreenState extends State<AccountScreen> {
     _ => t('Sicherung ausstehend', 'Backup pending'),
   };
 
+  Widget authOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String description,
+    required VoidCallback? onPressed,
+    bool emphasized = false,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: emphasized
+            ? colors.primaryContainer
+            : colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: emphasized ? colors.primary : colors.outlineVariant,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                icon,
+                color: emphasized ? colors.onPrimaryContainer : colors.primary,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: emphasized
+                        ? colors.onPrimaryContainer
+                        : colors.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              color: emphasized ? colors.onPrimaryContainer : colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            description,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: emphasized
+                  ? colors.onPrimaryContainer
+                  : colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 20),
+          if (emphasized)
+            FilledButton(onPressed: onPressed, child: Text(title))
+          else
+            OutlinedButton(onPressed: onPressed, child: Text(title)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<LanguageProvider>();
@@ -468,10 +538,6 @@ class _AccountScreenState extends State<AccountScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(t('Konto & Datensicherung', 'Account & backup')),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(48),
-          child: PrivacyPolicyLink(german: de),
-        ),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -487,7 +553,10 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: [
                       Text(
                         cloud.anonymous
-                            ? t('Ohne Registrierung', 'Without registration')
+                            ? t(
+                                'Du nutzt die App als Gast',
+                                'You are using the app as a guest',
+                              )
                             : cloud.email ?? '',
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
@@ -662,83 +731,64 @@ class _AccountScreenState extends State<AccountScreen> {
                                       'Google ist verbunden',
                                       'Google is connected',
                                     )
-                                  : t('Google-Konto', 'Google account'),
+                                  : t('Dein Konto', 'Your account'),
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
-                      if (!cloud.googleLinked) ...[
-                        Text(
-                          t(
-                            'Deine Gastdaten absichern',
-                            'Secure your guest data',
+                      if (cloud.anonymous ||
+                          cloud.status == 'session' ||
+                          cloud.status == 'google') ...[
+                        authOption(
+                          icon: Icons.login_rounded,
+                          title: 'Login',
+                          subtitle: t(
+                            'Du hast bereits ein Konto?',
+                            'Already have an account?',
                           ),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          t(
-                            'Verbinde deine vorhandenen Bikes und Setups mit Google. So erhältst du auf anderen Geräten wieder Zugriff – ohne zusätzliches Passwort.',
-                            'Connect your existing bikes and setups to Google to access them on other devices. No extra password needed.',
+                          description: t(
+                            'Melde dich mit Google an, um auf deine gespeicherten Bikes und Setups zuzugreifen. Du entscheidest vorher, was mit deinen Gastdaten passiert.',
+                            'Sign in with Google to access your saved bikes and setups. First choose what happens to your guest data.',
                           ),
+                          onPressed: disabled || cloud.googlePending
+                              ? null
+                              : () => signInWithGuestChoice(cloud),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton(
+                        const SizedBox(height: 16),
+                      ],
+                      if (!cloud.googleLinked)
+                        authOption(
+                          icon: Icons.person_add_alt_1_rounded,
+                          title: t('Registrieren', 'Register'),
+                          subtitle: t(
+                            'Neu hier? Sichere deine Bikes.',
+                            'New here? Keep your bikes safe.',
+                          ),
+                          description: t(
+                            'Erstelle dein App-Konto mit Google. Deine bisherigen Bikes und Setups bleiben erhalten und werden mit deinem Konto verknüpft. Du brauchst kein zusätzliches Passwort.',
+                            'Create your app account with Google. Your existing bikes and setups are kept and linked to your account. No extra password needed.',
+                          ),
+                          emphasized: true,
                           onPressed: disabled || cloud.googlePending
                               ? null
                               : () => run(() => cloud.startGoogle(link: true)),
-                          child: Text(
-                            t(
-                              'Mit Google absichern',
-                              'Link Google to secure your data',
-                            ),
-                          ),
-                        ),
-                      ] else ...[
+                        )
+                      else
                         Text(
                           t(
                             'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
                             'Google is linked. Sign in with the same Google account on other devices.',
                           ),
                         ),
-                      ],
-                      if (cloud.anonymous ||
-                          cloud.status == 'session' ||
-                          cloud.status == 'google') ...[
-                        const Divider(height: 32),
-                        Text(
-                          t(
-                            'Schon ein Konto vorhanden?',
-                            'Already have an account?',
-                          ),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          t(
-                            'Melde dich mit deinem bestehenden Google-Konto an. Du entscheidest vorher, ob deine Gastdaten übernommen oder verworfen werden.',
-                            'Sign in with your existing Google account. First choose whether to import or discard your guest data.',
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton(
-                          onPressed: disabled || cloud.googlePending
-                              ? null
-                              : () => signInWithGuestChoice(cloud),
-                          child: Text(
-                            t('Mit Google anmelden', 'Sign in with Google'),
-                          ),
-                        ),
-                      ],
                       if (cloud.googlePending || cloud.googleIssue != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           cloud.googleIssue == null
                               ? t(
-                                  'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Mit Google anmelden“ wählen.',
-                                  'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Sign in with Google.',
+                                  'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Login“ wählen.',
+                                  'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Login.',
                                 )
                               : googleAuthErrorHelp(
                                   cloud.googleIssue!,
@@ -897,6 +947,8 @@ class _AccountScreenState extends State<AccountScreen> {
                   t('Konto und Daten löschen', 'Delete account and data'),
                 ),
               ),
+              const Divider(height: 40),
+              PrivacyPolicyLink(german: de),
             ],
           ),
         ),

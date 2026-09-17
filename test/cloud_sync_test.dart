@@ -6,6 +6,7 @@ import 'package:bike_setup_tracker/cloud/sync_documents.dart';
 import 'package:bike_setup_tracker/models/bike.dart';
 import 'package:bike_setup_tracker/providers/bike_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sembast/sembast_memory.dart';
@@ -38,6 +39,7 @@ class FakeCloud {
   int guestDeletionCalls = 0;
   bool failGuestDeletion = false;
   int signupCalls = 0;
+  int requests = 0;
   final deletedUsers = <String>{};
   bool userLookupOffline = false;
   String signupUserId = 'user-1';
@@ -51,6 +53,7 @@ class FakeCloud {
   );
 
   Future<http.Response> handle(http.Request request) async {
+    requests++;
     http.Response json(Object? value, [int code = 200]) => http.Response(
       jsonEncode(value),
       code,
@@ -90,7 +93,7 @@ class FakeCloud {
         if (userLookupOffline) throw http.ClientException('Offline');
         if (deletedUsers.contains(authId))
           return json({
-              'error_code': 'user_not_found',
+            'error_code': 'user_not_found',
             'msg': 'User from sub claim in JWT does not exist',
           }, 403);
         return json(authUser(authId));
@@ -219,6 +222,42 @@ void main() {
       await db.close();
     });
   }
+
+  test(
+    'onboarding blocks all sync triggers until explicitly started',
+    () async {
+      await initialize();
+      cloud.dispose();
+      await server.client.auth.signOut();
+      cloud = CloudProvider(
+        store,
+        bikes,
+        client: server.client,
+        cloudEnabled: false,
+      );
+      final requestsBefore = server.requests;
+      await cloud.sync();
+      cloud.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await store.savePayload({
+        'bikes': [bike('before-onboarding')],
+        'catalog': [],
+      });
+      await Future<void>.delayed(const Duration(milliseconds: 2200));
+      expect(server.requests, requestsBefore);
+      expect(server.signupCalls, 0);
+      expect(store.owner, isNull);
+
+      final completed = Completer<void>();
+      cloud.addListener(() {
+        if (!cloud.busy && !completed.isCompleted) completed.complete();
+      });
+      cloud.startSync();
+      await completed.future.timeout(const Duration(seconds: 5));
+      expect(server.signupCalls, 1);
+      expect(store.owner, 'user-1');
+      expect(server.rows, contains('bike:before-onboarding'));
+    },
+  );
 
   test(
     'sync decision preserves concurrent edits and delete/edit conflicts',

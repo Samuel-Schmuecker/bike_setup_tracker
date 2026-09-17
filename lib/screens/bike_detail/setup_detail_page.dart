@@ -1,3 +1,4 @@
+import '../../services/onboarding_tour_service.dart';
 import '../../models/setting_range.dart';
 import '../../widgets/setting_range_widgets.dart';
 // lib/screens/bike_detail/setup_detail_screen.dart
@@ -28,10 +29,130 @@ class SetupDetailPage extends StatefulWidget {
   });
 
   @override
-  State<SetupDetailPage> createState() => _SetupDetailPageState();
+  State<SetupDetailPage> createState() => SetupDetailPageState();
 }
 
-class _SetupDetailPageState extends State<SetupDetailPage> {
+class SetupDetailPageState extends State<SetupDetailPage> {
+  final _valueTourKey = GlobalKey(debugLabel: 'tour-value');
+  final _fieldsTourKey = GlobalKey(debugLabel: 'tour-fields');
+  final _orderTourKey = GlobalKey(debugLabel: 'tour-order');
+  final _finishTourKey = GlobalKey(debugLabel: 'tour-finish-order');
+  final _historyTourKey = GlobalKey(debugLabel: 'tour-history');
+  String? _tourFieldId;
+  String? _tourCategoryId;
+  OnboardingTourService? _tour;
+  VoidCallback? _startTourOrdering;
+
+  Future<bool> runTour(OnboardingTourService tour) async {
+    _tour = tour;
+    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    try {
+      if (_valueTourKey.currentContext != null) {
+        if (!await tour.showStep(
+          context: context,
+          target: _valueTourKey,
+          step: 6,
+          event: 'valueSaved',
+          german: german,
+          title: german
+              ? 'Wert ändern und speichern'
+              : 'Change and save a value',
+          description: german
+              ? 'Tippe auf den markierten Wert. Ändere ihn mit + / − oder per Eingabe und tippe auf Speichern. Deine Übung bleibt am Demo-Bike gespeichert.'
+              : 'Tap the highlighted value. Change it using + / − or typing, then Save. Your practice change is saved on the demo bike.',
+        ))
+          return false;
+      }
+      if (!mounted) return false;
+      final advanced = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(german ? 'Grundtour geschafft' : 'Basics complete'),
+          content: Text(
+            german
+                ? 'Möchtest du noch Sortieren, Änderungsverlauf und Favoriten ausprobieren?'
+                : 'Would you like to try ordering, change history and favorites?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(german ? 'Fertig' : 'Done'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(german ? 'Vertiefung starten' : 'Explore more'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted || advanced != true) return false;
+      if (!await tour.showStep(
+        context: context,
+        target: _orderTourKey,
+        step: 1,
+        total: 5,
+        advanced: true,
+        event: 'orderStarted',
+        german: german,
+        title: german ? 'Umsortieren öffnen' : 'Open ordering',
+        description: german
+            ? 'Tippe auf die zwei Pfeile. Im Sortiermodus kannst du Felder und Kategorien verschieben. Der Wechsel zwischen Setups ist dabei gesperrt.'
+            : 'Tap the arrows to reorder fields and categories. Switching setups is locked while ordering.',
+        onNext: () async => _startTourOrdering?.call(),
+      ))
+        return false;
+      if (!mounted) return false;
+      if (_fieldsTourKey.currentContext != null &&
+          !await tour.showStep(
+            context: context,
+            target: _fieldsTourKey,
+            step: 2,
+            total: 5,
+            advanced: true,
+            event: 'fieldMoved',
+            german: german,
+            title: german ? 'Ein Feld verschieben' : 'Move a field',
+            description: german
+                ? 'Ziehe ein Feld an eine andere Position und lasse es los. Kategorien kannst du über ihren Griff nach langem Drücken verschieben.'
+                : 'Drag a field to another position and release it. To move categories, press and hold their handle.',
+          ))
+        return false;
+      if (!mounted) return false;
+      if (!await tour.showStep(
+        context: context,
+        target: _finishTourKey,
+        step: 3,
+        total: 5,
+        advanced: true,
+        event: 'orderFinished',
+        german: german,
+        title: german ? 'Sortierung abschließen' : 'Finish ordering',
+        description: german
+            ? 'Tippe auf Fertig. Bei einer Änderung kannst du wählen, ob die Reihenfolge nur hier oder für alle Setups dieses Demo-Bikes gilt.'
+            : 'Tap Done. After a change, choose whether to apply the order to this setup or all setups of this demo bike.',
+        onNext: _finishOrdering,
+      ))
+        return false;
+      if (!mounted) return false;
+      return await tour.showStep(
+        context: context,
+        target: _historyTourKey,
+        step: 4,
+        total: 5,
+        advanced: true,
+        event: 'history',
+        german: german,
+        title: german ? 'Änderungen nachvollziehen' : 'Review changes',
+        description: german
+            ? 'Hier siehst du vorherige und neue Einstellwerte mit Zeitpunkt und optionaler Notiz. Deine gerade gespeicherte Änderung erscheint hier. Mit Weiter geht es zum Favoritenstern.'
+            : 'This history shows old and new values, timestamps and optional notes. Your saved change appears here. Next takes you to favorites.',
+      );
+    } finally {
+      if (mounted && _editingOrder) setState(() => _editingOrder = false);
+      _tour = null;
+    }
+  }
+
   late TextEditingController _notesController;
   late FocusNode _notesFocusNode;
   late BikeProvider _bikeProvider;
@@ -85,6 +206,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
         !listEquals(_draftCategoryOrder, _initialCategoryOrder);
     if (changed.isEmpty && !categoriesChanged) {
       setState(() => _editingOrder = false);
+      _tour?.complete('orderFinished');
       return;
     }
     final bike = _bikeProvider.bikes.firstWhere(
@@ -92,6 +214,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
     );
     var applyToAll = false;
     if (bike.setups.length > 1) {
+      _tour?.suspend();
       final lang = context.read<LanguageProvider>().currentLanguage;
       final result = await showDialog<bool>(
         context: context,
@@ -110,7 +233,11 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
           ],
         ),
       );
-      if (!mounted || result == null) return;
+      if (!mounted) return;
+      if (result == null) {
+        _tour?.resume();
+        return;
+      }
       applyToAll = result;
     }
     _bikeProvider.updateFieldOrders(
@@ -121,6 +248,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       categoryOrder: categoriesChanged ? _draftCategoryOrder : null,
     );
     setState(() => _editingOrder = false);
+    _tour?.complete('orderFinished');
   }
 
   @override
@@ -173,6 +301,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
 
   @override
   void dispose() {
+    _tour?.cancelFor(context);
     // Provider nicht während des Widget-Abbaus benachrichtigen. Das kann bei
     // InheritedWidget/Provider zu `_dependents.isEmpty` führen.
     final notes = _notesController.text;
@@ -269,6 +398,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
         .toList();
 
     Widget orderedFields(String categoryId, List<Widget> children) {
+      if (children.isNotEmpty) _tourCategoryId ??= categoryId;
       final original = <String>{
         ...?setup.fieldOrders[categoryId],
         for (final child in children) (child.key! as ValueKey<String>).value,
@@ -277,13 +407,18 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
         _initialOrders.putIfAbsent(categoryId, () => original);
       }
       return ReorderableFieldWrap(
+        key: categoryId == _tourCategoryId ? _fieldsTourKey : null,
         categoryId: categoryId,
         order: _editingOrder
             ? (_draftOrders[categoryId] ?? original)
             : original,
         editing: _editingOrder,
         dragLabel: Translations.get(lang, 'dragField'),
-        onReorder: (order) => setState(() => _draftOrders[categoryId] = order),
+        onReorder: (order) {
+          final before = _draftOrders[categoryId] ?? original;
+          setState(() => _draftOrders[categoryId] = order);
+          if (!listEquals(before, order)) _tour?.complete('fieldMoved');
+        },
         children: children,
       );
     }
@@ -351,7 +486,7 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       );
     }
 
-    void showStepperModal(
+    Future<void> showStepperModal(
       String fieldId,
       String title,
       String unit,
@@ -359,8 +494,11 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       bool isText,
       double stepSize,
       Function(String, String) onSave,
-    ) {
-      showDialog(
+    ) async {
+      final guided = _tour?.waitingFor('valueSaved') == true;
+      if (guided) _tour!.suspend();
+      var changed = false;
+      await showDialog(
         context: context,
         builder: (ctx) => _EditValueDialog(
           title: title,
@@ -369,9 +507,19 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
           isText: isText,
           stepSize: ranges[fieldId]?.step ?? stepSize,
           range: isText ? null : ranges[fieldId],
-          onSave: onSave,
+          onSave: (value, note) {
+            onSave(value, note);
+            changed = value != currentValue;
+          },
         ),
       );
+      if (guided && mounted) {
+        if (changed) {
+          _tour?.complete('valueSaved');
+        } else {
+          _tour?.resume();
+        }
+      }
     }
 
     Widget buildSectionHeader(String title, {IconData? icon, String? svgPath}) {
@@ -460,12 +608,14 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
       final isSet = value != null && value != '-';
       final range = numeric ? ranges[fieldId] : null;
       final number = _parseDouble(value ?? '');
+      if (numeric) _tourFieldId ??= fieldId;
 
       return InkWell(
         key: ValueKey(fieldId),
         onTap: onTap,
         borderRadius: BorderRadius.circular(12.0),
         child: Container(
+          key: !_editingOrder && fieldId == _tourFieldId ? _valueTourKey : null,
           width: width,
           height: width,
           decoration: BoxDecoration(
@@ -673,33 +823,36 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            hasPressure ? pressure : '-',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: hasPressure
-                                  ? Colors.white
-                                  : Colors.white38,
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              hasPressure ? pressure : '-',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: hasPressure
+                                    ? Colors.white
+                                    : Colors.white38,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            unitFor('tirePressure', 'bar/PSI'),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: hasPressure
-                                  ? colorScheme.primary
-                                  : Colors.white38,
+                            const SizedBox(width: 4),
+                            Text(
+                              unitFor('tirePressure', 'bar/PSI'),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: hasPressure
+                                    ? colorScheme.primary
+                                    : Colors.white38,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -1381,6 +1534,17 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
             ],
           ),
     };
+    _startTourOrdering = () {
+      FocusScope.of(context).unfocus();
+      setState(() {
+        _draftOrders.clear();
+        _initialOrders.clear();
+        _draftCategoryOrder = null;
+        _initialCategoryOrder = List.of(categoryOrder);
+        _editingOrder = true;
+      });
+      _tour?.complete('orderStarted');
+    };
     return PopScope(
       canPop: !_editingOrder,
       onPopInvokedWithResult: (didPop, result) {
@@ -1404,23 +1568,16 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                     ),
                   if (_editingOrder)
                     TextButton(
+                      key: _finishTourKey,
                       onPressed: _finishOrdering,
                       child: Text(Translations.get(lang, 'finishFieldOrder')),
                     )
                   else
                     IconButton(
+                      key: _orderTourKey,
                       icon: const Icon(Icons.swap_vert),
                       tooltip: Translations.get(lang, 'editFieldOrder'),
-                      onPressed: () {
-                        FocusScope.of(context).unfocus();
-                        setState(() {
-                          _draftOrders.clear();
-                          _initialOrders.clear();
-                          _draftCategoryOrder = null;
-                          _initialCategoryOrder = List.of(categoryOrder);
-                          _editingOrder = true;
-                        });
-                      },
+                      onPressed: _startTourOrdering,
                     ),
                   if (!_editingOrder)
                     IconButton(
@@ -1534,9 +1691,12 @@ class _SetupDetailPageState extends State<SetupDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // --- LOG ---
-                    buildSectionHeader(
-                      Translations.get(lang, 'history'),
-                      icon: Icons.history,
+                    Container(
+                      key: _historyTourKey,
+                      child: buildSectionHeader(
+                        Translations.get(lang, 'history'),
+                        icon: Icons.history,
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),

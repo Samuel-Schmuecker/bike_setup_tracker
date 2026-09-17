@@ -22,15 +22,24 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     this.bikes, {
     SupabaseClient? client,
     bool startAutomatically = true,
-  }) : _client = client {
+    bool cloudEnabled = true,
+  }) : _client = client,
+       _cloudEnabled = cloudEnabled {
     WidgetsBinding.instance.addObserver(this);
     store.addListener(_localChanged);
     bikes.addListener(_bikeStatusChanged);
-    if (startAutomatically) {
-      _timer = Timer.periodic(const Duration(seconds: 45), (_) => sync());
-      unawaited(sync());
-    }
+    if (startAutomatically && _cloudEnabled) startSync();
   }
+  bool _cloudEnabled;
+
+  /// Called after onboarding has been confirmed and saved locally.
+  void startSync() {
+    if (_disposed) return;
+    _cloudEnabled = true;
+    _timer ??= Timer.periodic(const Duration(seconds: 45), (_) => sync());
+    unawaited(sync());
+  }
+
   final LocalStore store;
   final BikeProvider bikes;
   SupabaseClient? _client;
@@ -89,6 +98,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _localChanged() {
+    if (!_cloudEnabled) return;
     final current = store.payload;
     if (sameJson(current, _observedPayload)) return;
     _observedPayload = current;
@@ -99,6 +109,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<SupabaseClient> _ensureClient() async {
+    if (!_cloudEnabled) throw StateError('ONBOARDING_NOT_COMPLETED');
     if (_client != null) return _client!;
     await Supabase.initialize(
       url: CloudConfig.url,
@@ -170,7 +181,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> sync() async {
-    if (busy || _disposed) return;
+    if (!_cloudEnabled || busy || _disposed) return;
     if (cloudPaused || deletionPending) {
       status = cloudPaused ? 'paused' : 'deleting';
       _emit();

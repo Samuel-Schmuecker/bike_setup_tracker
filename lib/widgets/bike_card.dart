@@ -9,17 +9,17 @@ import '../screens/edit_bike/edit_bike_screen.dart';
 class BikeCard extends StatelessWidget {
   final Bike bike;
   final VoidCallback? onLongPress;
+  final VoidCallback? onTap;
 
-  const BikeCard({
-    super.key,
-    required this.bike,
-    this.onLongPress,
-  });
+  const BikeCard({super.key, required this.bike, this.onLongPress, this.onTap});
 
   @override
   Widget build(BuildContext context) {
     // Holt IMMER einen Bildpfad (Nutzer oder Kategorie-Fallback)
-    final displayPath = ImageHelper.getDisplayImagePath(bike.imagePath, bike.category);
+    final displayPath = ImageHelper.getDisplayImagePath(
+      bike.imagePath,
+      bike.category,
+    );
 
     // Hilfs-Widget für die nebeneinanderliegenden Chips (jetzt immer im dunklen Look)
     Widget buildChip(Widget child) {
@@ -37,16 +37,15 @@ class BikeCard extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      clipBehavior: Clip.antiAlias, // Wichtig für abgerundete Ecken trotz Stack/Bild
+      clipBehavior:
+          Clip.antiAlias, // Wichtig für abgerundete Ecken trotz Stack/Bild
       elevation: 3, // Schatten, da es ein Bild ist
       child: SizedBox(
         height: 140, // Feste Höhe
         child: Stack(
           children: [
             // 1. Hintergrundbild (es gibt jetzt IMMER eins)
-            Positioned.fill(
-              child: ImageHelper.buildImage(displayPath),
-            ),
+            Positioned.fill(child: ImageHelper.buildImage(displayPath)),
 
             // 2. Dunkles Gradient-Overlay (Links nach Rechts) für Lesbarkeit
             Positioned.fill(
@@ -57,7 +56,8 @@ class BikeCard extends StatelessWidget {
                     end: Alignment.centerRight,
                     colors: [
                       Colors.black87, // Sehr dunkel links (für Text)
-                      Colors.transparent, // Transparent rechts (Bild bleibt sichtbar)
+                      Colors
+                          .transparent, // Transparent rechts (Bild bleibt sichtbar)
                     ],
                   ),
                 ),
@@ -69,22 +69,27 @@ class BikeCard extends StatelessWidget {
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BikeDetailScreen(bikeId: bike.id),
-                      ),
-                    );
-                  },
-                  onLongPress: onLongPress ?? () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditBikeScreen(bike: bike),
-                      ),
-                    );
-                  },
+                  onTap:
+                      onTap ??
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                BikeDetailScreen(bikeId: bike.id),
+                          ),
+                        );
+                      },
+                  onLongPress:
+                      onLongPress ??
+                      () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditBikeScreen(bike: bike),
+                          ),
+                        );
+                      },
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Row(

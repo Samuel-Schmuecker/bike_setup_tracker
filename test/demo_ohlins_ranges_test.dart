@@ -20,6 +20,11 @@ void main() {
     expect(params.ranges['shockLsr']!.max, 7);
     expect(params.shockHbo, isFalse);
     expect(params.shockPsi, isFalse);
+    expect(provider.bikes.single.setups, hasLength(2));
+    expect(
+      provider.bikes.single.setups.map((setup) => setup.name),
+      ['Bikepark Setup', 'Nass & Wurzeln'],
+    );
     await provider.saveToDevice();
     provider.dispose();
   });

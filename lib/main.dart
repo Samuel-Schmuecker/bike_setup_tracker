@@ -50,7 +50,11 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider(preferences)),
         ChangeNotifierProvider.value(value: bikes),
         ChangeNotifierProvider(
-          create: (_) => CloudProvider(store, bikes),
+          create: (_) => CloudProvider(
+            store,
+            bikes,
+            cloudEnabled: preferences.getBool('hasSeenOnboarding') ?? false,
+          ),
           lazy: false,
         ),
         ChangeNotifierProvider(create: (_) => LanguageProvider()), // NEU

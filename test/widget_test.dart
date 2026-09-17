@@ -50,9 +50,9 @@ void main() {
     await tester.tap(find.text('Konto & Datensicherung'));
     await tester.pumpAndSettle();
     expect(find.byType(AccountScreen), findsOneWidget);
-    expect(find.text('Ohne Registrierung'), findsOneWidget);
-    expect(find.text('Mit Google absichern'), findsOneWidget);
-    expect(find.text('Mit Google anmelden'), findsOneWidget);
+    expect(find.text('Du nutzt die App als Gast'), findsOneWidget);
+    expect(find.text('Registrieren'), findsNWidgets(2));
+    expect(find.text('Login'), findsNWidgets(2));
     expect(find.text('E-Mail-Code anfordern'), findsNothing);
     expect(find.textContaining('Die anonyme Anmeldung allein'), findsOneWidget);
     expect(tester.takeException(), isNull);

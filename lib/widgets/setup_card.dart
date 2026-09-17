@@ -14,6 +14,7 @@ class SetupCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final VoidCallback onFavoriteToggle;
+  final GlobalKey? favoriteKey;
 
   const SetupCard({
     super.key,
@@ -22,6 +23,7 @@ class SetupCard extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     required this.onFavoriteToggle,
+    this.favoriteKey,
   });
 
   // Verhindert .0 bei runden Zahlen und gibt '-' bei null zurück
@@ -135,6 +137,7 @@ class SetupCard extends StatelessWidget {
                     ),
                   ),
                   IconButton(
+                    key: favoriteKey,
                     icon: Icon(
                       setup.isFavorite ? Icons.star : Icons.star_border,
                       color: setup.isFavorite
