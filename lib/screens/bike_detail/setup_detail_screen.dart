@@ -41,7 +41,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
   Future<void> _showTour() async {
     if (!mounted) return;
     final tour = widget.onboardingTour!;
-    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    final languageCode = context.read<LanguageProvider>().currentLanguage;
     var advanced = false;
     try {
       _tourStartPage = _controller!.page!.round();
@@ -50,11 +50,9 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         target: _swipeTourKey,
         step: 5,
         event: 'swipe',
-        german: german,
-        title: german ? 'Zwischen Setups wischen' : 'Swipe between setups',
-        description: german
-            ? '**Links oder rechts wischen.** Am PC: mit gedrückter linker Maustaste ziehen.'
-            : '**Swipe left or right.** On a PC: drag with the left mouse button held.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourSwipeTitle'),
+        description: Translations.get(languageCode, 'tourSwipeBody'),
       );
       if (!mounted || !next) return;
       setState(() => _tourDetailActive = true);
@@ -67,11 +65,7 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              german
-                  ? 'Die Tour wurde unterbrochen. Bitte erneut starten.'
-                  : 'Please restart the tour.',
-            ),
+            content: Text(Translations.get(languageCode, 'tourInterrupted')),
           ),
         );
     } finally {

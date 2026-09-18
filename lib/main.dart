@@ -14,6 +14,7 @@ import 'cloud/local_store.dart';
 import 'cloud/cloud_provider.dart';
 import 'screens/settings/account_screen.dart';
 import 'utils/app_route_observer.dart';
+import 'utils/translations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,14 +28,16 @@ Future<void> main() async {
     await bikes.ready;
   } catch (_) {
     runApp(
-      const MaterialApp(
+      MaterialApp(
         home: Scaffold(
           body: Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: SelectableText(
-                'Die gespeicherten Daten konnten nicht sicher geladen werden. '
-                'Sie wurden nicht überschrieben. Bitte die App-Daten nicht löschen und den Support kontaktieren.',
+                Translations.get(
+                  preferences.getString('app_lang') ?? 'de',
+                  'startupLoadError',
+                ),
               ),
             ),
           ),
@@ -51,9 +54,10 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ThemeProvider(preferences)),
         ChangeNotifierProvider.value(value: bikes),
         ChangeNotifierProvider(
-          create: (_) => CloudProvider(
+          create: (context) => CloudProvider(
             store,
             bikes,
+            theme: context.read<ThemeProvider>(),
             cloudEnabled: preferences.getBool('hasSeenOnboarding') ?? false,
           ),
           lazy: false,

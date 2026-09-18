@@ -1,3 +1,4 @@
+import 'package:bike_setup_tracker/utils/translations.dart';
 import 'dart:convert';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
@@ -19,8 +20,7 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> {
   String? _message;
   bool _working = false;
-  bool get de => context.read<LanguageProvider>().currentLanguage == 'de';
-  String t(String german, String english) => de ? german : english;
+  String get languageCode => context.read<LanguageProvider>().currentLanguage;
 
   Future<void> signInWithGuestChoice(CloudProvider cloud) async {
     String? choice;
@@ -28,37 +28,29 @@ class _AccountScreenState extends State<AccountScreen> {
       choice = await showDialog<String>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: Text(
-            t(
-              'Was soll mit deinen Gastdaten passieren?',
-              'What should happen to your guest data?',
-            ),
-          ),
+          title: Text(Translations.get(languageCode, 'guestDataChoiceTitle')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  t(
-                    'Nach erfolgreicher Google-Anmeldung wird das bisherige Gastkonto gelöscht. Übernommene Daten werden vorher vollständig synchronisiert.',
-                    'After successful Google sign-in, the old guest account is deleted. Imported data is fully synced first.',
-                  ),
-                ),
+                Text(Translations.get(languageCode, 'guestDataChoiceBody')),
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => Navigator.pop(dialogContext, 'import'),
                   child: Text(
-                    t('Daten als Kopien übernehmen', 'Import data as copies'),
+                    Translations.get(languageCode, 'guestDataImportCopies'),
                   ),
                 ),
                 TextButton(
                   onPressed: () => run(() => export(cloud)),
-                  child: Text(t('Sicherung exportieren', 'Export backup')),
+                  child: Text(Translations.get(languageCode, 'backupExport')),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext, 'discard'),
-                  child: Text(t('Gastdaten verwerfen', 'Discard guest data')),
+                  child: Text(
+                    Translations.get(languageCode, 'guestDataDiscard'),
+                  ),
                 ),
               ],
             ),
@@ -66,7 +58,7 @@ class _AccountScreenState extends State<AccountScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text(t('Abbrechen', 'Cancel')),
+              child: Text(Translations.get(languageCode, 'cancel')),
             ),
           ],
         ),
@@ -74,11 +66,8 @@ class _AccountScreenState extends State<AccountScreen> {
       if (choice == null || !mounted) return;
       if (choice == 'discard' &&
           !await confirm(
-            t('Gastdaten wirklich verwerfen?', 'Discard guest data?'),
-            t(
-              'Nach erfolgreicher Anmeldung werden das alte Gastkonto, seine Cloud-Daten und lokalen Sicherungen gelöscht. Exportierte Dateien bleiben erhalten.',
-              'After successful sign-in, the old guest account, its cloud data and local backups are deleted. Exported files remain.',
-            ),
+            Translations.get(languageCode, 'guestDataDiscardTitle'),
+            Translations.get(languageCode, 'guestDataDiscardBody'),
           )) {
         return;
       }
@@ -94,27 +83,20 @@ class _AccountScreenState extends State<AccountScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, update) => AlertDialog(
-          title: Text(
-            t('Konto endgültig löschen?', 'Permanently delete account?'),
-          ),
+          title: Text(Translations.get(languageCode, 'accountDeleteTitle')),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  t(
-                    'Dein App-Konto, Cloud-Daten, Bilder und frühere Versionen sowie die lokalen Sicherungen dieses Kontos werden gelöscht. Dein Google-Konto bleibt bestehen. Exportierte Dateien und Kopien auf anderen Geräten bleiben erhalten. Anbieter-Backups unterliegen deren Aufbewahrungsfristen. Dieser Vorgang kann nicht rückgängig gemacht werden.',
-                    'Your app account, cloud data, images, previous versions and this account’s local backups will be deleted. Your Google account remains. Exported files and copies on other devices remain. Provider backups follow their retention periods. This cannot be undone.',
-                  ),
-                ),
+                Text(Translations.get(languageCode, 'accountDeleteBody')),
                 const SizedBox(height: 16),
                 TextField(
                   controller: controller,
                   onChanged: (_) => update(() {}),
                   decoration: InputDecoration(
-                    labelText: t(
-                      'Zur Bestätigung DELETE eingeben',
-                      'Type DELETE to confirm',
+                    labelText: Translations.get(
+                      languageCode,
+                      'accountDeleteConfirmationHint',
                     ),
                   ),
                 ),
@@ -124,7 +106,7 @@ class _AccountScreenState extends State<AccountScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(t('Abbrechen', 'Cancel')),
+              child: Text(Translations.get(languageCode, 'cancel')),
             ),
             FilledButton(
               onPressed: controller.text == 'DELETE'
@@ -133,7 +115,9 @@ class _AccountScreenState extends State<AccountScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
-              child: Text(t('Endgültig löschen', 'Delete permanently')),
+              child: Text(
+                Translations.get(languageCode, 'accountDeleteConfirm'),
+              ),
             ),
           ],
         ),
@@ -157,9 +141,10 @@ class _AccountScreenState extends State<AccountScreen> {
     } catch (error) {
       if (mounted) {
         setState(
-          () => _message = t(
-            'Der Vorgang wurde nicht abgeschlossen. Bitte Verbindung und Eingaben prüfen. Details: $error',
-            'The operation did not complete. Please check your connection and entries. Details: $error',
+          () => _message = Translations.format(
+            languageCode,
+            'accountOperationError',
+            {'error': (error).toString()},
           ),
         );
       }
@@ -196,28 +181,25 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> import(CloudProvider cloud) async {
     final file = await openFile(
       acceptedTypeGroups: [
-        const XTypeGroup(
-          label: 'Bike backup',
-          extensions: ['json'],
-          mimeTypes: ['application/json'],
-          uniformTypeIdentifiers: ['public.json'],
+        XTypeGroup(
+          label: Translations.get(languageCode, 'backupFileType'),
+          extensions: const ['json'],
+          mimeTypes: const ['application/json'],
+          uniformTypeIdentifiers: const ['public.json'],
         ),
       ],
     );
     if (file == null) return;
     if (await file.length() > 50 * 1024 * 1024) {
-      throw const FormatException('Backup exceeds 50 MB');
+      throw FormatException(Translations.get(languageCode, 'backupTooLarge'));
     }
     final backup = Map<String, dynamic>.from(
       jsonDecode(await file.readAsString()) as Map,
     );
     if (!mounted) return;
     final confirmed = await confirm(
-      t('Sicherung importieren?', 'Import backup?'),
-      t(
-        'Die Bikes werden als neue Kopien hinzugefügt. Vorhandene Bikes bleiben erhalten.',
-        'Bikes will be added as new copies. Existing bikes are retained.',
-      ),
+      Translations.get(languageCode, 'backupImportTitle'),
+      Translations.get(languageCode, 'backupImportBody'),
     );
     if (confirmed) await cloud.importBackup(backup);
   }
@@ -231,11 +213,11 @@ class _AccountScreenState extends State<AccountScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(t('Abbrechen', 'Cancel')),
+              child: Text(Translations.get(languageCode, 'cancel')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(t('Bestätigen', 'Confirm')),
+              child: Text(Translations.get(languageCode, 'confirm')),
             ),
           ],
         ),
@@ -248,17 +230,12 @@ class _AccountScreenState extends State<AccountScreen> {
     final selected = await showDialog<Json>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t('Frühere Cloud-Versionen', 'Previous cloud versions')),
+        title: Text(Translations.get(languageCode, 'backupCloudHistoryTitle')),
         content: SizedBox(
           width: 500,
           height: 350,
           child: rows.isEmpty
-              ? Text(
-                  t(
-                    'Noch keine früheren Versionen vorhanden.',
-                    'No previous versions yet.',
-                  ),
-                )
+              ? Text(Translations.get(languageCode, 'backupCloudHistoryEmpty'))
               : ListView(
                   children: [
                     for (final row in rows)
@@ -276,7 +253,7 @@ class _AccountScreenState extends State<AccountScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(t('Schließen', 'Close')),
+            child: Text(Translations.get(languageCode, 'close')),
           ),
         ],
       ),
@@ -284,11 +261,8 @@ class _AccountScreenState extends State<AccountScreen> {
     if (selected != null &&
         mounted &&
         await confirm(
-          t('Version wiederherstellen?', 'Restore version?'),
-          t(
-            'Diese Fassung wird wieder zur aktuellen Fassung. Der aktuelle lokale Bestand wird vorher gesichert.',
-            'This version becomes current. The current local data is backed up first.',
-          ),
+          Translations.get(languageCode, 'backupRestoreTitle'),
+          Translations.get(languageCode, 'backupRestoreBody'),
         )) {
       await cloud.restoreVersion(selected);
     }
@@ -300,27 +274,30 @@ class _AccountScreenState extends State<AccountScreen> {
     final selected = await showDialog<Json>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(t('Lokale Sicherungen', 'Local backups')),
+        title: Text(Translations.get(languageCode, 'backupLocalTitle')),
         content: SizedBox(
           width: 500,
           height: 350,
           child: rows.isEmpty
-              ? Text(t('Noch keine Sicherungen vorhanden.', 'No backups yet.'))
+              ? Text(Translations.get(languageCode, 'backupLocalEmpty'))
               : ListView(
                   children: [
                     for (final row in rows)
                       ListTile(
                         title: Text(
-                          '${(row['payload']['bikes'] as List).length} Bikes',
+                          Translations.format(languageCode, 'backupBikeCount', {
+                            'count': (row['payload']['bikes'] as List).length
+                                .toString(),
+                          }),
                         ),
                         subtitle: Text(
                           row['key'].toString().startsWith('backup:')
                               ? DateTime.fromMicrosecondsSinceEpoch(
                                   int.parse(row['key'].toString().substring(7)),
                                 ).toString()
-                              : t(
-                                  'Separat gespeicherter Kontobestand',
-                                  'Separately saved account data',
+                              : Translations.get(
+                                  languageCode,
+                                  'backupSeparateAccount',
                                 ),
                         ),
                         onTap: () => Navigator.pop(ctx, row),
@@ -331,7 +308,7 @@ class _AccountScreenState extends State<AccountScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(t('Schließen', 'Close')),
+            child: Text(Translations.get(languageCode, 'close')),
           ),
         ],
       ),
@@ -339,63 +316,40 @@ class _AccountScreenState extends State<AccountScreen> {
     if (selected != null &&
         mounted &&
         await confirm(
-          t('Als Kopien übernehmen?', 'Restore as copies?'),
-          t(
-            'Diese Bikes werden dem aktuellen Bestand hinzugefügt.',
-            'These bikes will be added to the current workspace.',
-          ),
+          Translations.get(languageCode, 'backupRestoreCopiesTitle'),
+          Translations.get(languageCode, 'backupRestoreCopiesBody'),
         )) {
       await cloud.restoreLocalWorkspace(selected);
     }
   }
 
   String documentLabel(String key, CloudProvider cloud) {
-    if (key == 'order') return t('Reihenfolge der Bikes', 'Bike order');
+    if (key == 'order')
+      return Translations.get(languageCode, 'accountDocumentBikeOrder');
     if (key == 'library') {
-      return t('Bibliothek eigener Felder', 'Custom field library');
+      return Translations.get(languageCode, 'accountDocumentFieldLibrary');
     }
     for (final bike in cloud.bikes.bikes) {
       if (key == 'bike:${bike.id}') return '${bike.brand} ${bike.model}';
     }
-    return t('Gelöschtes Bike', 'Deleted bike');
+    return Translations.get(languageCode, 'accountDocumentDeletedBike');
   }
 
   String statusText(String status) => switch (status) {
-    'google_waiting' => t(
-      'Cloud synchronisiert; Google-Anmeldung noch offen.',
-      'Cloud synced; Google sign-in pending.',
+    'google_waiting' => Translations.get(
+      languageCode,
+      'syncStatusGoogleWaiting',
     ),
-    'google' => t(
-      'Google-Anmeldung konnte nicht zugeordnet werden oder ist abgelaufen. Bitte abbrechen und erneut anmelden.',
-      'Google sign-in could not be matched or expired. Please cancel and sign in again.',
-    ),
-    'syncing' => t('Daten werden synchronisiert …', 'Syncing data …'),
-    'synced' => t('Mit Cloud synchronisiert', 'Synced with cloud'),
-    'conflict' => t(
-      'Änderungskonflikt – Auswahl erforderlich',
-      'Conflicting changes – choose a version',
-    ),
-    'setup' => t(
-      'Cloud-Einrichtung fehlt: SQL-Skript und Zugriffsregeln prüfen.',
-      'Cloud setup is incomplete: check SQL migration and access rules.',
-    ),
-    'session' => t(
-      'Anmeldung fehlt. Bitte erneut anmelden. Lokale Daten bleiben erhalten.',
-      'Session missing. Please sign in again. Local data is retained.',
-    ),
-    'auth' => t(
-      'Anmeldung nicht möglich. Verbindung und anonyme Anmeldung in Supabase prüfen.',
-      'Unable to authenticate. Check connection and anonymous sign-ins in Supabase.',
-    ),
-    'local' => t(
-      'Lokales Speichern fehlgeschlagen. Bitte freien Speicher prüfen.',
-      'Local save failed. Please check free storage.',
-    ),
-    'offline' => t(
-      'Sicherung ausstehend. Verbindung oder Cloud-Dienst nicht verfügbar; automatischer Wiederholungsversuch folgt.',
-      'Backup pending. Connection or cloud service unavailable; retrying automatically.',
-    ),
-    _ => t('Sicherung ausstehend', 'Backup pending'),
+    'google' => Translations.get(languageCode, 'syncStatusGoogleError'),
+    'syncing' => Translations.get(languageCode, 'syncStatusSyncing'),
+    'synced' => Translations.get(languageCode, 'syncStatusSynced'),
+    'conflict' => Translations.get(languageCode, 'syncStatusConflict'),
+    'setup' => Translations.get(languageCode, 'syncStatusSetup'),
+    'session' => Translations.get(languageCode, 'syncStatusSession'),
+    'auth' => Translations.get(languageCode, 'syncStatusAuth'),
+    'local' => Translations.get(languageCode, 'syncStatusLocal'),
+    'offline' => Translations.get(languageCode, 'syncStatusOffline'),
+    _ => Translations.get(languageCode, 'syncStatusPending'),
   };
 
   Widget authOption({
@@ -475,7 +429,9 @@ class _AccountScreenState extends State<AccountScreen> {
     final disabled = cloud.busy || _working;
     if (cloud.cloudPaused || cloud.deletionPending) {
       return Scaffold(
-        appBar: AppBar(title: Text(t('Konto löschen', 'Delete account'))),
+        appBar: AppBar(
+          title: Text(Translations.get(languageCode, 'accountDelete')),
+        ),
         body: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -493,13 +449,10 @@ class _AccountScreenState extends State<AccountScreen> {
                   const SizedBox(height: 16),
                   Text(
                     cloud.cloudPaused
-                        ? t(
-                            'Dein Konto wurde gelöscht. Es wird kein neues Gastkonto angelegt, bis du die App erneut nutzt.',
-                            'Your account has been deleted. No new guest account is created until you start again.',
-                          )
-                        : t(
-                            'Die Kontolöschung wurde gestartet. Die Synchronisierung ist gesperrt. Bei einem Verbindungsfehler kannst du die Löschung erneut versuchen.',
-                            'Account deletion has started. Sync is blocked. If the connection fails, retry deletion.',
+                        ? Translations.get(languageCode, 'accountDeletedBody')
+                        : Translations.get(
+                            languageCode,
+                            'accountDeletionPendingBody',
                           ),
                   ),
                   const SizedBox(height: 16),
@@ -511,7 +464,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           ? null
                           : () => run(() => export(cloud)),
                       child: Text(
-                        t('Lokale Daten exportieren', 'Export local data'),
+                        Translations.get(languageCode, 'backupExportLocal'),
                       ),
                     ),
                   FilledButton(
@@ -524,8 +477,14 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                     child: Text(
                       cloud.cloudPaused
-                          ? t('Neu als Gast starten', 'Start again as guest')
-                          : t('Löschung erneut versuchen', 'Retry deletion'),
+                          ? Translations.get(
+                              languageCode,
+                              'accountRestartGuest',
+                            )
+                          : Translations.get(
+                              languageCode,
+                              'accountRetryDeletion',
+                            ),
                     ),
                   ),
                 ],
@@ -537,7 +496,7 @@ class _AccountScreenState extends State<AccountScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: Text(t('Konto & Datensicherung', 'Account & backup')),
+        title: Text(Translations.get(languageCode, 'accountBackup')),
       ),
       body: Center(
         child: ConstrainedBox(
@@ -553,9 +512,9 @@ class _AccountScreenState extends State<AccountScreen> {
                     children: [
                       Text(
                         cloud.anonymous
-                            ? t(
-                                'Du nutzt die App als Gast',
-                                'You are using the app as a guest',
+                            ? Translations.get(
+                                languageCode,
+                                'accountGuestStatus',
                               )
                             : cloud.email ?? '',
                         style: Theme.of(context).textTheme.titleLarge,
@@ -565,9 +524,9 @@ class _AccountScreenState extends State<AccountScreen> {
                       if (cloud.sessionUnavailable) ...[
                         const SizedBox(height: 12),
                         Text(
-                          t(
-                            'Deine gespeicherte Anmeldung ist nicht mehr gültig. Das Konto wurde möglicherweise außerhalb der App gelöscht. Deine lokalen Daten sind noch vorhanden.',
-                            'Your saved session is no longer valid. The account may have been deleted outside the app. Your local data is still available.',
+                          Translations.get(
+                            languageCode,
+                            'accountSessionExpiredBody',
                           ),
                         ),
                         OutlinedButton.icon(
@@ -576,44 +535,38 @@ class _AccountScreenState extends State<AccountScreen> {
                               ? null
                               : () async {
                                   if (await confirm(
-                                    t(
-                                      'Lokale Daten neu verbinden?',
-                                      'Reconnect local data?',
+                                    Translations.get(
+                                      languageCode,
+                                      'accountReconnectTitle',
                                     ),
-                                    t(
-                                      'Es wird ein neues Gastkonto erstellt. Deine vorhandenen lokalen Daten werden dorthin übertragen. Anschließend kannst du Google verbinden oder dich anmelden.',
-                                      'A new guest account will be created and your existing local data uploaded to it. You can then link Google or sign in.',
+                                    Translations.get(
+                                      languageCode,
+                                      'accountReconnectBody',
                                     ),
                                   )) {
                                     await run(cloud.reconnectLocalData);
                                   }
                                 },
                           label: Text(
-                            t(
-                              'Lokale Daten neu verbinden',
-                              'Reconnect local data',
-                            ),
+                            Translations.get(languageCode, 'accountReconnect'),
                           ),
                         ),
                       ],
                       if (cloud.store.lastSync != null)
                         Text(
-                          '${t('Letzte Synchronisierung', 'Last sync')}: ${cloud.store.lastSync!.toLocal()}',
+                          '${Translations.get(languageCode, 'accountLastSync')}: ${cloud.store.lastSync!.toLocal()}',
                         ),
                       const SizedBox(height: 12),
                       Text(
-                        t(
-                          'Bikes, Setups und Bilder werden lokal und automatisch in deiner privaten Cloud gespeichert.',
-                          'Bikes, setups and images are saved locally and automatically to your private cloud.',
-                        ),
+                        Translations.get(languageCode, 'accountStorageBody'),
                       ),
                       if (cloud.anonymous)
                         Padding(
                           padding: const EdgeInsets.only(top: 12),
                           child: Text(
-                            t(
-                              'Verknüpfe dein Google-Konto, um nach Geräteverlust oder gelöschten App-Daten wieder Zugriff zu erhalten. Die anonyme Anmeldung allein ermöglicht das nicht.',
-                              'Link Google to regain access after losing a device or clearing app data. Anonymous sign-in alone cannot provide this.',
+                            Translations.get(
+                              languageCode,
+                              'accountLinkGoogleBody',
                             ),
                           ),
                         ),
@@ -622,7 +575,9 @@ class _AccountScreenState extends State<AccountScreen> {
                         OutlinedButton.icon(
                           onPressed: disabled ? null : cloud.sync,
                           icon: const Icon(Icons.sync),
-                          label: Text(t('Jetzt synchronisieren', 'Sync now')),
+                          label: Text(
+                            Translations.get(languageCode, 'accountSyncNow'),
+                          ),
                         ),
                       ],
                     ],
@@ -632,15 +587,10 @@ class _AccountScreenState extends State<AccountScreen> {
               if (cloud.conflicts.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text(
-                  t('Konflikte', 'Conflicts'),
+                  Translations.get(languageCode, 'accountConflictsTitle'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                Text(
-                  t(
-                    'Beide Fassungen bleiben bis zur Auswahl erhalten. Vor der Auflösung wird lokal eine Sicherung angelegt.',
-                    'Both versions are retained until you choose. A local backup is created before resolving.',
-                  ),
-                ),
+                Text(Translations.get(languageCode, 'accountConflictsBody')),
                 for (final key in cloud.conflicts.keys)
                   Card(
                     child: Padding(
@@ -659,13 +609,16 @@ class _AccountScreenState extends State<AccountScreen> {
                                       : () => run(
                                           () => cloud.keepBoth(
                                             key,
-                                            t('Konfliktkopie', 'Conflict copy'),
+                                            Translations.get(
+                                              languageCode,
+                                              'accountConflictCopy',
+                                            ),
                                           ),
                                         ),
                                   child: Text(
-                                    t(
-                                      'Beide Fassungen behalten',
-                                      'Keep both versions',
+                                    Translations.get(
+                                      languageCode,
+                                      'accountKeepBoth',
                                     ),
                                   ),
                                 ),
@@ -679,9 +632,9 @@ class _AccountScreenState extends State<AccountScreen> {
                                         ),
                                       ),
                                 child: Text(
-                                  t(
-                                    'Lokale Fassung behalten',
-                                    'Keep local version',
+                                  Translations.get(
+                                    languageCode,
+                                    'accountKeepLocal',
                                   ),
                                 ),
                               ),
@@ -695,9 +648,9 @@ class _AccountScreenState extends State<AccountScreen> {
                                         ),
                                       ),
                                 child: Text(
-                                  t(
-                                    'Cloud-Fassung übernehmen',
-                                    'Use cloud version',
+                                  Translations.get(
+                                    languageCode,
+                                    'accountUseCloud',
                                   ),
                                 ),
                               ),
@@ -727,11 +680,14 @@ class _AccountScreenState extends State<AccountScreen> {
                           Expanded(
                             child: Text(
                               cloud.googleLinked
-                                  ? t(
-                                      'Google ist verbunden',
-                                      'Google is connected',
+                                  ? Translations.get(
+                                      languageCode,
+                                      'accountGoogleConnected',
                                     )
-                                  : t('Dein Konto', 'Your account'),
+                                  : Translations.get(
+                                      languageCode,
+                                      'accountTitle',
+                                    ),
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                           ),
@@ -743,14 +699,14 @@ class _AccountScreenState extends State<AccountScreen> {
                           cloud.status == 'google') ...[
                         authOption(
                           icon: Icons.login_rounded,
-                          title: 'Login',
-                          subtitle: t(
-                            'Du hast bereits ein Konto?',
-                            'Already have an account?',
+                          title: Translations.get(languageCode, 'accountLogin'),
+                          subtitle: Translations.get(
+                            languageCode,
+                            'accountLoginSubtitle',
                           ),
-                          description: t(
-                            'Melde dich mit Google an, um auf deine gespeicherten Bikes und Setups zuzugreifen. Du entscheidest vorher, was mit deinen Gastdaten passiert.',
-                            'Sign in with Google to access your saved bikes and setups. First choose what happens to your guest data.',
+                          description: Translations.get(
+                            languageCode,
+                            'accountLoginBody',
                           ),
                           onPressed: disabled || cloud.googlePending
                               ? null
@@ -761,14 +717,17 @@ class _AccountScreenState extends State<AccountScreen> {
                       if (!cloud.googleLinked)
                         authOption(
                           icon: Icons.person_add_alt_1_rounded,
-                          title: t('Registrieren', 'Register'),
-                          subtitle: t(
-                            'Neu hier? Sichere deine Bikes.',
-                            'New here? Keep your bikes safe.',
+                          title: Translations.get(
+                            languageCode,
+                            'accountRegister',
                           ),
-                          description: t(
-                            'Erstelle dein App-Konto mit Google. Deine bisherigen Bikes und Setups bleiben erhalten und werden mit deinem Konto verknüpft. Du brauchst kein zusätzliches Passwort.',
-                            'Create your app account with Google. Your existing bikes and setups are kept and linked to your account. No extra password needed.',
+                          subtitle: Translations.get(
+                            languageCode,
+                            'accountRegisterSubtitle',
+                          ),
+                          description: Translations.get(
+                            languageCode,
+                            'accountRegisterBody',
                           ),
                           emphasized: true,
                           onPressed: disabled || cloud.googlePending
@@ -777,34 +736,40 @@ class _AccountScreenState extends State<AccountScreen> {
                         )
                       else
                         Text(
-                          t(
-                            'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
-                            'Google is linked. Sign in with the same Google account on other devices.',
+                          Translations.get(
+                            languageCode,
+                            'accountGoogleLinkedBody',
                           ),
                         ),
                       if (cloud.googlePending || cloud.googleIssue != null) ...[
                         const SizedBox(height: 12),
                         Text(
                           cloud.googleIssue == null
-                              ? t(
-                                  'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Login“ wählen.',
-                                  'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Login.',
+                              ? Translations.get(
+                                  languageCode,
+                                  'accountGoogleWaitingBody',
                                 )
                               : googleAuthErrorHelp(
                                   cloud.googleIssue!,
-                                  german: de,
+                                  languageCode: languageCode,
                                 ),
                         ),
                         if (cloud.googleIssue != null)
-                          SelectableText('Code: ${cloud.googleIssue}'),
+                          SelectableText(
+                            Translations.format(
+                              languageCode,
+                              'diagnosticCode',
+                              {'code': cloud.googleIssue.toString()},
+                            ),
+                          ),
                         OutlinedButton(
                           onPressed: disabled
                               ? null
                               : () => run(cloud.cancelGoogle),
                           child: Text(
-                            t(
-                              'Google-Anmeldung abbrechen',
-                              'Cancel Google sign-in',
+                            Translations.get(
+                              languageCode,
+                              'accountCancelGoogle',
                             ),
                           ),
                         ),
@@ -815,23 +780,28 @@ class _AccountScreenState extends State<AccountScreen> {
                               ? null
                               : () => run(() async {
                                   if (await confirm(
-                                    t('Abmelden?', 'Sign out?'),
-                                    t(
-                                      'Der lokale Kontobestand bleibt separat erhalten. Noch nicht synchronisierte Änderungen sind nur auf diesem Gerät vorhanden.',
-                                      'Your local account data is retained separately. Unsynced changes exist only on this device.',
+                                    Translations.get(
+                                      languageCode,
+                                      'accountSignOutTitle',
+                                    ),
+                                    Translations.get(
+                                      languageCode,
+                                      'accountSignOutBody',
                                     ),
                                   )) {
                                     await cloud.signOut();
                                   }
                                 }),
-                          child: Text(t('Abmelden', 'Sign out')),
+                          child: Text(
+                            Translations.get(languageCode, 'accountSignOut'),
+                          ),
                         ),
                       if (cloud.anonymous) ...[
                         const SizedBox(height: 12),
                         Text(
-                          t(
-                            'Google ist optional. Du kannst die App weiter als Gast nutzen.',
-                            'Google is optional. You can keep using the app as a guest.',
+                          Translations.get(
+                            languageCode,
+                            'accountGoogleOptionalBody',
                           ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
@@ -853,39 +823,28 @@ class _AccountScreenState extends State<AccountScreen> {
               const Divider(height: 40),
               if (cloud.guestCleanupPending) ...[
                 Text(
-                  t(
-                    'Bisheriges Gastkonto bereinigen',
-                    'Clean up previous guest account',
-                  ),
+                  Translations.get(languageCode, 'guestCleanupTitle'),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
                   cloud.guestCleanupError == null
-                      ? t(
-                          'Die Gastdaten werden abgeglichen. Erst danach wird das alte Gastkonto gelöscht.',
-                          'Guest data is being synced. The old guest account is deleted afterwards.',
+                      ? Translations.get(
+                          languageCode,
+                          'guestCleanupSyncingBody',
                         )
-                      : t(
-                          'Das alte Gastkonto konnte noch nicht gelöscht werden. Deine Google-Daten bleiben erhalten. Bitte erneut versuchen. Wenn der Fehler bleibt, muss der Gastbestand geprüft werden.',
-                          'The old guest account could not be deleted yet. Your Google data remains. Retry; if this persists, the guest data needs review.',
-                        ),
+                      : Translations.get(languageCode, 'guestCleanupErrorBody'),
                 ),
                 OutlinedButton(
                   onPressed: disabled ? null : cloud.sync,
-                  child: Text(t('Erneut versuchen', 'Retry')),
+                  child: Text(Translations.get(languageCode, 'retry')),
                 ),
                 const Divider(height: 24),
               ],
               Text(
-                t('Sicherungsdateien', 'Backup files'),
+                Translations.get(languageCode, 'backupFilesTitle'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              Text(
-                t(
-                  'Eine exportierte Datei enthält deine Bikes, Setups und Bilder. Bewahre sie an einem sicheren Ort außerhalb dieses Geräts auf.',
-                  'An exported file contains your bikes, setups and images. Keep it somewhere safe outside this device.',
-                ),
-              ),
+              Text(Translations.get(languageCode, 'backupFilesBody')),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 8,
@@ -894,45 +853,48 @@ class _AccountScreenState extends State<AccountScreen> {
                   OutlinedButton.icon(
                     onPressed: disabled ? null : () => run(() => export(cloud)),
                     icon: const Icon(Icons.download),
-                    label: Text(t('Exportieren', 'Export')),
+                    label: Text(
+                      Translations.get(languageCode, 'backupExportAction'),
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: disabled ? null : () => run(() => import(cloud)),
                     icon: const Icon(Icons.upload),
-                    label: Text(t('Importieren', 'Import')),
+                    label: Text(
+                      Translations.get(languageCode, 'backupImportAction'),
+                    ),
                   ),
                   OutlinedButton(
                     onPressed: disabled || cloud.user == null
                         ? null
                         : () => run(() => history(cloud)),
-                    child: Text(t('Cloud-Versionen', 'Cloud versions')),
+                    child: Text(
+                      Translations.get(languageCode, 'backupCloudVersions'),
+                    ),
                   ),
                   OutlinedButton(
                     onPressed: disabled
                         ? null
                         : () => run(() => localHistory(cloud)),
-                    child: Text(t('Lokale Sicherungen', 'Local backups')),
+                    child: Text(
+                      Translations.get(languageCode, 'backupLocalTitle'),
+                    ),
                   ),
                 ],
               ),
               const Divider(height: 40),
               Text(
-                t('Konto löschen', 'Delete account'),
+                Translations.get(languageCode, 'accountDelete'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              Text(
-                t(
-                  'Entfernt dein App-Konto und die zugehörigen Daten dauerhaft. Exportiere vorher eine Sicherung, wenn du deine Daten behalten möchtest.',
-                  'Permanently removes your app account and its data. Export a backup first if you want to keep your data.',
-                ),
-              ),
+              Text(Translations.get(languageCode, 'accountDeleteSummary')),
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: disabled ? null : () => run(() => export(cloud)),
                 icon: const Icon(Icons.download),
                 label: Text(
-                  t('Vorher Sicherung exportieren', 'Export backup first'),
+                  Translations.get(languageCode, 'accountExportBeforeDelete'),
                 ),
               ),
               TextButton.icon(
@@ -944,11 +906,11 @@ class _AccountScreenState extends State<AccountScreen> {
                 ),
                 icon: const Icon(Icons.delete_forever_outlined),
                 label: Text(
-                  t('Konto und Daten löschen', 'Delete account and data'),
+                  Translations.get(languageCode, 'accountDeleteAction'),
                 ),
               ),
               const Divider(height: 40),
-              PrivacyPolicyLink(german: de),
+              PrivacyPolicyLink(languageCode: languageCode),
             ],
           ),
         ),

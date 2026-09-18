@@ -59,29 +59,21 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           prefs.getBool('hasSeenBackupReminder') == true ||
           !bikes.bikes.any((bike) => bike.id != '3'))
         return;
-      final german = context.read<LanguageProvider>().currentLanguage == 'de';
+      final languageCode = context.read<LanguageProvider>().currentLanguage;
       final openBackup = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
           icon: const Icon(Icons.cloud_outlined),
-          title: Text(
-            german ? 'Datensicherung nicht vergessen' : 'Remember your backup',
-          ),
-          content: Text(
-            german
-                ? 'Dein erstes Bike ist angelegt! Prüfe unter „Konto & Datensicherung“ deine Sicherung und verknüpfe dein Konto für die Wiederherstellung nach Geräteverlust.'
-                : 'Your first bike is ready! Check Account & backup and link your account so you can restore your data if you lose your device.',
-          ),
+          title: Text(Translations.get(languageCode, 'backupReminderTitle')),
+          content: Text(Translations.get(languageCode, 'backupReminderBody')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(german ? 'Später' : 'Later'),
+              child: Text(Translations.get(languageCode, 'later')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(
-                german ? 'Konto & Datensicherung' : 'Account & backup',
-              ),
+              child: Text(Translations.get(languageCode, 'accountBackup')),
             ),
           ],
         ),
@@ -152,19 +144,17 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       await WidgetsBinding.instance.endOfFrame;
       if (!mounted) return;
       if (_bikeScrollController.hasClients) _bikeScrollController.jumpTo(0);
-      final german = context.read<LanguageProvider>().currentLanguage == 'de';
+      final languageCode = context.read<LanguageProvider>().currentLanguage;
       final next = await _tour.showStep(
         context: context,
         target: _demoBikeKey,
         step: 1,
         event: 'bikeMenu',
-        german: german,
-        title: german ? 'Bikes verwalten' : 'Manage bikes',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourBikeMenuTitle'),
         onNext: () =>
             _tourBikeMenu(bikes.bikes.firstWhere((bike) => bike.id == '3')),
-        description: german
-            ? '**Lange drücken** → Bike-Menü. Danach schließen. Wir üben am Demo-Bike.'
-            : '**Press and hold** → bike menu. Then close it. Practice on the demo bike.',
+        description: Translations.get(languageCode, 'tourBikeMenuBody'),
       );
       if (!mounted || !next) return;
       setState(() => _orderingBikes = false);
@@ -173,11 +163,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         target: _demoBikeKey,
         step: 2,
         event: 'openBike',
-        german: german,
-        title: german ? 'Bike öffnen' : 'Open bike',
-        description: german
-            ? '**Bike antippen** → Setups öffnen.'
-            : '**Tap the bike** → open its setups.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourOpenBikeTitle'),
+        description: Translations.get(languageCode, 'tourOpenBikeBody'),
       ))
         return;
       if (!mounted) return;
@@ -198,9 +186,10 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              context.read<LanguageProvider>().currentLanguage == 'de'
-                  ? 'Die Tour konnte nicht gestartet werden. Bitte erneut versuchen.'
-                  : 'Could not start the tour. Please try again.',
+              Translations.get(
+                context.read<LanguageProvider>().currentLanguage,
+                'tourStartError',
+              ),
             ),
           ),
         );
@@ -246,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                     Align(
                       alignment: Alignment.centerRight,
                       child: PopupMenuButton<String>(
-                        tooltip: 'Sprache / Language',
+                        tooltip: Translations.get(lang, 'language'),
                         initialValue: lang,
                         onSelected: language.setLanguage,
                         itemBuilder: (_) => [
@@ -255,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                             CheckedPopupMenuItem(
                               value: code,
                               checked: code == lang,
-                              child: Text(code == 'de' ? 'Deutsch' : 'English'),
+                              child: Text(Translations.languageName(code)),
                             ),
                         ],
                         child: Padding(
@@ -275,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                lang == 'de' ? 'Deutsch' : 'English',
+                                Translations.languageName(lang),
                                 style: Theme.of(ctx).textTheme.bodySmall
                                     ?.copyWith(
                                       color: Theme.of(
@@ -301,17 +290,13 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       style: const TextStyle(fontSize: 16, height: 1.5),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      lang == 'de'
-                          ? 'Nach „Los geht’s“ wird ein Gastkonto erstellt und deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
-                          : 'After you tap “Let’s go”, a guest account is created and your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
-                    ),
+                    Text(Translations.get(lang, 'welcomeCloudConsent')),
                     const SizedBox(height: 16),
                   ],
                 ),
               ),
               actions: [
-                PrivacyPolicyLink(german: lang == 'de'),
+                PrivacyPolicyLink(languageCode: lang),
                 FilledButton(
                   onPressed: () async {
                     if (isFirstStart) {
@@ -373,11 +358,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   const SizedBox(height: 16),
                   ListTile(
                     leading: const Icon(Icons.cloud_outlined),
-                    title: Text(
-                      lang == 'de'
-                          ? 'Konto & Datensicherung'
-                          : 'Account & backup',
-                    ),
+                    title: Text(Translations.get(lang, 'accountBackup')),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
                       Navigator.pop(sheetContext);
@@ -398,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                           .map(
                             (code) => DropdownMenuItem(
                               value: code,
-                              child: Text(code == 'de' ? 'Deutsch' : 'English'),
+                              child: Text(Translations.languageName(code)),
                             ),
                           )
                           .toList(),
@@ -430,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       _startTour();
                     },
                   ),
-                  PrivacyPolicyLink(german: lang == 'de'),
+                  PrivacyPolicyLink(languageCode: lang),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -479,15 +460,11 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
             if (touring) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  lang == 'de'
-                      ? 'Bearbeiten öffnet auch den Namen. Löschen erklären wir nur; es ist während der Tour deaktiviert.'
-                      : 'Edit also lets you rename the bike. Deletion is disabled during the tour.',
-                ),
+                child: Text(Translations.get(lang, 'tourBikeMenuHint')),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(sheetContext),
-                child: Text(lang == 'de' ? 'Zurück zur Tour' : 'Back to tour'),
+                child: Text(Translations.get(lang, 'tourBack')),
               ),
             ],
           ],
@@ -586,11 +563,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                   cloud.status == 'local' ||
                   cloud.status == 'session'))
             MaterialBanner(
-              content: Text(
-                lang == 'de'
-                    ? 'Die Datensicherung benötigt deine Aufmerksamkeit.'
-                    : 'Your backup needs attention.',
-              ),
+              content: Text(Translations.get(lang, 'backupNeedsAttention')),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.push(
@@ -599,7 +572,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                       builder: (_) => const AccountScreen(),
                     ),
                   ),
-                  child: Text(lang == 'de' ? 'Anzeigen' : 'View'),
+                  child: Text(Translations.get(lang, 'view')),
                 ),
               ],
             ),

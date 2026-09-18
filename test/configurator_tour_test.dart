@@ -15,10 +15,12 @@ void main() {
     bool existingSetup = false,
     bool seen = false,
     bool fromCreation = true,
+    String languageCode = 'de',
   }) async {
     SharedPreferences.setMockInitialValues({
       'is_first_start': true,
       'hasSeenConfiguratorTour': seen,
+      'app_lang': languageCode,
     });
     final bikes = BikeProvider();
     await tester.runAsync(() => bikes.ready);
@@ -78,6 +80,24 @@ void main() {
       bikes.dispose();
     },
   );
+
+  testWidgets('English tour uses localized headings, progress and actions', (
+    tester,
+  ) async {
+    final bikes = await mount(tester, languageCode: 'en');
+    expect(find.text('Choose your values'), findsOneWidget);
+    expect(find.text('Your first setup · 1 / 4'), findsOneWidget);
+    expect(find.text('Weiter'), findsNothing);
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    expect(find.text('Set adjustment ranges'), findsOneWidget);
+    await tester.tap(find.text('Skip'));
+    await tester.pumpAndSettle();
+    expect(find.text('Your first setup · 2 / 4'), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    bikes.dispose();
+  });
 
   testWidgets('skip remembers dismissal without changing main tour flag', (
     tester,

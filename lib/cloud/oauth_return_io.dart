@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import '../utils/translations.dart';
 
 /// Mobile returns through app_links. Desktop uses a short-lived loopback listener.
 class OAuthReturn {
@@ -12,6 +14,7 @@ class OAuthReturn {
     String attempt,
     Future<void> Function(Uri) onReturn, {
     int port = 43827,
+    String languageCode = 'de',
   }) async {
     if (Platform.isAndroid || Platform.isIOS) {
       return OAuthReturn._('bikesetuptracker://auth/callback');
@@ -39,13 +42,15 @@ class OAuthReturn {
         );
         request.response.write(
           '<!doctype html><meta charset="utf-8"><title>Bike Setup Tracker</title>'
-          '<h1>Anmeldung verarbeitet</h1><p>Du kannst dieses Fenster schließen und zur App zurückkehren.</p>',
+          '<h1>${const HtmlEscape().convert(Translations.get(languageCode, 'authReturnSuccessTitle'))}</h1>'
+          '<p>${const HtmlEscape().convert(Translations.get(languageCode, 'authReturnSuccessBody'))}</p>',
         );
       } catch (_) {
         request.response.statusCode = HttpStatus.badRequest;
         request.response.write(
           '<!doctype html><meta charset="utf-8"><title>Bike Setup Tracker</title>'
-          '<h1>Anmeldung nicht abgeschlossen</h1><p>Bitte kehre zur App zurück und versuche es erneut.</p>',
+          '<h1>${const HtmlEscape().convert(Translations.get(languageCode, 'authReturnErrorTitle'))}</h1>'
+          '<p>${const HtmlEscape().convert(Translations.get(languageCode, 'authReturnErrorBody'))}</p>',
         );
       } finally {
         await request.response.close();

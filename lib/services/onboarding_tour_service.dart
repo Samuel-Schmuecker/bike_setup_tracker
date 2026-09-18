@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/translations.dart';
 
 /// Shows a spotlight while leaving the real target available for input.
 /// Screens report successful actions; Next can bypass an exercise, Skip ends it.
@@ -89,7 +90,7 @@ class OnboardingTourService {
     required String event,
     required String title,
     required String description,
-    required bool german,
+    required String languageCode,
     Future<void> Function()? onNext,
   }) async {
     if (_cancelled || !context.mounted) return false;
@@ -132,10 +133,10 @@ class OnboardingTourService {
               target: target,
               title: title,
               description: description,
-              german: german,
+              languageCode: languageCode,
               allowTargetInteraction: allowTargetInteraction,
               progress:
-                  '${sectionLabel ?? (advanced ? (german ? 'Vertiefung' : 'More features') : (german ? 'Grundtour' : 'Basics'))} · $step / $total',
+                  '${sectionLabel ?? Translations.get(languageCode, advanced ? 'tourAdvancedSection' : 'tourBasicsSection')} · $step / $total',
               onSkip: cancel,
               onNext: () async {
                 if (busy) return;
@@ -170,14 +171,14 @@ class _Spotlight extends StatelessWidget {
     required this.title,
     required this.description,
     required this.progress,
-    required this.german,
+    required this.languageCode,
     required this.onSkip,
     required this.onNext,
     required this.allowTargetInteraction,
   });
   final GlobalKey target;
   final String title, description, progress;
-  final bool german;
+  final String languageCode;
   final VoidCallback onSkip, onNext;
   final bool allowTargetInteraction;
 
@@ -191,7 +192,7 @@ class _Spotlight extends StatelessWidget {
           child: Material(
             child: TextButton(
               onPressed: onSkip,
-              child: Text(german ? 'Tour schließen' : 'Close tour'),
+              child: Text(Translations.get(languageCode, 'tourClose')),
             ),
           ),
         );
@@ -301,7 +302,9 @@ class _Spotlight extends StatelessWidget {
                                 style: TextButton.styleFrom(
                                   foregroundColor: Colors.white70,
                                 ),
-                                child: Text(german ? 'Überspringen' : 'Skip'),
+                                child: Text(
+                                  Translations.get(languageCode, 'tourSkip'),
+                                ),
                               ),
                               FilledButton(
                                 onPressed: onNext,
@@ -309,7 +312,9 @@ class _Spotlight extends StatelessWidget {
                                   backgroundColor: OnboardingTourService.accent,
                                   foregroundColor: Colors.black,
                                 ),
-                                child: Text(german ? 'Weiter' : 'Next'),
+                                child: Text(
+                                  Translations.get(languageCode, 'tourNext'),
+                                ),
                               ),
                             ],
                           ),

@@ -1,6 +1,9 @@
 // lib/widgets/bike_card.dart
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
+import '../utils/translations.dart';
 import '../models/bike.dart';
 import '../utils/image_helper.dart';
 import '../screens/bike_detail/bike_detail_screen.dart';
@@ -130,7 +133,13 @@ class BikeCard extends StatelessWidget {
                                 children: [
                                   buildChip(
                                     Text(
-                                      bike.category,
+                                      Translations.bikeCategory(
+                                        context
+                                                .watch<LanguageProvider?>()
+                                                ?.currentLanguage ??
+                                            'de',
+                                        bike.category,
+                                      ),
                                       style: const TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,

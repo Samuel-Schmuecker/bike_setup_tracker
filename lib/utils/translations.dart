@@ -3,6 +3,250 @@
 class Translations {
   static const Map<String, Map<String, String>> texts = {
     'de': {
+      'languageName': 'Deutsch',
+      'bikeCategoryEnduro': 'Enduro',
+      'bikeCategoryTrail': 'Trail',
+      'bikeCategoryDownhill': 'Downhill',
+      'bikeCategoryAllMountain': 'All Mountain',
+      'bikeCategoryGravel': 'Gravel',
+      'bikeCategoryCrossCountry': 'Cross Country',
+      'bikeCategoryEBike': 'E-Bike',
+      'authReturnSuccessTitle': 'Anmeldung verarbeitet',
+      'authReturnSuccessBody':
+          'Du kannst dieses Fenster schließen und zur App zurückkehren.',
+      'authReturnErrorTitle': 'Anmeldung nicht abgeschlossen',
+      'authReturnErrorBody':
+          'Bitte kehre zur App zurück und versuche es erneut.',
+      'startupLoadError':
+          'Die gespeicherten Daten konnten nicht sicher geladen werden. Sie wurden nicht überschrieben. Bitte die App-Daten nicht löschen und den Support kontaktieren.',
+      'bikeTravelSummary': '{front}V / {rear}H mm',
+      'backupBikeCount': '{count} Bikes',
+      'backupFileType': 'Bike-Sicherung',
+      'backupTooLarge': 'Die Sicherung ist größer als 50 MB.',
+      'accountLogin': 'Login',
+      'diagnosticCode': 'Code: {code}',
+      'rangeInvalid': 'Gültige Grenzen und Schrittweite eingeben.',
+      'rangeInvalidInteger':
+          'Gültige Grenzen und Schrittweite eingeben. Nur ganze Zahlen.',
+      'rangeMinimum': 'Minimum',
+      'rangeMaximum': 'Maximum',
+      // Onboarding, account/backup and adjustment ranges.
+      'authProofHelp':
+          'Der Anmeldenachweis fehlt, ist ungültig oder abgelaufen. Starte und beende die Anmeldung im selben Browser. Auf dem iPhone die App direkt in Safari öffnen und dort erneut anmelden. Vorhandene App-Daten nicht löschen.',
+      'authAlreadyLinkedHelp':
+          'Dieses Google-Konto ist bereits verknüpft. Brich diesen Versuch ab und wähle „Mit Google anmelden“.',
+      'authManualLinkingHelp':
+          'Aktiviere „Allow manual linking“ in den Supabase-Auth-Einstellungen.',
+      'authIncompleteHelp':
+          'Google-Anmeldung nicht abgeschlossen. Bitte abbrechen und erneut versuchen. Bei erneutem Fehler den unten angezeigten Fehlercode mitteilen.',
+      'tourAdvancedSection': 'Vertiefung',
+      'tourBasicsSection': 'Grundtour',
+      'tourClose': 'Tour schließen',
+      'tourSkip': 'Überspringen',
+      'tourNext': 'Weiter',
+      'privacyPolicy': 'Datenschutzerklärung',
+      'rangeStepSize': 'Schrittweite',
+
+      'rangeRemove': 'Bereich entfernen',
+      'rangeOutside': 'Außerhalb des Bereichs',
+      'tourOwnBikeSection': 'Dein eigenes Bike',
+      'tourDatabaseTitle': 'Datenbank oder manuell',
+      'tourDatabaseBody':
+          '**Modell suchen** → Vorschlag aus der Bike-Datenbank wählen. Nicht dabei? **Modell und Marke selbst eingeben.**',
+      'tourSetupMenuHint':
+          'Umbenennen ändert den Namen, Duplizieren erzeugt eine Kopie. Löschen ist während der Tour deaktiviert.',
+      'tourBack': 'Zurück zur Tour',
+      'tourSetupMenuTitle': 'Setup lange drücken',
+      'tourSetupMenuBody':
+          '**Lange drücken** → umbenennen oder duplizieren. Danach Menü schließen.',
+      'tourOpenSetupTitle': 'Setup öffnen',
+      'tourOpenSetupBody': '**Setup antippen** → Einstellwerte öffnen.',
+      'tourFavoriteTitle': 'Favoriten markieren',
+      'tourFavoriteBody':
+          '**Stern antippen** → Favorit. Favoriten stehen zuerst. Erneut tippen zum Entfernen.',
+      'tourCompleteTitle': 'Tour abgeschlossen',
+      'tourCompleteBody':
+          'Lege jetzt dein eigenes Bike an. Beim ersten Setup zeigen wir dir die Auswahl der Werte, eigene Felder und Kategorien.',
+      'tourAddOwnBike': 'Eigenes Bike anlegen',
+
+      'tourInterrupted': 'Die Tour wurde unterbrochen. Bitte erneut starten.',
+      'tourSelectValuesTitle': 'Deine Werte auswählen',
+      'tourSelectValuesBody':
+          '**Nur tracken, was du brauchst.** Wähle hier PSI, Klicks, Tokens und mehr.',
+      'tourRangesTitle': 'Einstellbereiche festlegen',
+      'tourRangesBody':
+          '**Minimum, Maximum und Schrittweite** passend zu deinem Bauteil einstellen.',
+      'tourCustomFieldTitle': 'Eigenes Feld hinzufügen',
+      'tourCustomFieldBody':
+          '**Ein Wert fehlt?** Über + fügst du ein eigenes Feld hinzu.',
+      'tourCustomCategoryTitle': 'Eigene Kategorie anlegen',
+      'tourCustomCategoryBody':
+          '**Mehr als Fahrwerk und Reifen.** Lege z. B. „Dropper Post“ als Kategorie an.',
+      'tourFirstSetupSection': 'Dein erstes Setup',
+      'rangeAdd': 'Einstellbereich hinzufügen',
+      'rangeValueInvalid':
+          'Wert muss im Bereich und auf einem Einstellschritt liegen',
+      'tourSaveValueTitle': 'Wert ändern und speichern',
+      'tourSaveValueBody':
+          '**Wert antippen → ändern → Speichern.** Die Änderung bleibt am Demo-Bike.',
+      'tourBasicsCompleteTitle': 'Grundtour geschafft',
+      'tourBasicsCompleteBody':
+          'Jetzt kannst du dein eigenes Bike anlegen. Beim ersten Setup zeigen wir dir kurz, wie du Werte und eigene Felder auswählst. Oder probiere erst die Vertiefung aus.',
+      'tourStartAdvanced': 'Vertiefung starten',
+      'tourSetupParametersTitle': 'Parameter pro Setup',
+      'tourSetupParametersBody':
+          '**Dieses Regler-Symbol** öffnet die Parameterauswahl. Wähle für **jedes Setup separat**, welche Werte du trackst.',
+      'tourOpenOrderingTitle': 'Umsortieren öffnen',
+      'tourOpenOrderingBody':
+          '**Pfeile antippen** → Sortiermodus. Der Setup-Wechsel ist dabei gesperrt.',
+      'tourMoveFieldTitle': 'Ein Feld verschieben',
+      'tourMoveFieldBody': '**Feld halten, verschieben, loslassen.**',
+      'tourFinishOrderingTitle': 'Sortierung abschließen',
+      'tourFinishOrderingBody':
+          '**Fertig antippen.** Reihenfolge nur hier oder für alle Demo-Setups übernehmen.',
+      'tourHistoryTitle': 'Änderungen nachvollziehen',
+      'tourHistoryBody':
+          '**Vorher → Nachher** mit optionaler Notiz. Hier findest du deine Änderungen.',
+      'tourSwipeTitle': 'Zwischen Setups wischen',
+      'tourSwipeBody':
+          '**Links oder rechts wischen.** Am PC: mit gedrückter linker Maustaste ziehen.',
+      'tourStartError':
+          'Die Tour konnte nicht gestartet werden. Bitte erneut versuchen.',
+      'welcomeCloudConsent':
+          'Nach „Los geht’s“ wird ein Gastkonto erstellt und deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.',
+      'accountBackup': 'Konto & Datensicherung',
+      'tourBikeMenuHint':
+          'Bearbeiten öffnet auch den Namen. Löschen erklären wir nur; es ist während der Tour deaktiviert.',
+      'backupNeedsAttention':
+          'Die Datensicherung benötigt deine Aufmerksamkeit.',
+      'view': 'Anzeigen',
+      'backupReminderTitle': 'Datensicherung nicht vergessen',
+      'backupReminderBody':
+          'Dein erstes Bike ist angelegt! Prüfe unter „Konto & Datensicherung“ deine Sicherung und verknüpfe dein Konto für die Wiederherstellung nach Geräteverlust.',
+      'later': 'Später',
+      'tourBikeMenuTitle': 'Bikes verwalten',
+      'tourBikeMenuBody':
+          '**Lange drücken** → Bike-Menü. Danach schließen. Wir üben am Demo-Bike.',
+      'tourOpenBikeTitle': 'Bike öffnen',
+      'tourOpenBikeBody': '**Bike antippen** → Setups öffnen.',
+      'guestDataChoiceTitle': 'Was soll mit deinen Gastdaten passieren?',
+      'guestDataChoiceBody':
+          'Nach erfolgreicher Google-Anmeldung wird das bisherige Gastkonto gelöscht. Übernommene Daten werden vorher vollständig synchronisiert.',
+      'guestDataImportCopies': 'Daten als Kopien übernehmen',
+      'backupExport': 'Sicherung exportieren',
+      'guestDataDiscard': 'Gastdaten verwerfen',
+
+      'guestDataDiscardTitle': 'Gastdaten wirklich verwerfen?',
+      'guestDataDiscardBody':
+          'Nach erfolgreicher Anmeldung werden das alte Gastkonto, seine Cloud-Daten und lokalen Sicherungen gelöscht. Exportierte Dateien bleiben erhalten.',
+      'accountDeleteTitle': 'Konto endgültig löschen?',
+      'accountDeleteBody':
+          'Dein App-Konto, Cloud-Daten, Bilder und frühere Versionen sowie die lokalen Sicherungen dieses Kontos werden gelöscht. Dein Google-Konto bleibt bestehen. Exportierte Dateien und Kopien auf anderen Geräten bleiben erhalten. Anbieter-Backups unterliegen deren Aufbewahrungsfristen. Dieser Vorgang kann nicht rückgängig gemacht werden.',
+      'accountDeleteConfirmationHint': 'Zur Bestätigung DELETE eingeben',
+      'accountDeleteConfirm': 'Endgültig löschen',
+      'accountOperationError':
+          'Der Vorgang wurde nicht abgeschlossen. Bitte Verbindung und Eingaben prüfen. Details: {error}',
+      'backupImportTitle': 'Sicherung importieren?',
+      'backupImportBody':
+          'Die Bikes werden als neue Kopien hinzugefügt. Vorhandene Bikes bleiben erhalten.',
+      'confirm': 'Bestätigen',
+      'backupCloudHistoryTitle': 'Frühere Cloud-Versionen',
+      'backupCloudHistoryEmpty': 'Noch keine früheren Versionen vorhanden.',
+      'close': 'Schließen',
+      'backupRestoreTitle': 'Version wiederherstellen?',
+      'backupRestoreBody':
+          'Diese Fassung wird wieder zur aktuellen Fassung. Der aktuelle lokale Bestand wird vorher gesichert.',
+      'backupLocalTitle': 'Lokale Sicherungen',
+      'backupLocalEmpty': 'Noch keine Sicherungen vorhanden.',
+      'backupSeparateAccount': 'Separat gespeicherter Kontobestand',
+      'backupRestoreCopiesTitle': 'Als Kopien übernehmen?',
+      'backupRestoreCopiesBody':
+          'Diese Bikes werden dem aktuellen Bestand hinzugefügt.',
+      'accountDocumentBikeOrder': 'Reihenfolge der Bikes',
+      'accountDocumentFieldLibrary': 'Bibliothek eigener Felder',
+      'accountDocumentDeletedBike': 'Gelöschtes Bike',
+      'syncStatusGoogleWaiting':
+          'Cloud synchronisiert; Google-Anmeldung noch offen.',
+      'syncStatusGoogleError':
+          'Google-Anmeldung konnte nicht zugeordnet werden oder ist abgelaufen. Bitte abbrechen und erneut anmelden.',
+      'syncStatusSyncing': 'Daten werden synchronisiert …',
+      'syncStatusSynced': 'Mit Cloud synchronisiert',
+      'syncStatusConflict': 'Änderungskonflikt – Auswahl erforderlich',
+      'syncStatusSetup':
+          'Cloud-Einrichtung fehlt: SQL-Skript und Zugriffsregeln prüfen.',
+      'syncStatusSession':
+          'Anmeldung fehlt. Bitte erneut anmelden. Lokale Daten bleiben erhalten.',
+      'syncStatusAuth':
+          'Anmeldung nicht möglich. Verbindung und anonyme Anmeldung in Supabase prüfen.',
+      'syncStatusLocal':
+          'Lokales Speichern fehlgeschlagen. Bitte freien Speicher prüfen.',
+      'syncStatusOffline':
+          'Sicherung ausstehend. Verbindung oder Cloud-Dienst nicht verfügbar; automatischer Wiederholungsversuch folgt.',
+      'syncStatusPending': 'Sicherung ausstehend',
+      'accountDelete': 'Konto löschen',
+      'accountDeletedBody':
+          'Dein Konto wurde gelöscht. Es wird kein neues Gastkonto angelegt, bis du die App erneut nutzt.',
+      'accountDeletionPendingBody':
+          'Die Kontolöschung wurde gestartet. Die Synchronisierung ist gesperrt. Bei einem Verbindungsfehler kannst du die Löschung erneut versuchen.',
+      'backupExportLocal': 'Lokale Daten exportieren',
+      'accountRestartGuest': 'Neu als Gast starten',
+      'accountRetryDeletion': 'Löschung erneut versuchen',
+      'accountGuestStatus': 'Du nutzt die App als Gast',
+      'accountSessionExpiredBody':
+          'Deine gespeicherte Anmeldung ist nicht mehr gültig. Das Konto wurde möglicherweise außerhalb der App gelöscht. Deine lokalen Daten sind noch vorhanden.',
+      'accountReconnectTitle': 'Lokale Daten neu verbinden?',
+      'accountReconnectBody':
+          'Es wird ein neues Gastkonto erstellt. Deine vorhandenen lokalen Daten werden dorthin übertragen. Anschließend kannst du Google verbinden oder dich anmelden.',
+      'accountReconnect': 'Lokale Daten neu verbinden',
+      'accountLastSync': 'Letzte Synchronisierung',
+      'accountStorageBody':
+          'Bikes, Setups und Bilder werden lokal und automatisch in deiner privaten Cloud gespeichert.',
+      'accountLinkGoogleBody':
+          'Verknüpfe dein Google-Konto, um nach Geräteverlust oder gelöschten App-Daten wieder Zugriff zu erhalten. Die anonyme Anmeldung allein ermöglicht das nicht.',
+      'accountSyncNow': 'Jetzt synchronisieren',
+      'accountConflictsTitle': 'Konflikte',
+      'accountConflictsBody':
+          'Beide Fassungen bleiben bis zur Auswahl erhalten. Vor der Auflösung wird lokal eine Sicherung angelegt.',
+      'accountConflictCopy': 'Konfliktkopie',
+      'accountKeepBoth': 'Beide Fassungen behalten',
+      'accountKeepLocal': 'Lokale Fassung behalten',
+      'accountUseCloud': 'Cloud-Fassung übernehmen',
+      'accountGoogleConnected': 'Google ist verbunden',
+      'accountTitle': 'Dein Konto',
+      'accountLoginSubtitle': 'Du hast bereits ein Konto?',
+      'accountLoginBody':
+          'Melde dich mit Google an, um auf deine gespeicherten Bikes und Setups zuzugreifen. Du entscheidest vorher, was mit deinen Gastdaten passiert.',
+      'accountRegister': 'Registrieren',
+      'accountRegisterSubtitle': 'Neu hier? Sichere deine Bikes.',
+      'accountRegisterBody':
+          'Erstelle dein App-Konto mit Google. Deine bisherigen Bikes und Setups bleiben erhalten und werden mit deinem Konto verknüpft. Du brauchst kein zusätzliches Passwort.',
+      'accountGoogleLinkedBody':
+          'Google ist verknüpft. Melde dich auf anderen Geräten mit demselben Google-Konto an.',
+      'accountGoogleWaitingBody':
+          'Schließe die Google-Anmeldung im Browser ab und kehre zur App zurück. Bei einer Verknüpfung mit einem bereits verwendeten Google-Konto bitte abbrechen und „Login“ wählen.',
+      'accountCancelGoogle': 'Google-Anmeldung abbrechen',
+      'accountSignOutTitle': 'Abmelden?',
+      'accountSignOutBody':
+          'Der lokale Kontobestand bleibt separat erhalten. Noch nicht synchronisierte Änderungen sind nur auf diesem Gerät vorhanden.',
+      'accountSignOut': 'Abmelden',
+      'accountGoogleOptionalBody':
+          'Google ist optional. Du kannst die App weiter als Gast nutzen.',
+      'guestCleanupTitle': 'Bisheriges Gastkonto bereinigen',
+      'guestCleanupSyncingBody':
+          'Die Gastdaten werden abgeglichen. Erst danach wird das alte Gastkonto gelöscht.',
+      'guestCleanupErrorBody':
+          'Das alte Gastkonto konnte noch nicht gelöscht werden. Deine Google-Daten bleiben erhalten. Bitte erneut versuchen. Wenn der Fehler bleibt, muss der Gastbestand geprüft werden.',
+      'retry': 'Erneut versuchen',
+      'backupFilesTitle': 'Sicherungsdateien',
+      'backupFilesBody':
+          'Eine exportierte Datei enthält deine Bikes, Setups und Bilder. Bewahre sie an einem sicheren Ort außerhalb dieses Geräts auf.',
+      'backupExportAction': 'Exportieren',
+      'backupImportAction': 'Importieren',
+      'backupCloudVersions': 'Cloud-Versionen',
+      'accountDeleteSummary':
+          'Entfernt dein App-Konto und die zugehörigen Daten dauerhaft. Exportiere vorher eine Sicherung, wenn du deine Daten behalten möchtest.',
+      'accountExportBeforeDelete': 'Vorher Sicherung exportieren',
+      'accountDeleteAction': 'Konto und Daten löschen',
       'orderSetups': 'Setups ordnen',
       'favoritesStayFirst':
           'Ziehe die Setups in die gewünschte Reihenfolge. Favoriten bleiben oben.',
@@ -227,6 +471,244 @@ class Translations {
       'gotIt': 'Los geht\'s!',
     },
     'en': {
+      'languageName': 'English',
+      'bikeCategoryEnduro': 'Enduro',
+      'bikeCategoryTrail': 'Trail',
+      'bikeCategoryDownhill': 'Downhill',
+      'bikeCategoryAllMountain': 'All Mountain',
+      'bikeCategoryGravel': 'Gravel',
+      'bikeCategoryCrossCountry': 'Cross Country',
+      'bikeCategoryEBike': 'E-Bike',
+      'authReturnSuccessTitle': 'Sign-in processed',
+      'authReturnSuccessBody':
+          'You can close this window and return to the app.',
+      'authReturnErrorTitle': 'Sign-in incomplete',
+      'authReturnErrorBody': 'Please return to the app and try again.',
+      'startupLoadError':
+          'The saved data could not be loaded safely. It has not been overwritten. Do not clear the app data; please contact support.',
+      'bikeTravelSummary': '{front}F / {rear}R mm',
+      'backupBikeCount': '{count} bikes',
+      'backupFileType': 'Bike backup',
+      'backupTooLarge': 'The backup exceeds 50 MB.',
+      'accountLogin': 'Login',
+      'diagnosticCode': 'Code: {code}',
+      'rangeInvalid': 'Enter valid limits and step size.',
+      'rangeInvalidInteger':
+          'Enter valid limits and step size. Whole numbers only.',
+      'rangeMinimum': 'Minimum',
+      'rangeMaximum': 'Maximum',
+      // Onboarding, account/backup and adjustment ranges.
+      'authProofHelp':
+          'The sign-in proof is missing, invalid or expired. Start and finish in the same browser. On iPhone, open the app directly in Safari and retry there. Do not clear existing app data.',
+      'authAlreadyLinkedHelp':
+          'This Google account is already linked. Cancel this attempt and choose Sign in with Google.',
+      'authManualLinkingHelp':
+          'Enable Allow manual linking in Supabase Auth settings.',
+      'authIncompleteHelp':
+          'Google sign-in did not complete. Cancel and retry. If it fails again, report the diagnostic code below.',
+      'tourAdvancedSection': 'More features',
+      'tourBasicsSection': 'Basics',
+      'tourClose': 'Close tour',
+      'tourSkip': 'Skip',
+      'tourNext': 'Next',
+      'privacyPolicy': 'Privacy policy',
+      'rangeStepSize': 'Step size',
+
+      'rangeRemove': 'Remove range',
+      'rangeOutside': 'Outside range',
+      'tourOwnBikeSection': 'Your own bike',
+      'tourDatabaseTitle': 'Database or manual entry',
+      'tourDatabaseBody':
+          '**Search a model** → choose a bike database suggestion. Not listed? **Enter model and brand yourself.**',
+      'tourSetupMenuHint':
+          'Rename changes the name; Duplicate creates a copy. Deletion is disabled during the tour.',
+      'tourBack': 'Back to tour',
+      'tourSetupMenuTitle': 'Press and hold a setup',
+      'tourSetupMenuBody':
+          '**Press and hold** → rename or duplicate. Then close the menu.',
+      'tourOpenSetupTitle': 'Open setup',
+      'tourOpenSetupBody': '**Tap the setup** → open its settings.',
+      'tourFavoriteTitle': 'Mark favorites',
+      'tourFavoriteBody':
+          '**Tap the star** → favorite. Favorites stay first. Tap again to remove.',
+      'tourCompleteTitle': 'Tour complete',
+      'tourCompleteBody':
+          'Add your own bike next. Your first setup includes a short guide to tracking values, custom fields and categories.',
+      'tourAddOwnBike': 'Add my bike',
+
+      'tourInterrupted': 'Please restart the tour.',
+      'tourSelectValuesTitle': 'Choose your values',
+      'tourSelectValuesBody':
+          '**Track only what you need.** Select PSI, clicks, tokens and more.',
+      'tourRangesTitle': 'Set adjustment ranges',
+      'tourRangesBody':
+          'Set **minimum, maximum and step size** to match your component.',
+      'tourCustomFieldTitle': 'Add a custom field',
+      'tourCustomFieldBody':
+          '**Missing a value?** Use + to add your own field.',
+      'tourCustomCategoryTitle': 'Add a custom category',
+      'tourCustomCategoryBody':
+          '**Beyond suspension and tires.** Add a category such as “Dropper Post”.',
+      'tourFirstSetupSection': 'Your first setup',
+      'rangeAdd': 'Add adjustment range',
+      'rangeValueInvalid': 'Value must match the range and step size',
+      'tourSaveValueTitle': 'Change and save a value',
+      'tourSaveValueBody':
+          '**Tap value → change → Save.** The change stays on the demo bike.',
+      'tourBasicsCompleteTitle': 'Basics complete',
+      'tourBasicsCompleteBody':
+          'You can now add your own bike. Your first setup includes a short guide to tracking values and custom fields. Or explore more features first.',
+      'tourStartAdvanced': 'Explore more',
+      'tourSetupParametersTitle': 'Parameters per setup',
+      'tourSetupParametersBody':
+          '**This sliders icon** opens parameter selection. Choose which values to track **separately for each setup**.',
+      'tourOpenOrderingTitle': 'Open ordering',
+      'tourOpenOrderingBody':
+          '**Tap the arrows** → ordering mode. Switching setups is locked while ordering.',
+      'tourMoveFieldTitle': 'Move a field',
+      'tourMoveFieldBody': '**Hold, drag and release a field.**',
+      'tourFinishOrderingTitle': 'Finish ordering',
+      'tourFinishOrderingBody':
+          '**Tap Done.** Apply the order here or to all demo setups.',
+      'tourHistoryTitle': 'Review changes',
+      'tourHistoryBody':
+          '**Before → After** with an optional note. Find your changes here.',
+      'tourSwipeTitle': 'Swipe between setups',
+      'tourSwipeBody':
+          '**Swipe left or right.** On a PC: drag with the left mouse button held.',
+      'tourStartError': 'Could not start the tour. Please try again.',
+      'welcomeCloudConsent':
+          'After you tap “Let’s go”, a guest account is created and your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
+      'accountBackup': 'Account & backup',
+      'tourBikeMenuHint':
+          'Edit also lets you rename the bike. Deletion is disabled during the tour.',
+      'backupNeedsAttention': 'Your backup needs attention.',
+      'view': 'View',
+      'backupReminderTitle': 'Remember your backup',
+      'backupReminderBody':
+          'Your first bike is ready! Check Account & backup and link your account so you can restore your data if you lose your device.',
+      'later': 'Later',
+      'tourBikeMenuTitle': 'Manage bikes',
+      'tourBikeMenuBody':
+          '**Press and hold** → bike menu. Then close it. Practice on the demo bike.',
+      'tourOpenBikeTitle': 'Open bike',
+      'tourOpenBikeBody': '**Tap the bike** → open its setups.',
+      'guestDataChoiceTitle': 'What should happen to your guest data?',
+      'guestDataChoiceBody':
+          'After successful Google sign-in, the old guest account is deleted. Imported data is fully synced first.',
+      'guestDataImportCopies': 'Import data as copies',
+      'backupExport': 'Export backup',
+      'guestDataDiscard': 'Discard guest data',
+
+      'guestDataDiscardTitle': 'Discard guest data?',
+      'guestDataDiscardBody':
+          'After successful sign-in, the old guest account, its cloud data and local backups are deleted. Exported files remain.',
+      'accountDeleteTitle': 'Permanently delete account?',
+      'accountDeleteBody':
+          'Your app account, cloud data, images, previous versions and this account’s local backups will be deleted. Your Google account remains. Exported files and copies on other devices remain. Provider backups follow their retention periods. This cannot be undone.',
+      'accountDeleteConfirmationHint': 'Type DELETE to confirm',
+      'accountDeleteConfirm': 'Delete permanently',
+      'accountOperationError':
+          'The operation did not complete. Please check your connection and entries. Details: {error}',
+      'backupImportTitle': 'Import backup?',
+      'backupImportBody':
+          'Bikes will be added as new copies. Existing bikes are retained.',
+      'confirm': 'Confirm',
+      'backupCloudHistoryTitle': 'Previous cloud versions',
+      'backupCloudHistoryEmpty': 'No previous versions yet.',
+      'close': 'Close',
+      'backupRestoreTitle': 'Restore version?',
+      'backupRestoreBody':
+          'This version becomes current. The current local data is backed up first.',
+      'backupLocalTitle': 'Local backups',
+      'backupLocalEmpty': 'No backups yet.',
+      'backupSeparateAccount': 'Separately saved account data',
+      'backupRestoreCopiesTitle': 'Restore as copies?',
+      'backupRestoreCopiesBody':
+          'These bikes will be added to the current workspace.',
+      'accountDocumentBikeOrder': 'Bike order',
+      'accountDocumentFieldLibrary': 'Custom field library',
+      'accountDocumentDeletedBike': 'Deleted bike',
+      'syncStatusGoogleWaiting': 'Cloud synced; Google sign-in pending.',
+      'syncStatusGoogleError':
+          'Google sign-in could not be matched or expired. Please cancel and sign in again.',
+      'syncStatusSyncing': 'Syncing data …',
+      'syncStatusSynced': 'Synced with cloud',
+      'syncStatusConflict': 'Conflicting changes – choose a version',
+      'syncStatusSetup':
+          'Cloud setup is incomplete: check SQL migration and access rules.',
+      'syncStatusSession':
+          'Session missing. Please sign in again. Local data is retained.',
+      'syncStatusAuth':
+          'Unable to authenticate. Check connection and anonymous sign-ins in Supabase.',
+      'syncStatusLocal': 'Local save failed. Please check free storage.',
+      'syncStatusOffline':
+          'Backup pending. Connection or cloud service unavailable; retrying automatically.',
+      'syncStatusPending': 'Backup pending',
+      'accountDelete': 'Delete account',
+      'accountDeletedBody':
+          'Your account has been deleted. No new guest account is created until you start again.',
+      'accountDeletionPendingBody':
+          'Account deletion has started. Sync is blocked. If the connection fails, retry deletion.',
+      'backupExportLocal': 'Export local data',
+      'accountRestartGuest': 'Start again as guest',
+      'accountRetryDeletion': 'Retry deletion',
+      'accountGuestStatus': 'You are using the app as a guest',
+      'accountSessionExpiredBody':
+          'Your saved session is no longer valid. The account may have been deleted outside the app. Your local data is still available.',
+      'accountReconnectTitle': 'Reconnect local data?',
+      'accountReconnectBody':
+          'A new guest account will be created and your existing local data uploaded to it. You can then link Google or sign in.',
+      'accountReconnect': 'Reconnect local data',
+      'accountLastSync': 'Last sync',
+      'accountStorageBody':
+          'Bikes, setups and images are saved locally and automatically to your private cloud.',
+      'accountLinkGoogleBody':
+          'Link Google to regain access after losing a device or clearing app data. Anonymous sign-in alone cannot provide this.',
+      'accountSyncNow': 'Sync now',
+      'accountConflictsTitle': 'Conflicts',
+      'accountConflictsBody':
+          'Both versions are retained until you choose. A local backup is created before resolving.',
+      'accountConflictCopy': 'Conflict copy',
+      'accountKeepBoth': 'Keep both versions',
+      'accountKeepLocal': 'Keep local version',
+      'accountUseCloud': 'Use cloud version',
+      'accountGoogleConnected': 'Google is connected',
+      'accountTitle': 'Your account',
+      'accountLoginSubtitle': 'Already have an account?',
+      'accountLoginBody':
+          'Sign in with Google to access your saved bikes and setups. First choose what happens to your guest data.',
+      'accountRegister': 'Register',
+      'accountRegisterSubtitle': 'New here? Keep your bikes safe.',
+      'accountRegisterBody':
+          'Create your app account with Google. Your existing bikes and setups are kept and linked to your account. No extra password needed.',
+      'accountGoogleLinkedBody':
+          'Google is linked. Sign in with the same Google account on other devices.',
+      'accountGoogleWaitingBody':
+          'Complete Google sign-in in the browser and return to the app. If this Google account is already linked elsewhere, cancel and choose Login.',
+      'accountCancelGoogle': 'Cancel Google sign-in',
+      'accountSignOutTitle': 'Sign out?',
+      'accountSignOutBody':
+          'Your local account data is retained separately. Unsynced changes exist only on this device.',
+      'accountSignOut': 'Sign out',
+      'accountGoogleOptionalBody':
+          'Google is optional. You can keep using the app as a guest.',
+      'guestCleanupTitle': 'Clean up previous guest account',
+      'guestCleanupSyncingBody':
+          'Guest data is being synced. The old guest account is deleted afterwards.',
+      'guestCleanupErrorBody':
+          'The old guest account could not be deleted yet. Your Google data remains. Retry; if this persists, the guest data needs review.',
+      'retry': 'Retry',
+      'backupFilesTitle': 'Backup files',
+      'backupFilesBody':
+          'An exported file contains your bikes, setups and images. Keep it somewhere safe outside this device.',
+      'backupExportAction': 'Export',
+      'backupImportAction': 'Import',
+      'backupCloudVersions': 'Cloud versions',
+      'accountDeleteSummary':
+          'Permanently removes your app account and its data. Export a backup first if you want to keep your data.',
+      'accountExportBeforeDelete': 'Export backup first',
+      'accountDeleteAction': 'Delete account and data',
       'orderSetups': 'Reorder setups',
       'favoritesStayFirst':
           'Drag setups into your preferred order. Favorites stay at the top.',
@@ -455,6 +937,25 @@ class Translations {
 
   static List<String> get supportedLanguageCodes =>
       List.unmodifiable(texts.keys);
+
+  /// The language's native name, displayed by every language picker.
+  static String languageName(String languageCode) =>
+      texts[languageCode]?['languageName'] ?? languageCode;
+
+  /// Localize labels without changing the stored category identifiers.
+  static String bikeCategory(String languageCode, String category) {
+    const keys = {
+      'Enduro': 'bikeCategoryEnduro',
+      'Trail': 'bikeCategoryTrail',
+      'Downhill': 'bikeCategoryDownhill',
+      'All Mountain': 'bikeCategoryAllMountain',
+      'Gravel': 'bikeCategoryGravel',
+      'Cross Country': 'bikeCategoryCrossCountry',
+      'E-Bike': 'bikeCategoryEBike',
+    };
+    final key = keys[category];
+    return key == null ? category : get(languageCode, key);
+  }
 
   static String nextLanguageCode(String currentLanguageCode) {
     final languages = supportedLanguageCodes;

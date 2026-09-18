@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/bike_provider.dart';
+import '../providers/theme_provider.dart';
 import 'cloud_config.dart';
 import 'image_bytes.dart';
 import 'local_store.dart';
@@ -23,6 +24,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     SupabaseClient? client,
     bool startAutomatically = true,
     bool cloudEnabled = true,
+    this.theme,
   }) : _client = client,
        _cloudEnabled = cloudEnabled {
     WidgetsBinding.instance.addObserver(this);
@@ -42,6 +44,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   final LocalStore store;
   final BikeProvider bikes;
+  final ThemeProvider? theme;
   SupabaseClient? _client;
   Timer? _timer;
   Timer? _debounce;
@@ -517,6 +520,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       }
       await _oauthReturn?.close();
       final attempt = const Uuid().v4();
+      final languageCode =
+          (await SharedPreferences.getInstance()).getString('app_lang') ?? 'de';
       _oauthReturn = await OAuthReturn.open(attempt, (uri) async {
         try {
           await client.auth.getSessionFromUrl(uri);
@@ -526,7 +531,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
           _emit();
           rethrow;
         }
-      });
+      }, languageCode: languageCode);
       await store.backup('before-google');
       String? guestTicket;
       if (!link &&
@@ -715,6 +720,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       }
       // Keep a durable completion marker if local sign-out or erasure fails.
       await client.auth.signOut(scope: SignOutScope.local);
+      await _resetAppearance();
       await store.eraseAccount(uid);
       conflicts.clear();
       _uploaded.clear();
@@ -735,6 +741,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     _emit();
     try {
       // Prepare the first-run experience before remounting the home screen.
+      await _resetAppearance();
       await bikes.restoreDemoAfterDeletion();
       final preferences = await SharedPreferences.getInstance();
       if (!await preferences.setBool('hasSeenOnboarding', false)) {
@@ -746,6 +753,20 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
       _emit();
     }
     await sync();
+  }
+
+  Future<void> _resetAppearance() async {
+    final currentTheme = theme;
+    if (currentTheme != null) {
+      await currentTheme.reset();
+    } else {
+      final temporaryTheme = ThemeProvider(await SharedPreferences.getInstance());
+      try {
+        await temporaryTheme.reset();
+      } finally {
+        temporaryTheme.dispose();
+      }
+    }
   }
 
   Future<void> sendRecovery(String email) => _auth((client) async {

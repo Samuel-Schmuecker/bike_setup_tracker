@@ -8,7 +8,7 @@ void main() {
       const AuthException('Code verifier could not be found in local storage.'),
     );
     expect(code, 'pkce_verifier_missing_or_invalid');
-    expect(googleAuthErrorHelp(code, german: true), contains('Safari'));
+    expect(googleAuthErrorHelp(code, languageCode: 'de'), contains('Safari'));
   });
   test('diagnostics never expose exception text or arbitrary codes', () {
     expect(

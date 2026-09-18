@@ -75,39 +75,31 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     if (!mounted || prefs.getBool('hasSeenConfiguratorTour') == true) return;
     final bike = bikes.bikes.where((b) => b.id == widget.bikeId).firstOrNull;
     if (bike == null || bike.setups.isNotEmpty) return;
-    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    final languageCode = context.read<LanguageProvider>().currentLanguage;
     try {
       await _configuratorTour.run(() async {
         final steps = [
           (
             _parameterTourKey,
-            german ? 'Deine Werte auswählen' : 'Choose your values',
-            german
-                ? '**Nur tracken, was du brauchst.** Wähle hier PSI, Klicks, Tokens und mehr.'
-                : '**Track only what you need.** Select PSI, clicks, tokens and more.',
+            Translations.get(languageCode, 'tourSelectValuesTitle'),
+            Translations.get(languageCode, 'tourSelectValuesBody'),
           ),
           (
             _rangeTourKey.currentContext != null
                 ? _rangeTourKey
                 : _parameterTourKey,
-            german ? 'Einstellbereiche festlegen' : 'Set adjustment ranges',
-            german
-                ? '**Minimum, Maximum und Schrittweite** passend zu deinem Bauteil einstellen.'
-                : 'Set **minimum, maximum and step size** to match your component.',
+            Translations.get(languageCode, 'tourRangesTitle'),
+            Translations.get(languageCode, 'tourRangesBody'),
           ),
           (
             _customFieldTourKey,
-            german ? 'Eigenes Feld hinzufügen' : 'Add a custom field',
-            german
-                ? '**Ein Wert fehlt?** Über + fügst du ein eigenes Feld hinzu.'
-                : '**Missing a value?** Use + to add your own field.',
+            Translations.get(languageCode, 'tourCustomFieldTitle'),
+            Translations.get(languageCode, 'tourCustomFieldBody'),
           ),
           (
             _customCategoryTourKey,
-            german ? 'Eigene Kategorie anlegen' : 'Add a custom category',
-            german
-                ? '**Mehr als Fahrwerk und Reifen.** Lege z. B. „Dropper Post“ als Kategorie an.'
-                : '**Beyond suspension and tires.** Add a category such as “Dropper Post”.',
+            Translations.get(languageCode, 'tourCustomCategoryTitle'),
+            Translations.get(languageCode, 'tourCustomCategoryBody'),
           ),
         ];
         for (var index = 0; index < steps.length; index++) {
@@ -118,11 +110,14 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
             target: target,
             step: index + 1,
             total: steps.length,
-            sectionLabel: german ? 'Dein erstes Setup' : 'Your first setup',
+            sectionLabel: Translations.get(
+              languageCode,
+              'tourFirstSetupSection',
+            ),
             event: 'configurator-$index',
             title: title,
             description: description,
-            german: german,
+            languageCode: languageCode,
             allowTargetInteraction: false,
           ))
             return;
@@ -800,7 +795,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   }
 
   Widget _rangeControl(String key, String title, String unit) {
-    final de = context.read<LanguageProvider>().currentLanguage == 'de';
+    final languageCode = context.read<LanguageProvider>().currentLanguage;
     final range = _ranges[key];
     final integerOnly =
         !key.startsWith('custom:') &&
@@ -827,7 +822,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       ),
       title: Text(
         range == null
-            ? (de ? 'Einstellbereich hinzufügen' : 'Add adjustment range')
+            ? Translations.get(languageCode, 'rangeAdd')
             : '${SettingRange.format(range.min)}–${SettingRange.format(range.max)} $unit',
       ),
       trailing: const Icon(Icons.chevron_right, size: 20),
@@ -839,7 +834,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           initial: range,
           title: title,
           unit: unit,
-          de: de,
+          languageCode: languageCode,
           integerOnly: integerOnly,
           onSave: (value) => setState(() {
             _ranges[key] = value;

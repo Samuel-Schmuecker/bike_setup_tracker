@@ -1,15 +1,16 @@
+import 'package:bike_setup_tracker/utils/translations.dart';
 import 'package:flutter/material.dart';
 import '../models/setting_range.dart';
 
 class SettingRangeScale extends StatelessWidget {
   final SettingRange range;
   final double? value;
-  final bool de;
+  final String languageCode;
   const SettingRangeScale({
     super.key,
     required this.range,
     required this.value,
-    required this.de,
+    required this.languageCode,
   });
   @override
   Widget build(BuildContext context) {
@@ -34,7 +35,7 @@ class SettingRangeScale extends StatelessWidget {
         ),
         if (outside)
           Text(
-            de ? 'Außerhalb des Bereichs' : 'Outside range',
+            Translations.get(languageCode, 'rangeOutside'),
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
@@ -47,7 +48,7 @@ class SettingRangeEditor extends StatefulWidget {
   final SettingRange? initial;
   final String title;
   final String unit;
-  final bool de;
+  final String languageCode;
   final bool integerOnly;
   final ValueChanged<SettingRange?> onSave;
   const SettingRangeEditor({
@@ -55,7 +56,7 @@ class SettingRangeEditor extends StatefulWidget {
     this.initial,
     required this.title,
     required this.unit,
-    required this.de,
+    required this.languageCode,
     this.integerOnly = false,
     required this.onSave,
   });
@@ -97,9 +98,10 @@ class _SettingRangeEditorState extends State<SettingRangeEditor> {
         (widget.integerOnly &&
             [a!, b!, s!].any((v) => v != v.roundToDouble()))) {
       setState(
-        () => error = widget.de
-            ? 'Gültige Grenzen und Schrittweite eingeben.${widget.integerOnly ? ' Nur ganze Zahlen.' : ''}'
-            : 'Enter valid limits and step size.${widget.integerOnly ? ' Whole numbers only.' : ''}',
+        () => error = Translations.get(
+          widget.languageCode,
+          widget.integerOnly ? 'rangeInvalidInteger' : 'rangeInvalid',
+        ),
       );
       return;
     }
@@ -124,9 +126,9 @@ class _SettingRangeEditorState extends State<SettingRangeEditor> {
             Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             for (final entry in [
-              (min, 'Minimum'),
-              (max, 'Maximum'),
-              (step, widget.de ? 'Schrittweite' : 'Step size'),
+              (min, Translations.get(widget.languageCode, 'rangeMinimum')),
+              (max, Translations.get(widget.languageCode, 'rangeMaximum')),
+              (step, Translations.get(widget.languageCode, 'rangeStepSize')),
             ])
               Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -154,14 +156,14 @@ class _SettingRangeEditorState extends State<SettingRangeEditor> {
             const SizedBox(height: 16),
             FilledButton(
               onPressed: save,
-              child: Text(widget.de ? 'Speichern' : 'Save'),
+              child: Text(Translations.get(widget.languageCode, 'save')),
             ),
             TextButton(
               onPressed: () {
                 widget.onSave(null);
                 Navigator.pop(context);
               },
-              child: Text(widget.de ? 'Bereich entfernen' : 'Remove range'),
+              child: Text(Translations.get(widget.languageCode, 'rangeRemove')),
             ),
           ],
         ),

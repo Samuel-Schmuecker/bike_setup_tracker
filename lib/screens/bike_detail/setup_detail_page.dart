@@ -38,6 +38,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
   final _orderTourKey = GlobalKey(debugLabel: 'tour-order');
   final _finishTourKey = GlobalKey(debugLabel: 'tour-finish-order');
   final _historyTourKey = GlobalKey(debugLabel: 'tour-history');
+  final _parametersTourKey = GlobalKey(debugLabel: 'tour-setup-parameters');
   String? _tourFieldId;
   String? _tourCategoryId;
   OnboardingTourService? _tour;
@@ -45,7 +46,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
 
   Future<bool> runTour(OnboardingTourService tour) async {
     _tour = tour;
-    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    final languageCode = context.read<LanguageProvider>().currentLanguage;
     try {
       if (_valueTourKey.currentContext != null) {
         if (!await tour.showStep(
@@ -53,13 +54,9 @@ class SetupDetailPageState extends State<SetupDetailPage> {
           target: _valueTourKey,
           step: 6,
           event: 'valueSaved',
-          german: german,
-          title: german
-              ? 'Wert ändern und speichern'
-              : 'Change and save a value',
-          description: german
-              ? '**Wert antippen → ändern → Speichern.** Die Änderung bleibt am Demo-Bike.'
-              : '**Tap value → change → Save.** The change stays on the demo bike.',
+          languageCode: languageCode,
+          title: Translations.get(languageCode, 'tourSaveValueTitle'),
+          description: Translations.get(languageCode, 'tourSaveValueBody'),
         ))
           return false;
       }
@@ -67,11 +64,11 @@ class SetupDetailPageState extends State<SetupDetailPage> {
       final advanced = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text(german ? 'Grundtour geschafft' : 'Basics complete'),
+          title: Text(
+            Translations.get(languageCode, 'tourBasicsCompleteTitle'),
+          ),
           content: Text(
-            german
-                ? 'Jetzt kannst du dein eigenes Bike anlegen. Beim ersten Setup zeigen wir dir kurz, wie du Werte und eigene Felder auswählst. Oder probiere erst die Vertiefung aus.'
-                : 'You can now add your own bike. Your first setup includes a short guide to tracking values and custom fields. Or explore more features first.',
+            Translations.get(languageCode, 'tourBasicsCompleteBody'),
           ),
           actions: [
             TextButton(
@@ -79,15 +76,15 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                 tour.createOwnBikeRequested = true;
                 Navigator.pop(ctx, false);
               },
-              child: Text(german ? 'Eigenes Bike anlegen' : 'Add my bike'),
+              child: Text(Translations.get(languageCode, 'tourAddOwnBike')),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text(german ? 'Fertig' : 'Done'),
+              child: Text(Translations.get(languageCode, 'finishOrdering')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text(german ? 'Vertiefung starten' : 'Explore more'),
+              child: Text(Translations.get(languageCode, 'tourStartAdvanced')),
             ),
           ],
         ),
@@ -95,16 +92,28 @@ class SetupDetailPageState extends State<SetupDetailPage> {
       if (!mounted || advanced != true) return false;
       if (!await tour.showStep(
         context: context,
-        target: _orderTourKey,
+        target: _parametersTourKey,
         step: 1,
-        total: 5,
+        total: 6,
+        advanced: true,
+        allowTargetInteraction: false,
+        event: 'setupParameters',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourSetupParametersTitle'),
+        description: Translations.get(languageCode, 'tourSetupParametersBody'),
+      ))
+        return false;
+      if (!mounted) return false;
+      if (!await tour.showStep(
+        context: context,
+        target: _orderTourKey,
+        step: 2,
+        total: 6,
         advanced: true,
         event: 'orderStarted',
-        german: german,
-        title: german ? 'Umsortieren öffnen' : 'Open ordering',
-        description: german
-            ? '**Pfeile antippen** → Sortiermodus. Der Setup-Wechsel ist dabei gesperrt.'
-            : '**Tap the arrows** → ordering mode. Switching setups is locked while ordering.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourOpenOrderingTitle'),
+        description: Translations.get(languageCode, 'tourOpenOrderingBody'),
         onNext: () async => _startTourOrdering?.call(),
       ))
         return false;
@@ -113,30 +122,26 @@ class SetupDetailPageState extends State<SetupDetailPage> {
           !await tour.showStep(
             context: context,
             target: _fieldsTourKey,
-            step: 2,
-            total: 5,
+            step: 3,
+            total: 6,
             advanced: true,
             event: 'fieldMoved',
-            german: german,
-            title: german ? 'Ein Feld verschieben' : 'Move a field',
-            description: german
-                ? '**Feld halten, verschieben, loslassen.**'
-                : '**Hold, drag and release a field.**',
+            languageCode: languageCode,
+            title: Translations.get(languageCode, 'tourMoveFieldTitle'),
+            description: Translations.get(languageCode, 'tourMoveFieldBody'),
           ))
         return false;
       if (!mounted) return false;
       if (!await tour.showStep(
         context: context,
         target: _finishTourKey,
-        step: 3,
-        total: 5,
+        step: 4,
+        total: 6,
         advanced: true,
         event: 'orderFinished',
-        german: german,
-        title: german ? 'Sortierung abschließen' : 'Finish ordering',
-        description: german
-            ? '**Fertig antippen.** Reihenfolge nur hier oder für alle Demo-Setups übernehmen.'
-            : '**Tap Done.** Apply the order here or to all demo setups.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourFinishOrderingTitle'),
+        description: Translations.get(languageCode, 'tourFinishOrderingBody'),
         onNext: _finishOrdering,
       ))
         return false;
@@ -144,15 +149,13 @@ class SetupDetailPageState extends State<SetupDetailPage> {
       return await tour.showStep(
         context: context,
         target: _historyTourKey,
-        step: 4,
-        total: 5,
+        step: 5,
+        total: 6,
         advanced: true,
         event: 'history',
-        german: german,
-        title: german ? 'Änderungen nachvollziehen' : 'Review changes',
-        description: german
-            ? '**Vorher → Nachher** mit optionaler Notiz. Hier findest du deine Änderungen.'
-            : '**Before → After** with an optional note. Find your changes here.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourHistoryTitle'),
+        description: Translations.get(languageCode, 'tourHistoryBody'),
       );
     } finally {
       if (mounted && _editingOrder) setState(() => _editingOrder = false);
@@ -1588,6 +1591,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                     ),
                   if (!_editingOrder)
                     IconButton(
+                      key: _parametersTourKey,
                       icon: const Icon(Icons.tune),
                       tooltip: Translations.get(lang, 'setupConfig'),
                       onPressed: () {
@@ -2279,7 +2283,7 @@ class _EditValueDialogState extends State<_EditValueDialog> {
                 child: SettingRangeScale(
                   range: widget.range!,
                   value: _currentNum,
-                  de: lang == 'de',
+                  languageCode: lang,
                 ),
               ),
             if (_error != null)
@@ -2324,9 +2328,7 @@ class _EditValueDialogState extends State<_EditValueDialog> {
                                   .abs() >
                               0.000001))) {
                 setState(
-                  () => _error = lang == 'de'
-                      ? 'Wert muss im Bereich und auf einem Einstellschritt liegen'
-                      : 'Value must match the range and step size',
+                  () => _error = Translations.get(lang, 'rangeValueInvalid'),
                 );
                 return;
               }

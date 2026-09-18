@@ -49,7 +49,7 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
       if (!mounted || !_firstOwnBike) return;
       final prefs = await SharedPreferences.getInstance();
       if (!mounted || prefs.getBool('hasSeenBikeCreationTour') == true) return;
-      final german = context.read<LanguageProvider>().currentLanguage == 'de';
+      final languageCode = context.read<LanguageProvider>().currentLanguage;
       await _creationTour.run(() async {
         if (!mounted) return;
         await _creationTour.showStep(
@@ -58,12 +58,10 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
           step: 1,
           total: 1,
           event: 'bikeDatabase',
-          german: german,
-          sectionLabel: german ? 'Dein eigenes Bike' : 'Your own bike',
-          title: german ? 'Datenbank oder manuell' : 'Database or manual entry',
-          description: german
-              ? '**Modell suchen** → Vorschlag aus der Bike-Datenbank wählen. Nicht dabei? **Modell und Marke selbst eingeben.**'
-              : '**Search a model** → choose a bike database suggestion. Not listed? **Enter model and brand yourself.**',
+          languageCode: languageCode,
+          sectionLabel: Translations.get(languageCode, 'tourOwnBikeSection'),
+          title: Translations.get(languageCode, 'tourDatabaseTitle'),
+          description: Translations.get(languageCode, 'tourDatabaseBody'),
           allowTargetInteraction: true,
         );
       });
@@ -334,7 +332,14 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  '${option.travelFront}V / ${option.travelRear}H mm',
+                                  Translations.format(
+                                    lang,
+                                    'bikeTravelSummary',
+                                    {
+                                      'front': option.travelFront.toString(),
+                                      'rear': option.travelRear.toString(),
+                                    },
+                                  ),
                                 ),
                                 onTap: () => onSelected(option),
                               );
@@ -369,7 +374,12 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   items: _categories
-                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .map(
+                        (c) => DropdownMenuItem(
+                          value: c,
+                          child: Text(Translations.bikeCategory(lang, c)),
+                        ),
+                      )
                       .toList(),
                   onChanged: (val) {
                     if (val != null) setState(() => _category = val);

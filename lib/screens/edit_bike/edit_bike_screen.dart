@@ -208,7 +208,7 @@ class _EditBikeScreenState extends State<EditBikeScreen> {
                 DropdownButtonFormField<String>(
                   value: _category,
                   decoration: InputDecoration(labelText: Translations.get(lang, 'category'), border: const OutlineInputBorder()),
-                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(Translations.bikeCategory(lang, c)))).toList(),
                   onChanged: (val) { if (val != null) setState(() => _category = val); },
                 ),
                 const SizedBox(height: 16),

@@ -72,18 +72,16 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   Future<void> _showTour() async {
     if (!mounted) return;
     final tour = widget.onboardingTour!;
-    final german = context.read<LanguageProvider>().currentLanguage == 'de';
+    final languageCode = context.read<LanguageProvider>().currentLanguage;
     try {
       if (!await tour.showStep(
         context: context,
         target: _setupTourKey,
         step: 3,
         event: 'setupMenu',
-        german: german,
-        title: german ? 'Setup lange drücken' : 'Press and hold a setup',
-        description: german
-            ? '**Lange drücken** → umbenennen oder duplizieren. Danach Menü schließen.'
-            : '**Press and hold** → rename or duplicate. Then close the menu.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourSetupMenuTitle'),
+        description: Translations.get(languageCode, 'tourSetupMenuBody'),
         onNext: _tourSetupMenu,
       ))
         return;
@@ -93,11 +91,9 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
         target: _setupTourKey,
         step: 4,
         event: 'openSetup',
-        german: german,
-        title: german ? 'Setup öffnen' : 'Open setup',
-        description: german
-            ? '**Setup antippen** → Einstellwerte öffnen.'
-            : '**Tap the setup** → open its settings.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourOpenSetupTitle'),
+        description: Translations.get(languageCode, 'tourOpenSetupBody'),
       ))
         return;
       if (!mounted) return;
@@ -117,38 +113,32 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
       if (!await tour.showStep(
         context: context,
         target: _favoriteTourKey,
-        step: 5,
-        total: 5,
+        step: 6,
+        total: 6,
         advanced: true,
         event: 'favorite',
-        german: german,
-        title: german ? 'Favoriten markieren' : 'Mark favorites',
-        description: german
-            ? '**Stern antippen** → Favorit. Favoriten stehen zuerst. Erneut tippen zum Entfernen.'
-            : '**Tap the star** → favorite. Favorites stay first. Tap again to remove.',
+        languageCode: languageCode,
+        title: Translations.get(languageCode, 'tourFavoriteTitle'),
+        description: Translations.get(languageCode, 'tourFavoriteBody'),
       ))
         return;
       if (mounted)
         await showDialog<void>(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: Text(german ? 'Tour abgeschlossen' : 'Tour complete'),
-            content: Text(
-              german
-                  ? 'Lege jetzt dein eigenes Bike an. Beim ersten Setup zeigen wir dir die Auswahl der Werte, eigene Felder und Kategorien.'
-                  : 'Add your own bike next. Your first setup includes a short guide to tracking values, custom fields and categories.',
-            ),
+            title: Text(Translations.get(languageCode, 'tourCompleteTitle')),
+            content: Text(Translations.get(languageCode, 'tourCompleteBody')),
             actions: [
               TextButton(
                 onPressed: () {
                   tour.createOwnBikeRequested = true;
                   Navigator.pop(ctx);
                 },
-                child: Text(german ? 'Eigenes Bike anlegen' : 'Add my bike'),
+                child: Text(Translations.get(languageCode, 'tourAddOwnBike')),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text(german ? 'Fertig' : 'Done'),
+                child: Text(Translations.get(languageCode, 'finishOrdering')),
               ),
             ],
           ),
@@ -157,11 +147,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
       if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              german
-                  ? 'Die Tour wurde unterbrochen. Bitte erneut starten.'
-                  : 'Please restart the tour.',
-            ),
+            content: Text(Translations.get(languageCode, 'tourInterrupted')),
           ),
         );
     } finally {
@@ -267,17 +253,11 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
               if (touring) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    lang == 'de'
-                        ? 'Umbenennen ändert den Namen, Duplizieren erzeugt eine Kopie. Löschen ist während der Tour deaktiviert.'
-                        : 'Rename changes the name; Duplicate creates a copy. Deletion is disabled during the tour.',
-                  ),
+                  child: Text(Translations.get(lang, 'tourSetupMenuHint')),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    lang == 'de' ? 'Zurück zur Tour' : 'Back to tour',
-                  ),
+                  child: Text(Translations.get(lang, 'tourBack')),
                 ),
               ],
             ],
@@ -507,7 +487,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                       ImageHelper.buildImage(
                         ImageHelper.getDisplayImagePath(
                           bike.imagePath,
-                          bike.category,
+                          Translations.bikeCategory(lang, bike.category),
                         ),
                       ),
 

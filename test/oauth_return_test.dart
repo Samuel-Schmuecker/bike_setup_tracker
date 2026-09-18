@@ -8,9 +8,14 @@ void main() {
     'desktop callback rejects wrong attempt and never reflects credentials',
     () async {
       Uri? received;
-      final listener = await OAuthReturn.open('test-attempt', (uri) async {
-        received = uri;
-      }, port: 0);
+      final listener = await OAuthReturn.open(
+        'test-attempt',
+        (uri) async {
+          received = uri;
+        },
+        port: 0,
+        languageCode: 'en',
+      );
       final client = HttpClient();
       addTearDown(() async {
         client.close(force: true);
@@ -30,6 +35,11 @@ void main() {
       expect(correct.statusCode, 200);
       expect(received!.queryParameters['code'], 'secret');
       expect(page, isNot(contains('secret')));
+      expect(page, contains('Sign-in processed'));
+      expect(
+        page,
+        contains('You can close this window and return to the app.'),
+      );
     },
   );
 }

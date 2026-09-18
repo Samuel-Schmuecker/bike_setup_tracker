@@ -141,7 +141,7 @@ void main() {
                 builder: (_) => SettingRangeEditor(
                   title: 'Vorspannung',
                   unit: 'Umdr.',
-                  de: true,
+                  languageCode: 'de',
                   onSave: (value) => saved = value,
                 ),
               ),
@@ -175,7 +175,7 @@ void main() {
             child: SettingRangeScale(
               range: SettingRange(min: 0, max: 10, reference: 'closed'),
               value: -12,
-              de: true,
+              languageCode: 'de',
             ),
           ),
         ),

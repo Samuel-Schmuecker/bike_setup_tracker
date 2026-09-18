@@ -1,11 +1,12 @@
+import 'package:bike_setup_tracker/utils/translations.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/link.dart';
 
 class PrivacyPolicyLink extends StatelessWidget {
-  const PrivacyPolicyLink({super.key, required this.german});
+  const PrivacyPolicyLink({super.key, required this.languageCode});
 
-  final bool german;
+  final String languageCode;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +30,7 @@ class PrivacyPolicyLink extends StatelessWidget {
       builder: (context, followLink) => TextButton.icon(
         onPressed: followLink,
         icon: const Icon(Icons.privacy_tip_outlined),
-        label: Text(german ? 'Datenschutzerklärung' : 'Privacy policy'),
+        label: Text(Translations.get(languageCode, 'privacyPolicy')),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:bike_setup_tracker/cloud/local_store.dart';
 import 'package:bike_setup_tracker/cloud/sync_documents.dart';
 import 'package:bike_setup_tracker/models/bike.dart';
 import 'package:bike_setup_tracker/providers/bike_provider.dart';
+import 'package:bike_setup_tracker/providers/theme_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
@@ -192,6 +193,7 @@ void main() {
   late BikeProvider bikes;
   late FakeCloud server;
   late CloudProvider cloud;
+  late ThemeProvider theme;
 
   Future<void> initialize([List<Json> initial = const []]) async {
     SharedPreferences.setMockInitialValues({
@@ -208,14 +210,17 @@ void main() {
       email: 'test@example.com',
       password: 'testpassword',
     );
+    theme = ThemeProvider(await SharedPreferences.getInstance());
     cloud = CloudProvider(
       store,
       bikes,
       client: server.client,
+      theme: theme,
       startAutomatically: false,
     );
     addTearDown(() async {
       cloud.dispose();
+      theme.dispose();
       bikes.dispose();
       store.dispose();
       await server.client.dispose();
@@ -300,7 +305,18 @@ void main() {
       await initialize([bike('delete-me')]);
       await cloud.sync();
       await store.backup('before-test');
+      await theme.setBackground(const Color(0xFFFFFFFF));
+      await theme.setAccent(const Color(0xFFAA00FF));
       await cloud.deleteAccount();
+      expect(theme.background, ThemeProvider.defaultBackground);
+      expect(theme.accent.toARGB32(), ThemeProvider.defaultAccent.toARGB32());
+      final restoredTheme = ThemeProvider(await SharedPreferences.getInstance());
+      expect(restoredTheme.background, ThemeProvider.defaultBackground);
+      expect(
+        restoredTheme.accent.toARGB32(),
+        ThemeProvider.defaultAccent.toARGB32(),
+      );
+      restoredTheme.dispose();
       expect(cloud.cloudPaused, isTrue);
       expect(store.payload['bikes'], isEmpty);
       expect(await store.savedWorkspaces(), isEmpty);
@@ -335,11 +351,13 @@ void main() {
       await initialize([bike('keep-until-success')]);
       await cloud.sync();
       server.failDeletion = true;
+      await theme.setAccent(const Color(0xFFAA00FF));
       await expectLater(
         cloud.deleteAccount(),
         throwsA(isA<FunctionException>()),
       );
       expect(cloud.deletionPending, isTrue);
+      expect(theme.accent, const Color(0xFFAA00FF));
       expect((store.payload['bikes'] as List).length, 1);
       final uploads = server.uploads;
       await cloud.sync();

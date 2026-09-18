@@ -143,6 +143,11 @@ void main() {
       } else {
         await tester.tap(find.text('Vertiefung starten'));
         await tester.pumpAndSettle();
+        expect(find.text('Parameter pro Setup'), findsOneWidget);
+        expect(find.text('Vertiefung · 1 / 6'), findsOneWidget);
+        expect(find.byIcon(Icons.tune), findsOneWidget);
+        await tester.tap(find.text('Weiter'));
+        await tester.pumpAndSettle();
         expect(find.text('Umsortieren öffnen'), findsOneWidget);
         await tester.tap(find.byIcon(Icons.swap_vert).hitTestable());
         await tester.pumpAndSettle();
@@ -203,6 +208,7 @@ void main() {
         'Weiter',
         'Weiter',
         'Vertiefung starten',
+        'Weiter',
         'Weiter',
       ]) {
         await tester.tap(find.text(label));
