@@ -82,8 +82,8 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
         german: german,
         title: german ? 'Setup lange drücken' : 'Press and hold a setup',
         description: german
-            ? 'Halte die Karte gedrückt. Im Menü kannst du umbenennen oder duplizieren. Schließe das Menü danach wieder. Löschen üben wir nicht.'
-            : 'Press and hold the card. You can rename or duplicate it in the menu. Then close the menu. We will not practice deletion.',
+            ? '**Lange drücken** → umbenennen oder duplizieren. Danach Menü schließen.'
+            : '**Press and hold** → rename or duplicate. Then close the menu.',
         onNext: _tourSetupMenu,
       ))
         return;
@@ -96,8 +96,8 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
         german: german,
         title: german ? 'Setup öffnen' : 'Open setup',
         description: german
-            ? 'Tippe die Setup-Karte kurz an. Damit öffnest du die Einstellwerte.'
-            : 'Tap the setup card to open its settings.',
+            ? '**Setup antippen** → Einstellwerte öffnen.'
+            : '**Tap the setup** → open its settings.',
       ))
         return;
       if (!mounted) return;
@@ -124,8 +124,8 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
         german: german,
         title: german ? 'Favoriten markieren' : 'Mark favorites',
         description: german
-            ? 'Tippe auf den Stern. Favorisierte Setups stehen immer zuerst; ein weiterer Tipp entfernt die Markierung.'
-            : 'Tap the star. Favorite setups stay first; tap again to remove the favorite.',
+            ? '**Stern antippen** → Favorit. Favoriten stehen zuerst. Erneut tippen zum Entfernen.'
+            : '**Tap the star** → favorite. Favorites stay first. Tap again to remove.',
       ))
         return;
       if (mounted)
@@ -135,10 +135,17 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
             title: Text(german ? 'Tour abgeschlossen' : 'Tour complete'),
             content: Text(
               german
-                  ? 'Du kennst jetzt die wichtigsten Gesten. Über Anleitung / Informationen kannst du jederzeit wieder üben.'
-                  : 'You now know the main gestures. Restart the tour anytime from Tutorial / Information.',
+                  ? 'Lege jetzt dein eigenes Bike an. Beim ersten Setup zeigen wir dir die Auswahl der Werte, eigene Felder und Kategorien.'
+                  : 'Add your own bike next. Your first setup includes a short guide to tracking values, custom fields and categories.',
             ),
             actions: [
+              TextButton(
+                onPressed: () {
+                  tour.createOwnBikeRequested = true;
+                  Navigator.pop(ctx);
+                },
+                child: Text(german ? 'Eigenes Bike anlegen' : 'Add my bike'),
+              ),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text(german ? 'Fertig' : 'Done'),
@@ -172,7 +179,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   }
 
   void _onAddSetupTap(BuildContext context, Bike bike) {
-    if (bike.availableParameters == null) {
+    if (bike.availableParameters == null || bike.setups.isEmpty) {
       // Fall A: Noch nie konfiguriert -> Zeige Configurator
       Navigator.push(
         context,

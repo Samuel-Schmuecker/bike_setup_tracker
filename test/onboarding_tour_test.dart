@@ -1,4 +1,6 @@
 import 'package:bike_setup_tracker/widgets/bike_card.dart';
+import 'package:bike_setup_tracker/utils/app_route_observer.dart';
+import 'package:bike_setup_tracker/screens/add_bike/add_bike_screen.dart';
 import 'package:bike_setup_tracker/widgets/setup_card.dart';
 import 'dart:convert';
 import 'package:bike_setup_tracker/providers/bike_provider.dart';
@@ -76,7 +78,11 @@ void main() {
           ChangeNotifierProvider.value(value: bikes),
           ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ],
-        child: MaterialApp(theme: ThemeData.dark(), home: const HomeScreen()),
+        child: MaterialApp(
+          navigatorObservers: [appRouteObserver],
+          theme: ThemeData.dark(),
+          home: const HomeScreen(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -212,6 +218,81 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
+      bikes.dispose();
+    },
+  );
+
+  testWidgets('basic tour offers direct creation of an own bike', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1000, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final bikes = await mountHome(tester, first: true);
+    for (final label in [
+      'Weiter',
+      'Zurück zur Tour',
+      'Weiter',
+      'Weiter',
+      'Zurück zur Tour',
+      'Weiter',
+      'Weiter',
+      'Weiter',
+    ]) {
+      await tester.tap(find.text(label));
+      await tester.pumpAndSettle();
+    }
+    await tester.tap(find.text('Eigenes Bike anlegen'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AddBikeScreen>(find.byType(AddBikeScreen))
+          .configureAfterSave,
+      isTrue,
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+    bikes.dispose();
+  });
+
+  testWidgets(
+    'backup reminder waits for Home after replaced routes and appears once',
+    (tester) async {
+      final bikes = await mountHome(tester);
+      final navigator = tester.state<NavigatorState>(find.byType(Navigator));
+      navigator.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Create bike')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final demo = await bikes.ensureOnboardingDemo();
+      bikes.addBike(demo.copyWith(id: 'own', model: 'My bike'));
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('hasCreatedOwnBike', true);
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Configure bike')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Datensicherung nicht vergessen'), findsNothing);
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Datensicherung nicht vergessen'), findsOneWidget);
+      expect(find.text('Konto & Datensicherung'), findsOneWidget);
+      await tester.tap(find.text('Später'));
+      await tester.pumpAndSettle();
+      expect(prefs.getBool('hasSeenBackupReminder'), isTrue);
+      navigator.push(MaterialPageRoute<void>(builder: (_) => const Scaffold()));
+      await tester.pumpAndSettle();
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Datensicherung nicht vergessen'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await bikes.saveToDevice();
       bikes.dispose();
     },
   );

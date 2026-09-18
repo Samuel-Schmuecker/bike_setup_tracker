@@ -53,8 +53,8 @@ class _SetupDetailScreenState extends State<SetupDetailScreen> {
         german: german,
         title: german ? 'Zwischen Setups wischen' : 'Swipe between setups',
         description: german
-            ? 'Wische nach links oder rechts. Am PC: linke Maustaste gedrückt halten und ziehen. Nach einem Seitenwechsel geht es automatisch weiter.'
-            : 'Swipe left or right. On a PC, drag while holding the left mouse button. A successful page change advances the tour.',
+            ? '**Links oder rechts wischen.** Am PC: mit gedrückter linker Maustaste ziehen.'
+            : '**Swipe left or right.** On a PC: drag with the left mouse button held.',
       );
       if (!mounted || !next) return;
       setState(() => _tourDetailActive = true);

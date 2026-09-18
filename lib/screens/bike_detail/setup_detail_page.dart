@@ -58,8 +58,8 @@ class SetupDetailPageState extends State<SetupDetailPage> {
               ? 'Wert ändern und speichern'
               : 'Change and save a value',
           description: german
-              ? 'Tippe auf den markierten Wert. Ändere ihn mit + / − oder per Eingabe und tippe auf Speichern. Deine Übung bleibt am Demo-Bike gespeichert.'
-              : 'Tap the highlighted value. Change it using + / − or typing, then Save. Your practice change is saved on the demo bike.',
+              ? '**Wert antippen → ändern → Speichern.** Die Änderung bleibt am Demo-Bike.'
+              : '**Tap value → change → Save.** The change stays on the demo bike.',
         ))
           return false;
       }
@@ -70,10 +70,17 @@ class SetupDetailPageState extends State<SetupDetailPage> {
           title: Text(german ? 'Grundtour geschafft' : 'Basics complete'),
           content: Text(
             german
-                ? 'Möchtest du noch Sortieren, Änderungsverlauf und Favoriten ausprobieren?'
-                : 'Would you like to try ordering, change history and favorites?',
+                ? 'Jetzt kannst du dein eigenes Bike anlegen. Beim ersten Setup zeigen wir dir kurz, wie du Werte und eigene Felder auswählst. Oder probiere erst die Vertiefung aus.'
+                : 'You can now add your own bike. Your first setup includes a short guide to tracking values and custom fields. Or explore more features first.',
           ),
           actions: [
+            TextButton(
+              onPressed: () {
+                tour.createOwnBikeRequested = true;
+                Navigator.pop(ctx, false);
+              },
+              child: Text(german ? 'Eigenes Bike anlegen' : 'Add my bike'),
+            ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: Text(german ? 'Fertig' : 'Done'),
@@ -96,8 +103,8 @@ class SetupDetailPageState extends State<SetupDetailPage> {
         german: german,
         title: german ? 'Umsortieren öffnen' : 'Open ordering',
         description: german
-            ? 'Tippe auf die zwei Pfeile. Im Sortiermodus kannst du Felder und Kategorien verschieben. Der Wechsel zwischen Setups ist dabei gesperrt.'
-            : 'Tap the arrows to reorder fields and categories. Switching setups is locked while ordering.',
+            ? '**Pfeile antippen** → Sortiermodus. Der Setup-Wechsel ist dabei gesperrt.'
+            : '**Tap the arrows** → ordering mode. Switching setups is locked while ordering.',
         onNext: () async => _startTourOrdering?.call(),
       ))
         return false;
@@ -113,8 +120,8 @@ class SetupDetailPageState extends State<SetupDetailPage> {
             german: german,
             title: german ? 'Ein Feld verschieben' : 'Move a field',
             description: german
-                ? 'Ziehe ein Feld an eine andere Position und lasse es los. Kategorien kannst du über ihren Griff nach langem Drücken verschieben.'
-                : 'Drag a field to another position and release it. To move categories, press and hold their handle.',
+                ? '**Feld halten, verschieben, loslassen.**'
+                : '**Hold, drag and release a field.**',
           ))
         return false;
       if (!mounted) return false;
@@ -128,8 +135,8 @@ class SetupDetailPageState extends State<SetupDetailPage> {
         german: german,
         title: german ? 'Sortierung abschließen' : 'Finish ordering',
         description: german
-            ? 'Tippe auf Fertig. Bei einer Änderung kannst du wählen, ob die Reihenfolge nur hier oder für alle Setups dieses Demo-Bikes gilt.'
-            : 'Tap Done. After a change, choose whether to apply the order to this setup or all setups of this demo bike.',
+            ? '**Fertig antippen.** Reihenfolge nur hier oder für alle Demo-Setups übernehmen.'
+            : '**Tap Done.** Apply the order here or to all demo setups.',
         onNext: _finishOrdering,
       ))
         return false;
@@ -144,8 +151,8 @@ class SetupDetailPageState extends State<SetupDetailPage> {
         german: german,
         title: german ? 'Änderungen nachvollziehen' : 'Review changes',
         description: german
-            ? 'Hier siehst du vorherige und neue Einstellwerte mit Zeitpunkt und optionaler Notiz. Deine gerade gespeicherte Änderung erscheint hier. Mit Weiter geht es zum Favoritenstern.'
-            : 'This history shows old and new values, timestamps and optional notes. Your saved change appears here. Next takes you to favorites.',
+            ? '**Vorher → Nachher** mit optionaler Notiz. Hier findest du deine Änderungen.'
+            : '**Before → After** with an optional note. Find your changes here.',
       );
     } finally {
       if (mounted && _editingOrder) setState(() => _editingOrder = false);
@@ -1691,127 +1698,136 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // --- LOG ---
-                    Container(
+                    Column(
                       key: _historyTourKey,
-                      child: buildSectionHeader(
-                        Translations.get(lang, 'history'),
-                        icon: Icons.history,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: Stack(
-                        children: [
-                          setup.logs.isEmpty
-                              ? Padding(
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Text(
-                                    Translations.get(lang, 'noHistory'),
-                                    style: TextStyle(
-                                      fontStyle: FontStyle.italic,
-                                      color: Colors.white.withOpacity(0.5),
-                                    ),
-                                  ),
-                                )
-                              : ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxHeight: 240,
-                                  ),
-                                  child: ShaderMask(
-                                    shaderCallback: (Rect bounds) {
-                                      return const LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          Colors.white,
-                                          Colors.white,
-                                          Colors.transparent,
-                                        ],
-                                        stops: [0.0, 0.75, 1.0],
-                                      ).createShader(bounds);
-                                    },
-                                    blendMode: BlendMode.dstIn,
-                                    child: ListView.builder(
-                                      shrinkWrap: true,
-                                      physics: const BouncingScrollPhysics(),
-                                      padding: EdgeInsets.zero,
-                                      itemCount: setup.logs.length,
-                                      itemBuilder: (context, index) {
-                                        final log = setup.logs[index];
-                                        final isLast =
-                                            index == setup.logs.length - 1;
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          child: buildSectionHeader(
+                            Translations.get(lang, 'history'),
+                            icon: Icons.history,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Stack(
+                            children: [
+                              setup.logs.isEmpty
+                                  ? Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: Text(
+                                        Translations.get(lang, 'noHistory'),
+                                        style: TextStyle(
+                                          fontStyle: FontStyle.italic,
+                                          color: Colors.white.withOpacity(0.5),
+                                        ),
+                                      ),
+                                    )
+                                  : ConstrainedBox(
+                                      constraints: const BoxConstraints(
+                                        maxHeight: 240,
+                                      ),
+                                      child: ShaderMask(
+                                        shaderCallback: (Rect bounds) {
+                                          return const LinearGradient(
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter,
+                                            colors: [
+                                              Colors.white,
+                                              Colors.white,
+                                              Colors.transparent,
+                                            ],
+                                            stops: [0.0, 0.75, 1.0],
+                                          ).createShader(bounds);
+                                        },
+                                        blendMode: BlendMode.dstIn,
+                                        child: ListView.builder(
+                                          shrinkWrap: true,
+                                          physics:
+                                              const BouncingScrollPhysics(),
+                                          padding: EdgeInsets.zero,
+                                          itemCount: setup.logs.length,
+                                          itemBuilder: (context, index) {
+                                            final log = setup.logs[index];
+                                            final isLast =
+                                                index == setup.logs.length - 1;
 
-                                        String mainText = log.parameters;
-                                        String diffBadge = '';
-                                        final regex = RegExp(
-                                          r'(.*)\s\((.*)\)$',
-                                        );
-                                        final match = regex.firstMatch(
-                                          log.parameters,
-                                        );
-                                        if (match != null) {
-                                          mainText =
-                                              match.group(1) ?? log.parameters;
-                                          diffBadge = match.group(2) ?? '';
-                                        }
+                                            String mainText = log.parameters;
+                                            String diffBadge = '';
+                                            final regex = RegExp(
+                                              r'(.*)\s\((.*)\)$',
+                                            );
+                                            final match = regex.firstMatch(
+                                              log.parameters,
+                                            );
+                                            if (match != null) {
+                                              mainText =
+                                                  match.group(1) ??
+                                                  log.parameters;
+                                              diffBadge = match.group(2) ?? '';
+                                            }
 
-                                        return Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Column(
+                                            return Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Container(
-                                                  margin: const EdgeInsets.only(
-                                                    top: 6,
-                                                  ),
-                                                  width: 10,
-                                                  height: 10,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                      color:
-                                                          colorScheme.primary,
-                                                      width: 2,
-                                                    ),
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).scaffoldBackgroundColor,
-                                                  ),
-                                                ),
-                                                if (!isLast)
-                                                  Container(
-                                                    width: 1.5,
-                                                    height: 50,
-                                                    color: Colors.white
-                                                        .withOpacity(0.1),
-                                                  )
-                                                else
-                                                  const SizedBox(height: 10),
-                                              ],
-                                            ),
-                                            const SizedBox(width: 16),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: const EdgeInsets.only(
-                                                  bottom: 24.0,
-                                                ),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
+                                                Column(
                                                   children: [
-                                                    Row(
+                                                    Container(
+                                                      margin:
+                                                          const EdgeInsets.only(
+                                                            top: 6,
+                                                          ),
+                                                      width: 10,
+                                                      height: 10,
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        border: Border.all(
+                                                          color: colorScheme
+                                                              .primary,
+                                                          width: 2,
+                                                        ),
+                                                        color: Theme.of(
+                                                          context,
+                                                        ).scaffoldBackgroundColor,
+                                                      ),
+                                                    ),
+                                                    if (!isLast)
+                                                      Container(
+                                                        width: 1.5,
+                                                        height: 50,
+                                                        color: Colors.white
+                                                            .withOpacity(0.1),
+                                                      )
+                                                    else
+                                                      const SizedBox(
+                                                        height: 10,
+                                                      ),
+                                                  ],
+                                                ),
+                                                const SizedBox(width: 16),
+                                                Expanded(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          bottom: 24.0,
+                                                        ),
+                                                    child: Column(
                                                       crossAxisAlignment:
                                                           CrossAxisAlignment
-                                                              .center,
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
                                                       children: [
-                                                        Expanded(
-                                                          child: Text(
-                                                            mainText,
-                                                            style:
-                                                                const TextStyle(
+                                                        Row(
+                                                          crossAxisAlignment:
+                                                              CrossAxisAlignment
+                                                                  .center,
+                                                          children: [
+                                                            Expanded(
+                                                              child: Text(
+                                                                mainText,
+                                                                style: const TextStyle(
                                                                   fontWeight:
                                                                       FontWeight
                                                                           .w600,
@@ -1819,70 +1835,80 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                                                                   color: Colors
                                                                       .white,
                                                                 ),
-                                                          ),
-                                                        ),
-                                                        if (diffBadge
-                                                            .isNotEmpty)
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal: 8,
-                                                                  vertical: 2,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color: colorScheme
-                                                                  .primaryContainer
-                                                                  .withOpacity(
-                                                                    0.8,
-                                                                  ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    12,
-                                                                  ),
-                                                            ),
-                                                            child: Text(
-                                                              diffBadge,
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .bold,
-                                                                color: colorScheme
-                                                                    .onPrimaryContainer,
                                                               ),
                                                             ),
+                                                            if (diffBadge
+                                                                .isNotEmpty)
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          8,
+                                                                      vertical:
+                                                                          2,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: colorScheme
+                                                                      .primaryContainer
+                                                                      .withOpacity(
+                                                                        0.8,
+                                                                      ),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        12,
+                                                                      ),
+                                                                ),
+                                                                child: Text(
+                                                                  diffBadge,
+                                                                  style: TextStyle(
+                                                                    fontSize:
+                                                                        12,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color: colorScheme
+                                                                        .onPrimaryContainer,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                          ],
+                                                        ),
+                                                        if (log
+                                                            .note
+                                                            .isNotEmpty) ...[
+                                                          const SizedBox(
+                                                            height: 4,
                                                           ),
+                                                          Text(
+                                                            log.note,
+                                                            style: TextStyle(
+                                                              fontStyle:
+                                                                  FontStyle
+                                                                      .italic,
+                                                              color: Colors
+                                                                  .white
+                                                                  .withOpacity(
+                                                                    0.5,
+                                                                  ),
+                                                              fontSize: 13,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ],
                                                     ),
-                                                    if (log
-                                                        .note
-                                                        .isNotEmpty) ...[
-                                                      const SizedBox(height: 4),
-                                                      Text(
-                                                        log.note,
-                                                        style: TextStyle(
-                                                          fontStyle:
-                                                              FontStyle.italic,
-                                                          color: Colors.white
-                                                              .withOpacity(0.5),
-                                                          fontSize: 13,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
+                                              ],
+                                            );
+                                          },
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                        ],
-                      ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-
                     // --- NOTIZEN ---
                     Stack(
                       children: [

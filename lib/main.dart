@@ -13,6 +13,7 @@ import 'cloud/local_database.dart';
 import 'cloud/local_store.dart';
 import 'cloud/cloud_provider.dart';
 import 'screens/settings/account_screen.dart';
+import 'utils/app_route_observer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -70,6 +71,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorObservers: [appRouteObserver],
       title: 'Bike Setup Tracker',
       debugShowCheckedModeBanner: false,
       builder: (context, child) {

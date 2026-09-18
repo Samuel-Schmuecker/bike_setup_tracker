@@ -17,6 +17,7 @@ import '../../models/bike.dart';
 import '../edit_bike/edit_bike_screen.dart';
 import '../../services/onboarding_tour_service.dart';
 import '../bike_detail/bike_detail_screen.dart';
+import '../../utils/app_route_observer.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -25,7 +26,77 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with RouteAware {
+  bool _backupReminderShowing = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) appRouteObserver.subscribe(this, route);
+  }
+
+  @override
+  void didPopNext() {
+    _checkBackupReminder();
+  }
+
+  Future<void> _checkBackupReminder() async {
+    if (!mounted ||
+        _tourPreparing ||
+        _backupReminderShowing ||
+        ModalRoute.of(context)?.isCurrent != true)
+      return;
+    _backupReminderShowing = true;
+    try {
+      final bikes = context.read<BikeProvider>();
+      await bikes.ready;
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted ||
+          _tourPreparing ||
+          ModalRoute.of(context)?.isCurrent != true ||
+          prefs.getBool('hasCreatedOwnBike') != true ||
+          prefs.getBool('hasSeenBackupReminder') == true ||
+          !bikes.bikes.any((bike) => bike.id != '3'))
+        return;
+      final german = context.read<LanguageProvider>().currentLanguage == 'de';
+      final openBackup = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.cloud_outlined),
+          title: Text(
+            german ? 'Datensicherung nicht vergessen' : 'Remember your backup',
+          ),
+          content: Text(
+            german
+                ? 'Dein erstes Bike ist angelegt! Prüfe unter „Konto & Datensicherung“ deine Sicherung und verknüpfe dein Konto für die Wiederherstellung nach Geräteverlust.'
+                : 'Your first bike is ready! Check Account & backup and link your account so you can restore your data if you lose your device.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(german ? 'Später' : 'Later'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(
+                german ? 'Konto & Datensicherung' : 'Account & backup',
+              ),
+            ),
+          ],
+        ),
+      );
+      await prefs.setBool('hasSeenBackupReminder', true);
+      if (mounted && openBackup == true) {
+        await Navigator.of(
+          context,
+        ).push<void>(MaterialPageRoute(builder: (_) => const AccountScreen()));
+      }
+    } finally {
+      _backupReminderShowing = false;
+    }
+  }
+
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _orderingBikes = false;
@@ -45,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    appRouteObserver.unsubscribe(this);
     _tour.cancelFor(context);
     _searchController.dispose();
     _bikeScrollController.dispose();
@@ -60,6 +132,8 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) _showOnboardingDialog(isFirstStart: true);
     } else if (await _tour.isFirstStart()) {
       if (mounted) await _startTour();
+    } else {
+      await _checkBackupReminder();
     }
   }
 
@@ -89,8 +163,8 @@ class _HomeScreenState extends State<HomeScreen> {
         onNext: () =>
             _tourBikeMenu(bikes.bikes.firstWhere((bike) => bike.id == '3')),
         description: german
-            ? 'Halte die Bike-Karte lange gedrückt. Hier findest du Bearbeiten, Umbenennen und Sortieren. Schließe danach das Menü. Wir üben nur am Demo-Bike.'
-            : 'Press and hold the bike card. Explore editing, renaming and ordering, then close the menu. We only practice on the demo bike.',
+            ? '**Lange drücken** → Bike-Menü. Danach schließen. Wir üben am Demo-Bike.'
+            : '**Press and hold** → bike menu. Then close it. Practice on the demo bike.',
       );
       if (!mounted || !next) return;
       setState(() => _orderingBikes = false);
@@ -102,8 +176,8 @@ class _HomeScreenState extends State<HomeScreen> {
         german: german,
         title: german ? 'Bike öffnen' : 'Open bike',
         description: german
-            ? 'Tippe die Bike-Karte jetzt kurz an, um ihre Setups zu öffnen.'
-            : 'Now tap the bike card to open its setups.',
+            ? '**Bike antippen** → Setups öffnen.'
+            : '**Tap the bike** → open its setups.',
       ))
         return;
       if (!mounted) return;
@@ -112,6 +186,13 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (_) => BikeDetailScreen(bikeId: '3', onboardingTour: _tour),
         ),
       );
+      if (mounted && _tour.createOwnBikeRequested) {
+        await Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => const AddBikeScreen(configureAfterSave: true),
+          ),
+        );
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -126,6 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } finally {
       if (mounted) setState(() => _tourPreparing = false);
+      if (mounted) await _checkBackupReminder();
     }
   });
 
@@ -136,102 +218,131 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showOnboardingDialog({bool isFirstStart = false}) {
-    final lang = context.read<LanguageProvider>().currentLanguage;
-
     showDialog(
       context: context,
       // Verhindert, dass der User beim ersten Start aus Versehen daneben klickt
       barrierDismissible: !isFirstStart,
-      builder: (ctx) => PopScope(
-        canPop: !isFirstStart,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            Translations.get(lang, 'welcomeTitle'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  Translations.get(lang, 'welcomeText1'),
-                  style: const TextStyle(fontSize: 16, height: 1.5),
+      builder: (ctx) => Consumer<LanguageProvider>(
+        builder: (_, language, __) {
+          final lang = language.currentLanguage;
+          return PopScope(
+            canPop: !isFirstStart,
+            child: AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Text(
+                Translations.get(lang, 'welcomeTitle'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  lang == 'de'
-                      ? 'Nach „Los geht’s“ wird ein Gastkonto erstellt und deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
-                      : 'After you tap “Let’s go”, a guest account is created and your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
-                ),
-                const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.primaryContainer.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.5),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.touch_app,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          Translations.get(lang, 'welcomeText2'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: PopupMenuButton<String>(
+                        tooltip: 'Sprache / Language',
+                        initialValue: lang,
+                        onSelected: language.setLanguage,
+                        itemBuilder: (_) => [
+                          for (final code
+                              in Translations.supportedLanguageCodes)
+                            CheckedPopupMenuItem(
+                              value: code,
+                              checked: code == lang,
+                              child: Text(code == 'de' ? 'Deutsch' : 'English'),
+                            ),
+                        ],
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 12,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.language,
+                                size: 16,
+                                color: Theme.of(
+                                  ctx,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                lang == 'de' ? 'Deutsch' : 'English',
+                                style: Theme.of(ctx).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(
+                                        ctx,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                              Icon(
+                                Icons.expand_more,
+                                size: 16,
+                                color: Theme.of(
+                                  ctx,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      Translations.get(lang, 'welcomeText1'),
+                      style: const TextStyle(fontSize: 16, height: 1.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      lang == 'de'
+                          ? 'Nach „Los geht’s“ wird ein Gastkonto erstellt und deine Daten werden automatisch in einer privaten Cloud gespeichert. Verknüpfe unter „Konto & Datensicherung“ Google für die Wiederherstellung nach Geräteverlust.'
+                          : 'After you tap “Let’s go”, a guest account is created and your data is saved automatically in a private cloud. Link Google under Account & backup to restore access after losing your device.',
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+              actions: [
+                PrivacyPolicyLink(german: lang == 'de'),
+                FilledButton(
+                  onPressed: () async {
+                    if (isFirstStart) {
+                      // Status dauerhaft speichern!
+                      final prefs = await SharedPreferences.getInstance();
+                      if (!await prefs.setBool('is_first_start', true)) return;
+                      final saved = await prefs.setBool(
+                        'hasSeenOnboarding',
+                        true,
+                      );
+                      if (!saved || !mounted) return;
+                      context.read<CloudProvider>().startSync();
+                    }
+                    if (ctx.mounted) Navigator.pop(ctx);
+                    if (isFirstStart && mounted) await _startTour();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    child: Text(
+                      Translations.get(lang, 'gotIt'),
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          actions: [
-            PrivacyPolicyLink(german: lang == 'de'),
-            FilledButton(
-              onPressed: () async {
-                if (isFirstStart) {
-                  // Status dauerhaft speichern!
-                  final prefs = await SharedPreferences.getInstance();
-                  if (!await prefs.setBool('is_first_start', true)) return;
-                  final saved = await prefs.setBool('hasSeenOnboarding', true);
-                  if (!saved || !mounted) return;
-                  context.read<CloudProvider>().startSync();
-                }
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (isFirstStart && mounted) await _startTour();
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Text(
-                  Translations.get(lang, 'gotIt'),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

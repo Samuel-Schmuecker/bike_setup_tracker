@@ -10,15 +10,20 @@ import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../providers/bike_provider.dart';
-import '../../providers/language_provider.dart'; 
-import '../../utils/translations.dart';  
+import '../../providers/language_provider.dart';
+import '../../utils/translations.dart';
 import '../../models/bike.dart';
 import '../../models/bike_parameters.dart';
 import '../../utils/image_helper.dart';
 import '../../data/bike_presets.dart';
+import '../bike_detail/setup_configurator_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/onboarding_tour_service.dart';
 
 class AddBikeScreen extends StatefulWidget {
-  const AddBikeScreen({Key? key}) : super(key: key);
+  const AddBikeScreen({Key? key, this.configureAfterSave = false})
+    : super(key: key);
+  final bool configureAfterSave;
 
   @override
   State<AddBikeScreen> createState() => _AddBikeScreenState();
@@ -26,24 +31,77 @@ class AddBikeScreen extends StatefulWidget {
 
 class _AddBikeScreenState extends State<AddBikeScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _modelTourKey = GlobalKey(debugLabel: 'own-bike-model');
+  final _creationTour = OnboardingTourService(
+    preferenceKey: 'hasSeenBikeCreationTour',
+    preferenceValue: true,
+  );
+  late final Future<void> _creationReady;
+  bool _firstOwnBike = false;
+  bool _saving = false;
 
-  String _modelName = ''; 
+  @override
+  void initState() {
+    super.initState();
+    _creationReady = _prepareCreation();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _creationReady;
+      if (!mounted || !_firstOwnBike) return;
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted || prefs.getBool('hasSeenBikeCreationTour') == true) return;
+      final german = context.read<LanguageProvider>().currentLanguage == 'de';
+      await _creationTour.run(() async {
+        if (!mounted) return;
+        await _creationTour.showStep(
+          context: context,
+          target: _modelTourKey,
+          step: 1,
+          total: 1,
+          event: 'bikeDatabase',
+          german: german,
+          sectionLabel: german ? 'Dein eigenes Bike' : 'Your own bike',
+          title: german ? 'Datenbank oder manuell' : 'Database or manual entry',
+          description: german
+              ? '**Modell suchen** → Vorschlag aus der Bike-Datenbank wählen. Nicht dabei? **Modell und Marke selbst eingeben.**'
+              : '**Search a model** → choose a bike database suggestion. Not listed? **Enter model and brand yourself.**',
+          allowTargetInteraction: true,
+        );
+      });
+    });
+  }
+
+  Future<void> _prepareCreation() async {
+    final bikes = context.read<BikeProvider>();
+    await bikes.ready;
+    final prefs = await SharedPreferences.getInstance();
+    _firstOwnBike =
+        prefs.getBool('hasCreatedOwnBike') != true &&
+        !bikes.bikes.any((bike) => bike.id != '3');
+  }
+
+  String _modelName = '';
 
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _travelFrontController = TextEditingController();
   final TextEditingController _travelRearController = TextEditingController();
-  
+
   String _category = 'Enduro';
   String? _selectedImagePath;
   BikeParameters? _selectedParams;
 
   final List<String> _categories = [
-    'Enduro', 'Trail', 'Downhill', 'All Mountain', 
-    'Gravel', 'Cross Country', 'E-Bike'
+    'Enduro',
+    'Trail',
+    'Downhill',
+    'All Mountain',
+    'Gravel',
+    'Cross Country',
+    'E-Bike',
   ];
 
   @override
   void dispose() {
+    _creationTour.cancelFor(context);
     _brandController.dispose();
     _travelFrontController.dispose();
     _travelRearController.dispose();
@@ -56,9 +114,9 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
       source: ImageSource.gallery,
       maxWidth: 800,
       maxHeight: 800,
-      imageQuality: 70, 
+      imageQuality: 70,
     );
-    
+
     if (pickedFile != null) {
       if (kIsWeb) {
         final bytes = await pickedFile.readAsBytes();
@@ -78,23 +136,43 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
     }
   }
 
-  void _saveBike() {
+  Future<void> _saveBike() async {
+    if (_saving) return;
+    await _creationReady;
+    if (!mounted || _saving) return;
     if (_formKey.currentState!.validate()) {
+      _saving = true;
       _formKey.currentState!.save();
 
       final newBike = Bike(
         id: const Uuid().v4(),
         brand: _brandController.text.trim(),
-        model: _modelName.trim(), 
+        model: _modelName.trim(),
         category: _category,
         travelFront: int.tryParse(_travelFrontController.text) ?? 0,
         travelRear: int.tryParse(_travelRearController.text) ?? 0,
         imagePath: _selectedImagePath,
-        availableParameters: _selectedParams, 
+        availableParameters: _selectedParams,
       );
 
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       context.read<BikeProvider>().addBike(newBike);
-      Navigator.pop(context);
+      await prefs.setBool('hasCreatedOwnBike', true);
+      if (!mounted) return;
+      if (widget.configureAfterSave || _firstOwnBike) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute<void>(
+            builder: (_) => SetupConfiguratorScreen(
+              bikeId: newBike.id,
+              showFirstBikeTour: _firstOwnBike,
+            ),
+          ),
+        );
+      } else {
+        Navigator.pop(context);
+      }
     }
   }
 
@@ -122,10 +200,16 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                     height: 140,
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      color: colorScheme.surfaceContainerHighest.withOpacity(
+                        0.5,
+                      ),
                       borderRadius: BorderRadius.circular(16.0),
-                      border: _selectedImagePath == null 
-                          ? Border.all(color: colorScheme.outlineVariant.withOpacity(0.5))
+                      border: _selectedImagePath == null
+                          ? Border.all(
+                              color: colorScheme.outlineVariant.withOpacity(
+                                0.5,
+                              ),
+                            )
                           : null,
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -133,9 +217,18 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                         ? Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.add_a_photo, size: 32, color: colorScheme.primary),
+                              Icon(
+                                Icons.add_a_photo,
+                                size: 32,
+                                color: colorScheme.primary,
+                              ),
                               const SizedBox(height: 8),
-                              Text(Translations.get(lang, 'addPhoto'), style: TextStyle(color: colorScheme.onSurfaceVariant)),
+                              Text(
+                                Translations.get(lang, 'addPhoto'),
+                                style: TextStyle(
+                                  color: colorScheme.onSurfaceVariant,
+                                ),
+                              ),
                             ],
                           )
                         : ImageHelper.buildImage(_selectedImagePath!),
@@ -150,48 +243,67 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                       return const Iterable<Bike>.empty();
                     }
                     final query = textEditingValue.text.toLowerCase();
-                    return presetBikes.where((bike) => 
-                      bike.model.toLowerCase().contains(query) || 
-                      bike.brand.toLowerCase().contains(query)
+                    return presetBikes.where(
+                      (bike) =>
+                          bike.model.toLowerCase().contains(query) ||
+                          bike.brand.toLowerCase().contains(query),
                     );
                   },
                   displayStringForOption: (Bike option) => option.model,
                   onSelected: (Bike selection) {
                     setState(() {
-                      _brandController.text = selection.brand; 
-                      _travelFrontController.text = selection.travelFront.toString(); 
-                      _travelRearController.text = selection.travelRear.toString();
+                      _brandController.text = selection.brand;
+                      _travelFrontController.text = selection.travelFront
+                          .toString();
+                      _travelRearController.text = selection.travelRear
+                          .toString();
                       if (_categories.contains(selection.category)) {
-                        _category = selection.category; 
+                        _category = selection.category;
                       }
-                      _selectedParams = presetBikeParameters[selection.id]; 
+                      _selectedParams = presetBikeParameters[selection.id];
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         // FIX 2: Korrekten Suffix-Key für das Ausrufezeichen verwendet
-                        content: Text('${Translations.get(lang, 'specsApplied')} ${selection.brand} ${selection.model} ${Translations.get(lang, 'specsAppliedSuffix')}'),
+                        content: Text(
+                          '${Translations.get(lang, 'specsApplied')} ${selection.brand} ${selection.model} ${Translations.get(lang, 'specsAppliedSuffix')}',
+                        ),
                         backgroundColor: Colors.teal,
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
-                    FocusScope.of(context).unfocus(); 
+                    FocusScope.of(context).unfocus();
                   },
-                  fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                    return TextFormField(
-                      controller: textEditingController,
-                      focusNode: focusNode,
-                      textInputAction: TextInputAction.next, 
-                      decoration: InputDecoration(
-                        labelText: Translations.get(lang, 'model'), 
-                        hintText: Translations.get(lang, 'modelHint'),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: const Icon(Icons.auto_awesome, size: 18),
-                      ),
-                      validator: (val) => (val == null || val.trim().isEmpty) ? Translations.get(lang, 'required') : null,
-                      onSaved: (val) => _modelName = val ?? '',
-                    );
-                  },
+                  fieldViewBuilder:
+                      (
+                        context,
+                        textEditingController,
+                        focusNode,
+                        onFieldSubmitted,
+                      ) {
+                        return TextFormField(
+                          key: _modelTourKey,
+                          onTap: () => _creationTour.complete('bikeDatabase'),
+                          controller: textEditingController,
+                          focusNode: focusNode,
+                          textInputAction: TextInputAction.next,
+                          decoration: InputDecoration(
+                            labelText: Translations.get(lang, 'model'),
+                            hintText: Translations.get(lang, 'modelHint'),
+                            border: const OutlineInputBorder(),
+                            suffixIcon: const Icon(
+                              Icons.auto_awesome,
+                              size: 18,
+                            ),
+                          ),
+                          validator: (val) =>
+                              (val == null || val.trim().isEmpty)
+                              ? Translations.get(lang, 'required')
+                              : null,
+                          onSaved: (val) => _modelName = val ?? '',
+                        );
+                      },
                   optionsViewBuilder: (context, onSelected, options) {
                     return Align(
                       alignment: Alignment.topLeft,
@@ -201,8 +313,8 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                         color: colorScheme.surfaceContainerHighest,
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
-                            maxHeight: 250, 
-                            maxWidth: MediaQuery.of(context).size.width - 32 
+                            maxHeight: 250,
+                            maxWidth: MediaQuery.of(context).size.width - 32,
                           ),
                           child: ListView.builder(
                             padding: EdgeInsets.zero,
@@ -211,9 +323,19 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                             itemBuilder: (BuildContext context, int index) {
                               final option = options.elementAt(index);
                               return ListTile(
-                                leading: const Icon(Icons.directions_bike, size: 20),
-                                title: Text('${option.brand} ${option.model}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text('${option.travelFront}V / ${option.travelRear}H mm'),
+                                leading: const Icon(
+                                  Icons.directions_bike,
+                                  size: 20,
+                                ),
+                                title: Text(
+                                  '${option.brand} ${option.model}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  '${option.travelFront}V / ${option.travelRear}H mm',
+                                ),
                                 onTap: () => onSelected(option),
                               );
                             },
@@ -228,54 +350,85 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
                 // --- MARKE ---
                 TextFormField(
                   controller: _brandController,
-                  decoration: InputDecoration(labelText: Translations.get(lang, 'brand'), border: const OutlineInputBorder()),
-                  validator: (val) => (val == null || val.trim().isEmpty) ? Translations.get(lang, 'required') : null,
+                  decoration: InputDecoration(
+                    labelText: Translations.get(lang, 'brand'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (val) => (val == null || val.trim().isEmpty)
+                      ? Translations.get(lang, 'required')
+                      : null,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
-                
+
                 // --- KATEGORIE ---
                 DropdownButtonFormField<String>(
                   value: _category,
-                  decoration: InputDecoration(labelText: Translations.get(lang, 'category'), border: const OutlineInputBorder()),
-                  items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                  onChanged: (val) { if (val != null) setState(() => _category = val); },
+                  decoration: InputDecoration(
+                    labelText: Translations.get(lang, 'category'),
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: _categories
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => _category = val);
+                  },
                 ),
                 const SizedBox(height: 16),
-                
+
                 // --- FEDERWEG ---
                 Row(
                   children: [
                     Expanded(
                       child: TextFormField(
                         controller: _travelFrontController,
-                        decoration: InputDecoration(labelText: Translations.get(lang, 'travelFront'), border: const OutlineInputBorder()),
+                        decoration: InputDecoration(
+                          labelText: Translations.get(lang, 'travelFront'),
+                          border: const OutlineInputBorder(),
+                        ),
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.next,
                         // FIX 3: Übersetzung für 'Fehler' eingefügt
-                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? Translations.get(lang, 'error') : null,
+                        validator: (val) =>
+                            (val == null ||
+                                val.isEmpty ||
+                                int.tryParse(val) == null)
+                            ? Translations.get(lang, 'error')
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: TextFormField(
                         controller: _travelRearController,
-                        decoration: InputDecoration(labelText: Translations.get(lang, 'travelRear'), border: const OutlineInputBorder()),
+                        decoration: InputDecoration(
+                          labelText: Translations.get(lang, 'travelRear'),
+                          border: const OutlineInputBorder(),
+                        ),
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done,
-                        validator: (val) => (val == null || val.isEmpty || int.tryParse(val) == null) ? Translations.get(lang, 'error') : null,
+                        validator: (val) =>
+                            (val == null ||
+                                val.isEmpty ||
+                                int.tryParse(val) == null)
+                            ? Translations.get(lang, 'error')
+                            : null,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 32),
-                
+
                 FilledButton.icon(
                   onPressed: _saveBike,
                   icon: const Icon(Icons.save),
                   label: Padding(
                     padding: const EdgeInsets.all(12.0),
-                    child: Text(Translations.get(lang, 'saveBike'), style: const TextStyle(fontSize: 16)),
+                    child: Text(
+                      Translations.get(lang, 'saveBike'),
+                      style: const TextStyle(fontSize: 16),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 40),

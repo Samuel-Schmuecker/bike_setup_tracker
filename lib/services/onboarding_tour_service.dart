@@ -5,6 +5,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Shows a spotlight while leaving the real target available for input.
 /// Screens report successful actions; Next can bypass an exercise, Skip ends it.
 class OnboardingTourService {
+  OnboardingTourService({
+    this.preferenceKey = 'is_first_start',
+    this.preferenceValue = false,
+  });
+  final String preferenceKey;
+  final bool preferenceValue;
+  bool createOwnBikeRequested = false;
   static const accent = Color(0xFFC4F000);
   static const surface = Color(0xFF1C1C1C);
   bool _running = false;
@@ -61,6 +68,7 @@ class OnboardingTourService {
     if (_running) return;
     _running = true;
     _cancelled = false;
+    createOwnBikeRequested = false;
     try {
       await tour();
     } finally {
@@ -76,6 +84,8 @@ class OnboardingTourService {
     required int step,
     int total = 6,
     bool advanced = false,
+    String? sectionLabel,
+    bool allowTargetInteraction = true,
     required String event,
     required String title,
     required String description,
@@ -123,8 +133,9 @@ class OnboardingTourService {
               title: title,
               description: description,
               german: german,
+              allowTargetInteraction: allowTargetInteraction,
               progress:
-                  '${advanced ? (german ? 'Vertiefung' : 'More features') : (german ? 'Grundtour' : 'Basics')} · $step / $total',
+                  '${sectionLabel ?? (advanced ? (german ? 'Vertiefung' : 'More features') : (german ? 'Grundtour' : 'Basics'))} · $step / $total',
               onSkip: cancel,
               onNext: () async {
                 if (busy) return;
@@ -146,7 +157,7 @@ class OnboardingTourService {
     Overlay.of(context).insert(_overlay!);
     final result = await pending.future;
     final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setBool('is_first_start', false)) {
+    if (!await prefs.setBool(preferenceKey, preferenceValue)) {
       throw StateError('Could not save onboarding status');
     }
     return result && !_cancelled && context.mounted;
@@ -162,11 +173,13 @@ class _Spotlight extends StatelessWidget {
     required this.german,
     required this.onSkip,
     required this.onNext,
+    required this.allowTargetInteraction,
   });
   final GlobalKey target;
   final String title, description, progress;
   final bool german;
   final VoidCallback onSkip, onNext;
+  final bool allowTargetInteraction;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -198,7 +211,9 @@ class _Spotlight extends StatelessWidget {
           Positioned.fill(
             child: GestureDetector(
               onTap: () {},
-              child: CustomPaint(painter: _SpotlightPainter(rect)),
+              child: CustomPaint(
+                painter: _SpotlightPainter(rect, allowTargetInteraction),
+              ),
             ),
           ),
           SafeArea(
@@ -251,10 +266,24 @@ class _Spotlight extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  Text(
-                                    description,
+                                  Text.rich(
+                                    TextSpan(
+                                      children: [
+                                        for (final (index, part)
+                                            in description.split('**').indexed)
+                                          TextSpan(
+                                            text: part,
+                                            style: index.isOdd
+                                                ? const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.white,
+                                                  )
+                                                : null,
+                                          ),
+                                      ],
+                                    ),
                                     style: const TextStyle(
-                                      color: Colors.white,
+                                      color: Colors.white70,
                                       fontSize: 15,
                                       height: 1.4,
                                     ),
@@ -299,10 +328,12 @@ class _Spotlight extends StatelessWidget {
 }
 
 class _SpotlightPainter extends CustomPainter {
-  const _SpotlightPainter(this.rect);
+  const _SpotlightPainter(this.rect, this.allowTargetInteraction);
   final Rect rect;
+  final bool allowTargetInteraction;
   @override
-  bool hitTest(Offset position) => !rect.contains(position);
+  bool hitTest(Offset position) =>
+      !allowTargetInteraction || !rect.contains(position);
   @override
   void paint(Canvas canvas, Size size) {
     final hole = RRect.fromRectAndRadius(rect, const Radius.circular(20));
@@ -321,5 +352,7 @@ class _SpotlightPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_SpotlightPainter oldDelegate) => rect != oldDelegate.rect;
+  bool shouldRepaint(_SpotlightPainter oldDelegate) =>
+      rect != oldDelegate.rect ||
+      allowTargetInteraction != oldDelegate.allowTargetInteraction;
 }
