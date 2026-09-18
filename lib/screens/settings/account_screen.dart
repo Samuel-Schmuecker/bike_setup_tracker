@@ -504,6 +504,55 @@ class _AccountScreenState extends State<AccountScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              if (cloud.googleIssue != null) ...[
+                Card(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          googleAuthErrorHelp(
+                            cloud.googleIssue!,
+                            languageCode: languageCode,
+                          ),
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
+                          ),
+                        ),
+                        if (cloud.googleIssue == 'identity_already_exists') ...[
+                          const SizedBox(height: 12),
+                          FilledButton.icon(
+                            onPressed: disabled
+                                ? null
+                                : () async {
+                                    await run(cloud.cancelGoogle);
+                                    if (mounted &&
+                                        cloud.googleIssue == null &&
+                                        !cloud.googlePending) {
+                                      await signInWithGuestChoice(cloud);
+                                    }
+                                  },
+                            icon: const Icon(Icons.login),
+                            label: Text(
+                              Translations.get(languageCode, 'accountLogin'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),

@@ -55,6 +55,19 @@ void main() {
     expect(find.text('Login'), findsNWidgets(2));
     expect(find.text('E-Mail-Code anfordern'), findsNothing);
     expect(find.textContaining('Die anonyme Anmeldung allein'), findsOneWidget);
+    cloud.googleIssue = 'identity_already_exists';
+    tester.element(find.byType(AccountScreen)).markNeedsBuild();
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Dieses Google-Konto ist bereits'),
+      findsWidgets,
+    );
+    final recoveryLogin = find.ancestor(
+      of: find.byIcon(Icons.login),
+      matching: find.byWidgetPredicate((widget) => widget is FilledButton),
+    );
+    expect(recoveryLogin, findsOneWidget);
+    expect(tester.widget<FilledButton>(recoveryLogin).onPressed, isNotNull);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox.shrink());
     cloud.dispose();

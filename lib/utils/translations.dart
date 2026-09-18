@@ -34,7 +34,7 @@ class Translations {
       'authProofHelp':
           'Der Anmeldenachweis fehlt, ist ungültig oder abgelaufen. Starte und beende die Anmeldung im selben Browser. Auf dem iPhone die App direkt in Safari öffnen und dort erneut anmelden. Vorhandene App-Daten nicht löschen.',
       'authAlreadyLinkedHelp':
-          'Dieses Google-Konto ist bereits verknüpft. Brich diesen Versuch ab und wähle „Mit Google anmelden“.',
+          'Dieses Google-Konto ist bereits mit einem App-Konto verknüpft. Wähle „Login“, um dein bestehendes Konto zu öffnen. Deine Gastdaten bleiben bis zu deiner Entscheidung erhalten.',
       'authManualLinkingHelp':
           'Aktiviere „Allow manual linking“ in den Supabase-Auth-Einstellungen.',
       'authIncompleteHelp':
@@ -501,7 +501,7 @@ class Translations {
       'authProofHelp':
           'The sign-in proof is missing, invalid or expired. Start and finish in the same browser. On iPhone, open the app directly in Safari and retry there. Do not clear existing app data.',
       'authAlreadyLinkedHelp':
-          'This Google account is already linked. Cancel this attempt and choose Sign in with Google.',
+          'This Google account is already linked to an app account. Choose “Login” to open your existing account. Your guest data is kept until you decide what to do with it.',
       'authManualLinkingHelp':
           'Enable Allow manual linking in Supabase Auth settings.',
       'authIncompleteHelp':

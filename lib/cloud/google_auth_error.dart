@@ -4,6 +4,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Expose only a short diagnostic code, never callback URLs or tokens.
 String googleAuthErrorCode(Object error) {
   if (error is! AuthException) return 'google_failed';
+  if (error.message.toLowerCase().contains('identity is already linked')) {
+    return 'identity_already_exists';
+  }
   if (error.message.toLowerCase().contains('code verifier')) {
     return 'pkce_verifier_missing_or_invalid';
   }
@@ -11,6 +14,28 @@ String googleAuthErrorCode(Object error) {
   return code != null && RegExp(r'^[a-z0-9_]{1,80}$').hasMatch(code)
       ? code
       : 'google_failed';
+}
+
+// Capture callback errors before the SDK processes/clears the browser URL.
+String? googleAuthCallbackError(Uri uri) {
+  try {
+    final parameters = {
+      ...uri.queryParameters,
+      ...Uri.splitQueryString(uri.fragment),
+    };
+    if (!parameters.containsKey('error') &&
+        !parameters.containsKey('error_code')) {
+      return null;
+    }
+    return googleAuthErrorCode(
+      AuthException(
+        parameters['error_description'] ?? '',
+        code: parameters['error_code'],
+      ),
+    );
+  } on FormatException {
+    return null;
+  }
 }
 
 String googleAuthErrorHelp(String code, {required String languageCode}) {

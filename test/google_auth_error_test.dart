@@ -3,6 +3,38 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bike_setup_tracker/cloud/google_auth_error.dart';
 
 void main() {
+  test('Google linking callback errors survive query and fragment redirects', () {
+    for (final separator in ['?', '#']) {
+      expect(
+        googleAuthCallbackError(
+          Uri.parse(
+            'https://app.example/${separator}error=server_error&error_code=identity_already_exists&error_description=hidden',
+          ),
+        ),
+        'identity_already_exists',
+      );
+    }
+    expect(
+      googleAuthCallbackError(Uri.parse('https://app.example/?code=secret')),
+      isNull,
+    );
+    expect(
+      googleAuthCallbackError(
+        Uri.parse('https://app.example/#error=access_denied'),
+      ),
+      'google_failed',
+    );
+    expect(
+      googleAuthErrorCode(
+        const AuthException('Identity is already linked to another user'),
+      ),
+      'identity_already_exists',
+    );
+    expect(
+      googleAuthErrorHelp('identity_already_exists', languageCode: 'de'),
+      contains('Login'),
+    );
+  });
   test('missing verifier explains same-browser recovery', () {
     final code = googleAuthErrorCode(
       const AuthException('Code verifier could not be found in local storage.'),

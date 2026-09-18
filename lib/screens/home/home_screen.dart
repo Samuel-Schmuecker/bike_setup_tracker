@@ -28,6 +28,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with RouteAware {
   bool _backupReminderShowing = false;
+  bool _googleRecoveryShowing = false;
+  String? _shownGoogleIssue;
 
   @override
   void didChangeDependencies() {
@@ -518,6 +520,25 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final cloud = context.watch<CloudProvider?>();
+    if (cloud?.googleIssue == null) _shownGoogleIssue = null;
+    if (cloud?.googleIssue != null &&
+        cloud?.googleIssue != _shownGoogleIssue &&
+        !_googleRecoveryShowing) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted ||
+            _googleRecoveryShowing ||
+            cloud?.googleIssue == null ||
+            ModalRoute.of(context)?.isCurrent != true) {
+          return;
+        }
+        _googleRecoveryShowing = true;
+        _shownGoogleIssue = cloud?.googleIssue;
+        await Navigator.of(
+          context,
+        ).push(MaterialPageRoute<void>(builder: (_) => const AccountScreen()));
+        _googleRecoveryShowing = false;
+      });
+    }
     final lang = context.watch<LanguageProvider>().currentLanguage;
     final allBikes = context.watch<BikeProvider>().bikes;
 

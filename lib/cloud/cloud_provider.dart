@@ -114,6 +114,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   Future<SupabaseClient> _ensureClient() async {
     if (!_cloudEnabled) throw StateError('ONBOARDING_NOT_COMPLETED');
     if (_client != null) return _client!;
+    if (kIsWeb && googlePending) {
+      googleIssue = googleAuthCallbackError(Uri.base) ?? googleIssue;
+    }
     await Supabase.initialize(
       url: CloudConfig.url,
       publishableKey: CloudConfig.key,
@@ -524,6 +527,10 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
           (await SharedPreferences.getInstance()).getString('app_lang') ?? 'de';
       _oauthReturn = await OAuthReturn.open(attempt, (uri) async {
         try {
+          final callbackError = googleAuthCallbackError(uri);
+          if (callbackError != null) {
+            throw AuthException('Google sign-in failed', code: callbackError);
+          }
           await client.auth.getSessionFromUrl(uri);
           await sync();
         } catch (error) {
@@ -589,7 +596,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
           webOnlyWindowName: '_self',
         );
         if (!opened) throw StateError('GOOGLE_BROWSER_FAILED');
-      } catch (_) {
+      } catch (error) {
+        googleIssue = googleAuthErrorCode(error);
         await _oauthReturn?.close();
         await store.mutate((state) => state.remove('googleIntent'));
         rethrow;
@@ -760,7 +768,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     if (currentTheme != null) {
       await currentTheme.reset();
     } else {
-      final temporaryTheme = ThemeProvider(await SharedPreferences.getInstance());
+      final temporaryTheme = ThemeProvider(
+        await SharedPreferences.getInstance(),
+      );
       try {
         await temporaryTheme.reset();
       } finally {
