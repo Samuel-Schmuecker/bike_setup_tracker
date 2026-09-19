@@ -54928,7 +54928,8 @@ break
 case 47:s=49
 return A.f(c3.iD(new A.ah0()),$async$el)
 case 49:case 48:if(c4.a(B.k.bg(B.k.bl(c3.c,null),null)).h(0,"googleIntent")!=null&&m.ax==="synced")m.ax="google_waiting"
-s=m.ax==="synced"&&c4.a(B.k.bg(B.k.bl(c3.c,null),null)).h(0,"guestCleanup")!=null?50:51
+b=m.ax
+s=(b==="synced"||b==="cleanup")&&c4.a(B.k.bg(B.k.bl(c3.c,null),null)).h(0,"guestCleanup")!=null?50:51
 break
 case 50:p=53
 b=l.ax
