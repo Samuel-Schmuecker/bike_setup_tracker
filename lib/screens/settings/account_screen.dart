@@ -242,21 +242,38 @@ class _AccountScreenState extends State<AccountScreen> {
         content: SizedBox(
           width: 500,
           height: 350,
-          child: rows.isEmpty
-              ? Text(Translations.get(languageCode, 'backupCloudHistoryEmpty'))
-              : ListView(
-                  children: [
-                    for (final row in rows)
-                      if (row['payload'] != null)
-                        ListTile(
-                          title: Text(
-                            '${row['document_id']} · ${row['revision']}',
-                          ),
-                          subtitle: Text('${row['saved_at']}'),
-                          onTap: () => Navigator.pop(ctx, row),
+          child: Column(
+            children: [
+              Text(Translations.get(languageCode, 'backupCloudHistoryHint')),
+              const SizedBox(height: 12),
+              Expanded(
+                child: rows.isEmpty
+                    ? Text(
+                        Translations.get(
+                          languageCode,
+                          'backupCloudHistoryEmpty',
                         ),
-                  ],
-                ),
+                      )
+                    : ListView(
+                        children: [
+                          for (final row in rows)
+                            if (row['payload'] != null)
+                              ListTile(
+                                leading: Icon(
+                                  row['document_id'] == 'library'
+                                      ? Icons.category_outlined
+                                      : Icons.directions_bike,
+                                ),
+                                title: Text(_historyName(row)),
+                                subtitle: Text(_historyDate(row)),
+                                trailing: const Icon(Icons.restore),
+                                onTap: () => Navigator.pop(ctx, row),
+                              ),
+                        ],
+                      ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -270,10 +287,29 @@ class _AccountScreenState extends State<AccountScreen> {
         mounted &&
         await confirm(
           Translations.get(languageCode, 'backupRestoreTitle'),
-          Translations.get(languageCode, 'backupRestoreBody'),
+          '${_historyName(selected)} · ${_historyDate(selected)}\n\n${Translations.get(languageCode, 'backupRestoreBody')}',
         )) {
       await cloud.restoreVersion(selected);
     }
+  }
+
+  String _historyName(Json row) {
+    if (row['document_id'] == 'library') {
+      return Translations.get(languageCode, 'backupHistoryLibrary');
+    }
+    final payload = row['payload'] as Map;
+    final name = [
+      payload['brand'],
+      payload['model'],
+    ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' ');
+    return name.isEmpty ? 'Bike' : name;
+  }
+
+  String _historyDate(Json row) {
+    final date = DateTime.tryParse('${row['saved_at']}')?.toLocal();
+    if (date == null) return '';
+    final localizations = MaterialLocalizations.of(context);
+    return '${localizations.formatMediumDate(date)} · ${localizations.formatTimeOfDay(TimeOfDay.fromDateTime(date), alwaysUse24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context))}';
   }
 
   Future<void> localHistory(CloudProvider cloud) async {

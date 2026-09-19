@@ -15,7 +15,8 @@ Datenbankpasswort in die Flutter-App übernehmen.
 4. Die Folgemigrationen für Kontolöschung, Gastwechsel und
    [Bildbereinigung](bike-image-cleanup.md) einschließlich der dort genannten
    Edge Functions einrichten.
-5. In Authentication anonyme Anmeldung aktivieren. Google anschließend wie
+5. Die Migration für die [7-Tage-Aufbewahrung](history-retention.md) ausführen.
+6. In Authentication anonyme Anmeldung aktivieren. Google anschließend wie
    in Abschnitt 2 beschrieben einrichten; E-Mail-Anmeldung ist dafür nicht nötig.
 
 Die Tabellen brauchen keine manuelle Bearbeitung. Direkte Schreibzugriffe
@@ -61,8 +62,9 @@ Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
   vorsichtshalber als Konflikt behandelt. Eine spätere feinere Aufteilung ist möglich.
 - Die Cloud prüft die erwartete Revision atomar. Löschungen bleiben als
   Löschmarkierungen erhalten. Die letzten 20 vorherigen Versionen je Dokument
-  können wiederhergestellt werden. Die Oberfläche zeigt die 100 neuesten
-  historischen Einträge des Kontos.
+  bleiben höchstens sieben Tage zugänglich und werden minütlich bereinigt.
+  Die Oberfläche zeigt bis zu 100 wiederherstellbare Einträge mit Bike-Namen
+  und Datum; technische Reihenfolge-Einträge sind ausgeblendet.
 - Bilder: private, unveränderliche Objekte anhand ihres Inhalts-Hashs,
   maximal 5 MB pro Datei. Auf dem zweiten Gerät werden sie lokal eingebettet
   gespeichert, damit sie offline angezeigt werden können.

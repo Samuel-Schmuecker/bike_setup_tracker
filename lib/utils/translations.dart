@@ -150,8 +150,12 @@ class Translations {
       'backupImportBody':
           'Die Bikes werden als neue Kopien hinzugefügt. Vorhandene Bikes bleiben erhalten.',
       'confirm': 'Bestätigen',
-      'backupCloudHistoryTitle': 'Frühere Cloud-Versionen',
-      'backupCloudHistoryEmpty': 'Noch keine früheren Versionen vorhanden.',
+      'backupCloudHistoryTitle': 'Sicherungen wiederherstellen',
+      'backupCloudHistoryEmpty':
+          'Keine Sicherungen der letzten 7 Tage vorhanden.',
+      'backupCloudHistoryHint':
+          'Ältere Stände deiner Bikes und Feldbibliothek. Wähle einen Stand zum Wiederherstellen. Sicherungen laufen nach 7 Tagen ab.',
+      'backupHistoryLibrary': 'Feldbibliothek',
       'close': 'Schließen',
       'backupRestoreTitle': 'Version wiederherstellen?',
       'backupRestoreBody':
@@ -246,7 +250,7 @@ class Translations {
           'Eine exportierte Datei enthält deine Bikes, Setups und Bilder. Bewahre sie an einem sicheren Ort außerhalb dieses Geräts auf.',
       'backupExportAction': 'Exportieren',
       'backupImportAction': 'Importieren',
-      'backupCloudVersions': 'Cloud-Versionen',
+      'backupCloudVersions': 'Sicherungen wiederherstellen',
       'accountDeleteSummary':
           'Entfernt dein App-Konto und die zugehörigen Daten dauerhaft. Exportiere vorher eine Sicherung, wenn du deine Daten behalten möchtest.',
       'accountExportBeforeDelete': 'Vorher Sicherung exportieren',
@@ -620,8 +624,11 @@ class Translations {
       'backupImportBody':
           'Bikes will be added as new copies. Existing bikes are retained.',
       'confirm': 'Confirm',
-      'backupCloudHistoryTitle': 'Previous cloud versions',
-      'backupCloudHistoryEmpty': 'No previous versions yet.',
+      'backupCloudHistoryTitle': 'Restore backups',
+      'backupCloudHistoryEmpty': 'No backups from the last 7 days.',
+      'backupCloudHistoryHint':
+          'Earlier versions of your bikes and field library. Choose a version to restore. Backups expire after 7 days.',
+      'backupHistoryLibrary': 'Field library',
       'close': 'Close',
       'backupRestoreTitle': 'Restore version?',
       'backupRestoreBody':
@@ -713,7 +720,7 @@ class Translations {
           'An exported file contains your bikes, setups and images. Keep it somewhere safe outside this device.',
       'backupExportAction': 'Export',
       'backupImportAction': 'Import',
-      'backupCloudVersions': 'Cloud versions',
+      'backupCloudVersions': 'Restore backups',
       'accountDeleteSummary':
           'Permanently removes your app account and its data. Export a backup first if you want to keep your data.',
       'accountExportBeforeDelete': 'Export backup first',

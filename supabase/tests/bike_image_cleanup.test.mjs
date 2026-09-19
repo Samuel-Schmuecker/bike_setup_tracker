@@ -36,6 +36,38 @@ async function fixture(t) {
   return { db, upload, save, claim };
 }
 
+test('history expires across accounts without deleting current bikes; RLS enforces the boundary', async (t) => {
+  const { db, save } = await fixture(t);
+  await save('bike', 0, null);
+  await db.exec(`
+    insert into public.bike_document_history(user_id, document_id, revision, payload, saved_at) values
+      ('${uid}', 'bike:old', 1, '{}', now() - interval '8 days'),
+      ('${other}', 'bike:old', 1, '{}', now() - interval '8 days'),
+      ('${uid}', 'bike:recent', 1, '{}', now() - interval '6 days');
+    create schema cron;
+    create table cron.job(jobname text, schedule text, command text);
+    create function cron.schedule(text,text,text) returns bigint language sql as $$
+      insert into cron.job values ($1,$2,$3) returning 1::bigint;
+    $$;
+  `);
+  // PGlite has no scheduler extension. Execute the real migration with only
+  // extension installation omitted and capture its scheduling request above.
+  const migration = await readFile(new URL('../migrations/202609190001_history_retention.sql', import.meta.url), 'utf8');
+  await db.exec(migration.replace('create extension if not exists pg_cron with schema pg_catalog;', ''));
+  assert.equal((await db.query('select * from public.bike_document_history')).rows.length, 1);
+  assert.equal((await db.query('select * from public.bike_documents')).rows.length, 1);
+  assert.equal((await db.query('select schedule from cron.job')).rows[0].schedule, '* * * * *');
+  await db.exec(`insert into public.bike_document_history(user_id,document_id,revision,payload,saved_at)
+    values ('${uid}','bike:expired',1,'{}',now() - interval '7 days'),
+           ('${other}','bike:private',1,'{}',now());
+    set role authenticated;`);
+  assert.deepEqual((await db.query('select document_id from public.bike_document_history')).rows,
+    [{ document_id: 'bike:recent' }]);
+  await assert.rejects(db.query('select public.purge_expired_bike_history()'), /permission denied/);
+  await db.exec('reset role; select public.purge_expired_bike_history();');
+  assert.equal((await db.query('select * from public.bike_document_history')).rows.length, 2);
+});
+
 test('deletion releases its photos but preserves setup history without image references', async (t) => {
   const { db, upload, save, claim } = await fixture(t);
   await upload(); await save('bike', 0); await save('bike', 1, null);

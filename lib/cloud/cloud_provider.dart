@@ -1055,6 +1055,15 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         .from('bike_document_history')
         .select()
         .eq('user_id', user!.id)
+        .neq('document_id', 'order')
+        .not('payload', 'is', null)
+        .gt(
+          'saved_at',
+          DateTime.now()
+              .toUtc()
+              .subtract(const Duration(days: 7))
+              .toIso8601String(),
+        )
         .order('saved_at', ascending: false)
         .limit(100);
   }
