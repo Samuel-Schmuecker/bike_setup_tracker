@@ -135,6 +135,7 @@ class _AccountScreenState extends State<AccountScreen> {
       _working = true;
       _message = null;
     });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     try {
       await work();
       if (mounted) setState(() => _message = success);
@@ -145,6 +146,13 @@ class _AccountScreenState extends State<AccountScreen> {
             languageCode,
             'accountOperationError',
             {'error': (error).toString()},
+          ),
+        );
+        // The inline error can be below the viewport after the guest dialog.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_message!),
+            duration: const Duration(seconds: 15),
           ),
         );
       }

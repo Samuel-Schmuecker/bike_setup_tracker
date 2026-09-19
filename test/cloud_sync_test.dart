@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:bike_setup_tracker/cloud/cloud_provider.dart';
 import 'package:bike_setup_tracker/cloud/local_store.dart';
 import 'package:bike_setup_tracker/cloud/sync_documents.dart';
@@ -47,6 +48,8 @@ class FakeCloud {
   int deletionCalls = 0;
   int guestDeletionCalls = 0;
   bool failGuestDeletion = false;
+  bool failGuestPreparation = false;
+  int guestPreparationCalls = 0;
   int signupCalls = 0;
   int requests = 0;
   final deletedUsers = <String>{};
@@ -104,8 +107,13 @@ class FakeCloud {
         if (failGuestDeletion) return json({'error': 'guest_changed'}, 409);
         return json({'deleted': true});
       }
-      if (body['action'] == 'prepare_guest')
+      if (body['action'] == 'prepare_guest') {
+        guestPreparationCalls++;
+        if (failGuestPreparation) {
+          return json({'error': 'guest_changed_or_setup_missing'}, 409);
+        }
         return json({'ticket': 'guest-ticket'});
+      }
       deletionCalls++;
       if (failDeletion) return json({'error': 'image_delete_failed'}, 500);
       rows.clear();
@@ -651,7 +659,72 @@ void main() {
         };
       });
 
+  test(
+    'failed Google preparation releases callback and preserves guest data',
+    () async {
+      await initialize([bike('guest')]);
+      server.anonymousAuth = true;
+      await server.client.auth.signInAnonymously();
+      await cloud.sync();
+      expect(cloud.status, 'synced');
+      server.failGuestPreparation = true;
+
+      await expectLater(
+        cloud.startGoogle(link: false, guestChoice: 'import'),
+        throwsA(isA<FunctionException>()),
+      );
+
+      expect(cloud.googleIssue, isNotNull);
+      expect(cloud.googlePending, isFalse);
+      expect(cloud.busy, isFalse);
+      expect(bikes.bikes.single.id, 'guest');
+      expect(server.deletionCalls, 0);
+      expect(server.guestDeletionCalls, 0);
+      final listener = await HttpServer.bind(
+        InternetAddress.loopbackIPv4,
+        43827,
+      );
+      await listener.close(force: true);
+    },
+  );
+
   const photo = 'data:image/png;base64,AQIDBA==';
+
+  test(
+    'image cleanup failure does not block Google guest preparation',
+    () async {
+      await initialize([bike('guest')]);
+      await server.client.auth.signInAnonymously();
+      await cloud.sync();
+      server.failImageCleanup = true;
+      // Stop at the transfer endpoint instead of opening a real browser.
+      server.failGuestPreparation = true;
+      await expectLater(
+        cloud.startGoogle(link: false, guestChoice: 'import'),
+        throwsA(isA<FunctionException>()),
+      );
+      expect(cloud.status, 'cleanup');
+      expect(server.guestPreparationCalls, 1);
+      expect(bikes.bikes.single.id, 'guest');
+    },
+  );
+
+  test('cleanup failure cannot mask missing images and permit login', () async {
+    await initialize([bike('guest')]);
+    await server.client.auth.signInAnonymously();
+    await cloud.sync();
+    server.rows['bike:guest']!['payload']['imagePath'] =
+        'cloud:user-1/missing.jpg';
+    server.rows['bike:guest']!['revision'] = 2;
+    server.failImageCleanup = true;
+    await expectLater(
+      cloud.startGoogle(link: false, guestChoice: 'import'),
+      throwsStateError,
+    );
+    expect(cloud.status, 'images');
+    expect(server.guestPreparationCalls, 0);
+    expect(bikes.bikes.single.id, 'guest');
+  });
 
   test(
     'photo upload with lost document response survives restart without a duplicate or conflict',

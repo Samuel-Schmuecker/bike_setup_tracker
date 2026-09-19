@@ -386,7 +386,8 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         } catch (error, stack) {
           lastError = error;
           lastErrorStack = stack;
-          status = 'cleanup';
+          // Cleanup is maintenance, but must not hide missing image downloads.
+          if (status == 'synced') status = 'cleanup';
         }
       }
       if (status == 'synced') {
@@ -615,7 +616,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         throw StateError('Choose what to do with guest data');
       }
       await sync();
-      if (status != 'synced') {
+      // Old image cleanup does not affect the synchronized guest documents.
+      // The transfer endpoint still validates their revisions before switching.
+      if (status != 'synced' && status != 'cleanup') {
         throw StateError(
           'Gastdaten zuerst vollständig synchronisieren und Konflikte lösen.',
         );
@@ -647,43 +650,43 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
           rethrow;
         }
       }, languageCode: languageCode);
-      await store.backup('before-google');
-      String? guestTicket;
-      if (!link &&
-          anonymous &&
-          user?.id == store.owner &&
-          store.owner != null) {
-        final response = await client.functions.invoke(
-          'delete-account',
-          body: {
-            'action': 'prepare_guest',
-            'revisions': {
-              for (final entry in (store.state['base'] as Map).entries)
-                if ((entry.value['revision'] as num) > 0)
-                  entry.key: entry.value['revision'],
+      try {
+        await store.backup('before-google');
+        String? guestTicket;
+        if (!link &&
+            anonymous &&
+            user?.id == store.owner &&
+            store.owner != null) {
+          final response = await client.functions.invoke(
+            'delete-account',
+            body: {
+              'action': 'prepare_guest',
+              'revisions': {
+                for (final entry in (store.state['base'] as Map).entries)
+                  if ((entry.value['revision'] as num) > 0)
+                    entry.key: entry.value['revision'],
+              },
             },
+          );
+          if (response.data is! Map || response.data['ticket'] is! String) {
+            throw StateError('Gastwechsel konnte nicht vorbereitet werden.');
+          }
+          guestTicket = response.data['ticket'] as String;
+        }
+        await store.mutate(
+          (state) => state['googleIntent'] = {
+            'id': attempt,
+            'kind': link ? 'link' : 'login',
+            'guestTicket': guestTicket,
+            'guestChoice': guestChoice,
+            'sourceOwner': state['owner'],
+            'sourceAnonymous':
+                state['owner'] == null ||
+                state['anonymousOwner'] == true ||
+                (anonymous && user?.id == state['owner']),
+            'createdAt': DateTime.now().microsecondsSinceEpoch,
           },
         );
-        if (response.data is! Map || response.data['ticket'] is! String) {
-          throw StateError('Gastwechsel konnte nicht vorbereitet werden.');
-        }
-        guestTicket = response.data['ticket'] as String;
-      }
-      await store.mutate(
-        (state) => state['googleIntent'] = {
-          'id': attempt,
-          'kind': link ? 'link' : 'login',
-          'guestTicket': guestTicket,
-          'guestChoice': guestChoice,
-          'sourceOwner': state['owner'],
-          'sourceAnonymous':
-              state['owner'] == null ||
-              state['anonymousOwner'] == true ||
-              (anonymous && user?.id == state['owner']),
-          'createdAt': DateTime.now().microsecondsSinceEpoch,
-        },
-      );
-      try {
         final redirect = _oauthReturn!.redirect;
         final response = link
             ? await client.auth.getLinkIdentityUrl(
