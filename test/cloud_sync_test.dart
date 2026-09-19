@@ -14,6 +14,7 @@ import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:sembast/sembast_memory.dart';
+import 'package:sembast/sembast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -1069,6 +1070,36 @@ void main() {
       expect(server.deletionCalls, 0);
     },
   );
+
+  test('guest copies merge into a previously saved Google workspace', () async {
+    await switchGuestWithChoice('import');
+    await stringMapStoreFactory
+        .store('workspaces')
+        .record('account:user-2')
+        .put(store.database, {
+          'version': 1,
+          'owner': 'user-2',
+          'payload': {
+            'bikes': [bike('existing')],
+            'catalog': [],
+          },
+          'base': {},
+          'initialized': true,
+        });
+    server.rows['bike:existing'] = {
+      'document_id': 'bike:existing',
+      'revision': 1,
+      'payload': bike('existing'),
+    };
+    await cloud.sync();
+    expect(cloud.googlePending, isFalse, reason: '${cloud.lastError}');
+    expect(store.owner, 'user-2');
+    expect(bikes.bikes.length, 2);
+    expect(bikes.bikes.map((bike) => bike.id), contains('existing'));
+    expect(bikes.bikes.map((bike) => bike.id), isNot(contains('guest')));
+    await cloud.sync();
+    expect(bikes.bikes.length, 2);
+  });
 
   test(
     'explicit discard never uploads guest bikes to Google account',

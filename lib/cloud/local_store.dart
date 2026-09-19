@@ -257,7 +257,9 @@ class LocalStore extends ChangeNotifier {
                   'base': {},
                   'initialized': true,
                 }
-              : Map<String, dynamic>.from(saved);
+              // Database snapshots contain read-only nested lists and maps.
+              // Guest import needs a mutable copy of the entire workspace.
+              : cloneJson(saved);
           if (intent['sourceAnonymous'] == true) {
             await _record.record('backup:${intent['createdAt']}').put(txn, {
               'owner': uid,
