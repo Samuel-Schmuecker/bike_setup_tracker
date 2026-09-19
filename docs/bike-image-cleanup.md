@@ -2,6 +2,14 @@
 
 ## Supabase aktivieren
 
+Im aktuellen Projekt ist die Funktion unter dem URL-Slug `super-function`
+bereitgestellt; der Dashboard-Anzeigename lautet `cleanup-bike-images`.
+Die App verwendet deshalb standardmäßig `super-function`. Entscheidend ist
+die tatsächliche URL, nicht der Anzeigename. Für eine Bereitstellung unter
+`cleanup-bike-images` die App mit
+`--dart-define=SUPABASE_IMAGE_CLEANUP_FUNCTION=cleanup-bike-images` bauen.
+Die folgenden Schritte beschreiben eine neue Bereitstellung unter diesem Namen.
+
 Vor Veröffentlichung der aktualisierten App:
 
 1. Die bisherigen drei Migrationen müssen eingerichtet sein. Danach

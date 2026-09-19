@@ -375,7 +375,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         try {
           if (user?.id != uid) throw StateError('SESSION_MISSING');
           final result = await client.functions.invoke(
-            'cleanup-bike-images',
+            CloudConfig.imageCleanupFunction,
             headers: {'Authorization': authorization},
           );
           if (result.data is! Map || result.data['complete'] != true) {

@@ -73,7 +73,7 @@ class FakeCloud {
       request: request,
     );
     final path = request.url.path;
-    if (path == '/functions/v1/cleanup-bike-images') {
+    if (path == '/functions/v1/super-function') {
       imageCleanupCalls++;
       if (failImageCleanup) return json({'error': 'image_delete_failed'}, 500);
       final candidates = <String>{};
