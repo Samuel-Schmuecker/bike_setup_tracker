@@ -20,6 +20,8 @@ class AccountScreen extends StatefulWidget {
 class _AccountScreenState extends State<AccountScreen> {
   String? _message;
   bool _working = false;
+  bool _highlightReconnect = false;
+  final _reconnectKey = GlobalKey();
   String get languageCode => context.read<LanguageProvider>().currentLanguage;
 
   Future<void> signInWithGuestChoice(CloudProvider cloud) async {
@@ -73,7 +75,10 @@ class _AccountScreenState extends State<AccountScreen> {
       }
     }
     if (mounted) {
-      await run(() => cloud.startGoogle(link: false, guestChoice: choice));
+      await run(
+        () => cloud.startGoogle(link: false, guestChoice: choice),
+        guideReconnect: true,
+      );
     }
   }
 
@@ -129,7 +134,11 @@ class _AccountScreenState extends State<AccountScreen> {
     if (accepted == true && mounted) await run(cloud.deleteAccount);
   }
 
-  Future<void> run(Future<void> Function() work, {String? success}) async {
+  Future<void> run(
+    Future<void> Function() work, {
+    String? success,
+    bool guideReconnect = false,
+  }) async {
     if (_working) return;
     setState(() {
       _working = true;
@@ -141,13 +150,29 @@ class _AccountScreenState extends State<AccountScreen> {
       if (mounted) setState(() => _message = success);
     } catch (error) {
       if (mounted) {
-        setState(
-          () => _message = Translations.format(
-            languageCode,
-            'accountOperationError',
-            {'error': (error).toString()},
-          ),
-        );
+        final needsReconnect =
+            guideReconnect && context.read<CloudProvider>().sessionUnavailable;
+        setState(() {
+          if (needsReconnect) _highlightReconnect = true;
+          _message = needsReconnect
+              ? Translations.get(languageCode, 'accountReconnectBeforeGoogle')
+              : Translations.format(languageCode, 'accountOperationError', {
+                  'error': (error).toString(),
+                });
+        });
+        if (needsReconnect) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final target = _reconnectKey.currentContext;
+            if (target != null) {
+              Scrollable.ensureVisible(
+                target,
+                alignment: 0.3,
+                duration: const Duration(milliseconds: 300),
+              );
+            }
+          });
+        }
         // The inline error can be below the viewport after the guest dialog.
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -473,6 +498,7 @@ class _AccountScreenState extends State<AccountScreen> {
     context.watch<LanguageProvider>();
     final cloud = context.watch<CloudProvider>();
     final disabled = cloud.busy || _working;
+    final highlightReconnect = _highlightReconnect && cloud.sessionUnavailable;
     if (cloud.cloudPaused || cloud.deletionPending) {
       return Scaffold(
         appBar: AppBar(
@@ -625,6 +651,23 @@ class _AccountScreenState extends State<AccountScreen> {
                           ),
                         ),
                         OutlinedButton.icon(
+                          key: _reconnectKey,
+                          style: highlightReconnect
+                              ? OutlinedButton.styleFrom(
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primary,
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimary,
+                                  side: BorderSide(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    width: 2,
+                                  ),
+                                )
+                              : null,
                           icon: const Icon(Icons.refresh),
                           onPressed: disabled
                               ? null
@@ -640,12 +683,28 @@ class _AccountScreenState extends State<AccountScreen> {
                                     ),
                                   )) {
                                     await run(cloud.reconnectLocalData);
+                                    if (mounted && !cloud.sessionUnavailable) {
+                                      setState(
+                                        () => _highlightReconnect = false,
+                                      );
+                                    }
                                   }
                                 },
                           label: Text(
                             Translations.get(languageCode, 'accountReconnect'),
                           ),
                         ),
+                        if (highlightReconnect)
+                          Text(
+                            Translations.get(
+                              languageCode,
+                              'accountReconnectBeforeGoogle',
+                            ),
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                       ],
                       if (cloud.store.lastSync != null)
                         Text(
@@ -827,7 +886,10 @@ class _AccountScreenState extends State<AccountScreen> {
                           emphasized: true,
                           onPressed: disabled || cloud.googlePending
                               ? null
-                              : () => run(() => cloud.startGoogle(link: true)),
+                              : () => run(
+                                  () => cloud.startGoogle(link: true),
+                                  guideReconnect: true,
+                                ),
                         )
                       else
                         Text(

@@ -206,6 +206,8 @@ class Translations {
       'accountReconnectBody':
           'Es wird ein neues Gastkonto erstellt. Deine vorhandenen lokalen Daten werden dorthin übertragen. Anschließend kannst du Google verbinden oder dich anmelden.',
       'accountReconnect': 'Lokale Daten neu verbinden',
+      'accountReconnectBeforeGoogle':
+          'Bitte zuerst „Lokale Daten neu verbinden“ wählen. Danach kannst du dich mit Google registrieren oder anmelden.',
       'accountLastSync': 'Letzte Synchronisierung',
       'accountStorageBody':
           'Bikes, Setups und Bilder werden lokal und automatisch in deiner privaten Cloud gespeichert.',
@@ -676,6 +678,8 @@ class Translations {
       'accountReconnectBody':
           'A new guest account will be created and your existing local data uploaded to it. You can then link Google or sign in.',
       'accountReconnect': 'Reconnect local data',
+      'accountReconnectBeforeGoogle':
+          'Please select “Reconnect local data” first. Then you can register or sign in with Google.',
       'accountLastSync': 'Last sync',
       'accountStorageBody':
           'Bikes, setups and images are saved locally and automatically to your private cloud.',
