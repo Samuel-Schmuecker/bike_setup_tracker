@@ -13,6 +13,7 @@ class Bike {
   final String? imagePath;
   final BikeParameters? availableParameters; // NEU
   final List<TrailSetup> setups;
+  final bool isFavorite;
 
   Bike({
     required this.id,
@@ -24,6 +25,7 @@ class Bike {
     this.imagePath,
     this.availableParameters, // NEU
     this.setups = const [],
+    this.isFavorite = false,
   });
 
   /// Favorites stay first; manual order is preserved within each group.
@@ -42,6 +44,7 @@ class Bike {
     String? imagePath,
     BikeParameters? availableParameters,
     List<TrailSetup>? setups,
+    bool? isFavorite,
   }) {
     return Bike(
       id: id ?? this.id,
@@ -53,6 +56,7 @@ class Bike {
       imagePath: imagePath ?? this.imagePath,
       availableParameters: availableParameters ?? this.availableParameters,
       setups: setups ?? this.setups,
+      isFavorite: isFavorite ?? this.isFavorite,
     );
   }
 
@@ -60,6 +64,7 @@ class Bike {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'isFavorite': isFavorite,
       'brand': brand,
       'model': model,
       'category': category,
@@ -74,6 +79,7 @@ class Bike {
   factory Bike.fromMap(Map<String, dynamic> map) {
     return Bike(
       id: map['id'] ?? '',
+      isFavorite: map['isFavorite'] ?? false,
       brand: map['brand'] ?? '',
       model: map['model'] ?? '',
       category: map['category'] ?? '',

@@ -22,6 +22,12 @@ class BikeProvider extends ChangeNotifier {
   String? storageError;
 
   UnmodifiableListView<Bike> get bikes => UnmodifiableListView(_bikes);
+
+  /// Favorites lead while preserving manual order within each group.
+  List<Bike> get orderedBikes => [
+    ..._bikes.where((bike) => bike.isFavorite),
+    ..._bikes.where((bike) => !bike.isFavorite),
+  ];
   UnmodifiableListView<CustomSetupCategory> get customFieldCatalog =>
       UnmodifiableListView(_customFieldCatalog);
 
@@ -422,6 +428,15 @@ class BikeProvider extends ChangeNotifier {
       return;
     }
     _bikes = bikeIds.map((id) => byId[id]!).toList();
+    notifyListeners();
+    saveToDevice();
+  }
+
+  void toggleBikeFavorite(String bikeId) {
+    final index = _bikes.indexWhere((bike) => bike.id == bikeId);
+    if (index == -1) return;
+    final bike = _bikes[index];
+    _bikes[index] = bike.copyWith(isFavorite: !bike.isFavorite);
     notifyListeners();
     saveToDevice();
   }

@@ -256,9 +256,11 @@ class Translations {
           'Ziehe die Setups in die gewünschte Reihenfolge. Favoriten bleiben oben.',
       // HomeScreen & AddBike
       'myBikes': 'Meine Bikes',
+      'addFavorite': 'Als Favorit markieren',
+      'removeFavorite': 'Favorit entfernen',
       'orderBikes': 'Bikes sortieren',
       'orderBikesHint':
-          'Halte eine Bike-Kachel gedrückt und ziehe sie an die gewünschte Stelle. Die anderen Bikes machen direkt Platz. Änderungen werden automatisch gespeichert.',
+          'Halte eine Bike-Kachel gedrückt und ziehe sie an die gewünschte Stelle. Favoriten bleiben oben. Änderungen werden automatisch gespeichert.',
       'finishOrdering': 'Fertig',
       'settings': 'Einstellungen',
       'appearance': 'Farben & Darstellung',
@@ -721,9 +723,11 @@ class Translations {
           'Drag setups into your preferred order. Favorites stay at the top.',
       // HomeScreen & AddBike
       'myBikes': 'My Bikes',
+      'addFavorite': 'Mark as favorite',
+      'removeFavorite': 'Remove favorite',
       'orderBikes': 'Reorder bikes',
       'orderBikesHint':
-          'Hold a bike card and drag it into position. The other bikes move aside as you drag. Changes are saved automatically.',
+          'Hold a bike card and drag it into position. Favorites stay at the top. Changes are saved automatically.',
       'finishOrdering': 'Done',
       'settings': 'Settings',
       'appearance': 'Colors & appearance',

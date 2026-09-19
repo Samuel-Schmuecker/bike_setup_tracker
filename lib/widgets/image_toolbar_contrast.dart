@@ -12,8 +12,17 @@ class ImageToolbarContrast extends StatefulWidget {
     required this.imagePath,
     required this.expandedHeight,
     required this.builder,
-  });
+  }) : _bikeCard = false;
 
+  /// Samples the favorite button on a bike card, including its horizontal shade.
+  const ImageToolbarContrast.bikeCard({
+    super.key,
+    required this.imagePath,
+    required this.builder,
+  }) : expandedHeight = 140,
+       _bikeCard = true;
+
+  final bool _bikeCard;
   final String imagePath;
   final double expandedHeight;
   final Widget Function(BuildContext context, Color iconColor) builder;
@@ -140,15 +149,58 @@ class _ImageToolbarContrastState extends State<ImageToolbarContrast> {
     return luminance > 0.179 ? Colors.black : Colors.white;
   }
 
+  Color _cardIconColor(Size size) {
+    if (_pixels == null || size.isEmpty) return Colors.white;
+    final fitted = applyBoxFit(BoxFit.cover, _imageSize, size);
+    final crop = Alignment.center.inscribe(
+      fitted.source,
+      Offset.zero & _imageSize,
+    );
+    final surface = Theme.of(context).colorScheme.surface;
+    var total = 0.0;
+    // Match the 24px icon centered in the top-right 48px button (8px inset).
+    for (var row = 0; row < 6; row++) {
+      for (var column = 0; column < 6; column++) {
+        final x = (size.width - 44 + (column + 0.5) * 4) / size.width;
+        final y = (20 + (row + 0.5) * 4) / size.height;
+        final px = (crop.left + crop.width * x).floor().clamp(
+          0,
+          _imageSize.width.toInt() - 1,
+        );
+        final py = (crop.top + crop.height * y).floor().clamp(
+          0,
+          _imageSize.height.toInt() - 1,
+        );
+        final offset = (py * _imageSize.width.toInt() + px) * 4;
+        final pixel = Color.fromARGB(
+          _pixels!.getUint8(offset + 3),
+          _pixels!.getUint8(offset),
+          _pixels!.getUint8(offset + 1),
+          _pixels!.getUint8(offset + 2),
+        );
+        total += Color.alphaBlend(
+          Colors.black.withValues(alpha: 0.87 * (1 - x).clamp(0.0, 1.0)),
+          Color.alphaBlend(pixel, surface),
+        ).computeLuminance();
+      }
+    }
+    return total / 36 > 0.179 ? Colors.black : Colors.white;
+  }
+
   @override
-  Widget build(BuildContext context) => SliverLayoutBuilder(
-    builder: (context, constraints) => widget.builder(
-      context,
-      _iconColor(
-        constraints.crossAxisExtent,
-        constraints.scrollOffset,
-        MediaQuery.paddingOf(context).top,
-      ),
-    ),
-  );
+  Widget build(BuildContext context) => widget._bikeCard
+      ? LayoutBuilder(
+          builder: (context, constraints) =>
+              widget.builder(context, _cardIconColor(constraints.biggest)),
+        )
+      : SliverLayoutBuilder(
+          builder: (context, constraints) => widget.builder(
+            context,
+            _iconColor(
+              constraints.crossAxisExtent,
+              constraints.scrollOffset,
+              MediaQuery.paddingOf(context).top,
+            ),
+          ),
+        );
 }

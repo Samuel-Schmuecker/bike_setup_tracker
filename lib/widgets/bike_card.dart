@@ -6,6 +6,7 @@ import '../providers/language_provider.dart';
 import '../utils/translations.dart';
 import '../models/bike.dart';
 import '../utils/image_helper.dart';
+import 'image_toolbar_contrast.dart';
 import '../screens/bike_detail/bike_detail_screen.dart';
 import '../screens/edit_bike/edit_bike_screen.dart';
 
@@ -13,8 +14,15 @@ class BikeCard extends StatelessWidget {
   final Bike bike;
   final VoidCallback? onLongPress;
   final VoidCallback? onTap;
+  final VoidCallback? onFavoriteToggle;
 
-  const BikeCard({super.key, required this.bike, this.onLongPress, this.onTap});
+  const BikeCard({
+    super.key,
+    required this.bike,
+    this.onLongPress,
+    this.onTap,
+    this.onFavoriteToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,141 +53,163 @@ class BikeCard extends StatelessWidget {
       elevation: 3, // Schatten, da es ein Bild ist
       child: SizedBox(
         height: 140, // Feste Höhe
-        child: Stack(
-          children: [
-            // 1. Hintergrundbild (es gibt jetzt IMMER eins)
-            Positioned.fill(child: ImageHelper.buildImage(displayPath)),
+        child: ImageToolbarContrast.bikeCard(
+          imagePath: displayPath,
+          builder: (context, iconColor) => Stack(
+            children: [
+              // 1. Hintergrundbild (es gibt jetzt IMMER eins)
+              Positioned.fill(child: ImageHelper.buildImage(displayPath)),
 
-            // 2. Dunkles Gradient-Overlay (Links nach Rechts) für Lesbarkeit
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    colors: [
-                      Colors.black87, // Sehr dunkel links (für Text)
-                      Colors
-                          .transparent, // Transparent rechts (Bild bleibt sichtbar)
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // 3. Klickbarer Bereich und Text (liegt ganz oben)
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap:
-                      onTap ??
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                BikeDetailScreen(bikeId: bike.id),
-                          ),
-                        );
-                      },
-                  onLongPress:
-                      onLongPress ??
-                      () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => EditBikeScreen(bike: bike),
-                          ),
-                        );
-                      },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Texte und Chips
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Marke
-                              Text(
-                                bike.brand.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 1.2,
-                                  color: Colors.white70, // Fest auf hellgrau
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 2),
-                              // Modell
-                              Text(
-                                bike.model,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white, // Fest auf weiß
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              // Chips (Kategorie & Setups nebeneinander)
-                              Row(
-                                children: [
-                                  buildChip(
-                                    Text(
-                                      Translations.bikeCategory(
-                                        context
-                                                .watch<LanguageProvider?>()
-                                                ?.currentLanguage ??
-                                            'de',
-                                        bike.category,
-                                      ),
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  buildChip(
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.tune,
-                                          size: 14,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          '${bike.setups.length}',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+              // 2. Dunkles Gradient-Overlay (Links nach Rechts) für Lesbarkeit
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.black87, // Sehr dunkel links (für Text)
+                        Colors
+                            .transparent, // Transparent rechts (Bild bleibt sichtbar)
                       ],
                     ),
                   ),
                 ),
               ),
-            ),
-          ],
+
+              // 3. Klickbarer Bereich und Text (liegt ganz oben)
+              Positioned.fill(
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap:
+                        onTap ??
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  BikeDetailScreen(bikeId: bike.id),
+                            ),
+                          );
+                        },
+                    onLongPress:
+                        onLongPress ??
+                        () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditBikeScreen(bike: bike),
+                            ),
+                          );
+                        },
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 56, 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Texte und Chips
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Marke
+                                Text(
+                                  bike.brand.toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 1.2,
+                                    color: Colors.white70, // Fest auf hellgrau
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                // Modell
+                                Text(
+                                  bike.model,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white, // Fest auf weiß
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                // Chips (Kategorie & Setups nebeneinander)
+                                Row(
+                                  children: [
+                                    buildChip(
+                                      Text(
+                                        Translations.bikeCategory(
+                                          context
+                                                  .watch<LanguageProvider?>()
+                                                  ?.currentLanguage ??
+                                              'de',
+                                          bike.category,
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    buildChip(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.tune,
+                                            size: 14,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            '${bike.setups.length}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  tooltip: Translations.get(
+                    context.watch<LanguageProvider?>()?.currentLanguage ?? 'de',
+                    bike.isFavorite ? 'removeFavorite' : 'addFavorite',
+                  ),
+                  icon: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (bike.isFavorite)
+                        const Icon(Icons.star, color: Colors.amber),
+                      Icon(Icons.star_border, color: iconColor),
+                    ],
+                  ),
+                  onPressed: onFavoriteToggle,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

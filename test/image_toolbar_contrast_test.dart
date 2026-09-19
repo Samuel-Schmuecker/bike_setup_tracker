@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:bike_setup_tracker/widgets/image_toolbar_contrast.dart';
+import 'package:bike_setup_tracker/widgets/bike_card.dart';
+import 'field_order_test.dart' show fixture;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,6 +19,55 @@ Future<String> imagePath(Color color) async {
 }
 
 void main() {
+  testWidgets('bike favorite outline adapts to light and dark images', (
+    tester,
+  ) async {
+    final light = (await tester.runAsync(() => imagePath(Colors.white)))!;
+    final dark = (await tester.runAsync(() => imagePath(Colors.black)))!;
+    Future<void> show(String path, {bool favorite = false}) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData.dark(),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 360,
+                child: BikeCard(
+                  bike: fixture(
+                    'a',
+                  ).copyWith(imagePath: path, isFavorite: favorite),
+                  onFavoriteToggle: () {},
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.runAsync(() async {
+        await precacheImage(
+          MemoryImage(base64Decode(path.split(',').last)),
+          tester.element(find.byType(BikeCard)),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pumpAndSettle();
+    }
+
+    Color? outline() =>
+        tester.widget<Icon>(find.byIcon(Icons.star_border)).color;
+    await show(light);
+    expect(outline(), Colors.black);
+    await show(dark);
+    expect(outline(), Colors.white);
+    await show(light, favorite: true);
+    expect(outline(), Colors.black);
+    expect(tester.widget<Icon>(find.byIcon(Icons.star)).color, Colors.amber);
+    await show(dark, favorite: true);
+    expect(outline(), Colors.white);
+    expect(tester.widget<Icon>(find.byIcon(Icons.star)).color, Colors.amber);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('toolbar adapts to replacement images and collapsed surface', (
     tester,
   ) async {

@@ -548,7 +548,7 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
       });
     }
     final lang = context.watch<LanguageProvider>().currentLanguage;
-    final allBikes = context.watch<BikeProvider>().bikes;
+    final allBikes = context.watch<BikeProvider>().orderedBikes;
 
     final filteredBikes = allBikes.where((bike) {
       final query = _searchQuery.toLowerCase();
@@ -676,10 +676,19 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                         : AddBikeCard(onTap: _onAddBikeTap),
                     onReorder: (oldIndex, newIndex) {
                       if (!_orderingBikes) return;
-                      final ids = allBikes.map((bike) => bike.id).toList();
+                      final reordered = List<Bike>.from(filteredBikes);
                       if (newIndex > oldIndex) newIndex--;
-                      ids.insert(newIndex, ids.removeAt(oldIndex));
-                      context.read<BikeProvider>().reorderBikes(ids);
+                      final bike = reordered.removeAt(oldIndex);
+                      final favoriteCount = reordered
+                          .where((b) => b.isFavorite)
+                          .length;
+                      final target = bike.isFavorite
+                          ? newIndex.clamp(0, favoriteCount)
+                          : newIndex.clamp(favoriteCount, reordered.length);
+                      reordered.insert(target, bike);
+                      context.read<BikeProvider>().reorderBikes(
+                        reordered.map((bike) => bike.id).toList(),
+                      );
                     },
                     proxyDecorator: (child, index, animation) => Material(
                       color: Theme.of(context).colorScheme.surface,
@@ -693,6 +702,9 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
                             ? _demoBikeKey
                             : null,
                         bike: filteredBikes[index],
+                        onFavoriteToggle: () => context
+                            .read<BikeProvider>()
+                            .toggleBikeFavorite(filteredBikes[index].id),
                         onTap: _tourPreparing && filteredBikes[index].id == '3'
                             ? () => _tour.complete('openBike')
                             : null,

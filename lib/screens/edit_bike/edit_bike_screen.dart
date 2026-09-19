@@ -94,6 +94,7 @@ class _EditBikeScreenState extends State<EditBikeScreen> {
         travelFront: _travelFront,
         travelRear: _travelRear,
         imagePath: _selectedImagePath,
+        isFavorite: widget.bike.isFavorite,
         availableParameters: widget.bike.availableParameters, // Behalte die Specs bei!
         setups: widget.bike.setups, // Behalte alle Setups bei!
       );
