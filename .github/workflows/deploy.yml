@@ -27,7 +27,11 @@ jobs:
         run: flutter pub get
 
       - name: Web App bauen
-        run: flutter build web --release --base-href "/bike_setup_tracker/"
+        run: >
+          flutter build web --release --base-href "/bike_setup_tracker/"
+          --dart-define=SUPABASE_URL=https://iwmrlwouyfpmizzirmby.supabase.co
+          --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_PJ45Vu6e1aRdKN8bJGIMAQ_hvCrmmyW
+          --dart-define=SUPABASE_IMAGE_CLEANUP_FUNCTION=cleanup-bike-images
 
       - name: Deploy auf GitHub Pages
         uses: Peaceiris/actions-gh-pages@v3
