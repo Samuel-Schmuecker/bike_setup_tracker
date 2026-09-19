@@ -5,6 +5,13 @@ on:
     branches:
       - main # Oder 'master', je nachdem wie dein Haupt-Branch heißt
 
+permissions:
+  contents: write
+
+concurrency:
+  group: github-pages-publish
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -29,9 +36,13 @@ jobs:
       - name: Web App bauen
         run: >
           flutter build web --release --base-href "/bike_setup_tracker/"
+          --dart-define=APP_ENV=production
           --dart-define=SUPABASE_URL=https://iwmrlwouyfpmizzirmby.supabase.co
           --dart-define=SUPABASE_PUBLISHABLE_KEY=sb_publishable_PJ45Vu6e1aRdKN8bJGIMAQ_hvCrmmyW
           --dart-define=SUPABASE_IMAGE_CLEANUP_FUNCTION=cleanup-bike-images
+
+      - name: Offline-Caches nach Web-Adresse trennen
+        run: dart run tool/isolate_web_cache.dart
 
       - name: Deploy auf GitHub Pages
         uses: Peaceiris/actions-gh-pages@v3

@@ -10,6 +10,7 @@ import 'providers/bike_provider.dart';
 import 'providers/language_provider.dart'; // NEU
 import 'screens/home/home_screen.dart';
 import 'cloud/local_database.dart';
+import 'cloud/cloud_config.dart';
 import 'cloud/local_store.dart';
 import 'cloud/cloud_provider.dart';
 import 'screens/settings/account_screen.dart';
@@ -18,6 +19,8 @@ import 'utils/translations.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  CloudConfig.validate();
+  SharedPreferences.setPrefix(CloudConfig.preferencesPrefix);
   final preferences = await SharedPreferences.getInstance();
   late final LocalStore store;
   late final BikeProvider bikes;

@@ -2,6 +2,11 @@
 
 A new Flutter project.
 
+## Entwicklung und Produktion
+
+Die Einrichtung von Dev/Main, den beiden Supabase-Projekten und den
+Deployments ist in [docs/environments.md](docs/environments.md) beschrieben.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

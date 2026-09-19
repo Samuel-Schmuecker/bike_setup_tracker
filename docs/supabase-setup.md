@@ -1,5 +1,9 @@
 # Supabase einrichten
 
+Für die Trennung von `dev` und `main` zuerst [Umgebungen](environments.md) lesen.
+Die Beispiele mit `dcrkfiooddkbzljibomo` beziehen sich auf Dev; Produktion
+verwendet `iwmrlwouyfpmizzirmby` und muss separat eingerichtet werden.
+
 Die öffentliche Projekt-URL und der Publishable Key sind in
 `lib/cloud/cloud_config.dart` hinterlegt. Das sind Client-Zugangsdaten, keine
 Verwaltungsschlüssel. Niemals `service_role`, Secret Keys oder das
