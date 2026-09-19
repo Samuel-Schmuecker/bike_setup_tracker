@@ -28,10 +28,14 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.38.9'
           channel: 'stable'
 
       - name: Dependencies installieren
         run: flutter pub get
+
+      - name: Cache-Trennung testen
+        run: flutter test test/web_cache_isolation_test.dart
 
       - name: Web App bauen
         run: >

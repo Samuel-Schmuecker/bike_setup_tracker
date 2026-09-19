@@ -10,6 +10,13 @@ liegen zum Zeitpunkt der Trennung noch keine echten Nutzerdaten.
 
 ## Builds und lokaler Speicher
 
+Beide Deployments verwenden ausdrücklich Flutter **3.38.9**, passend zum lokal
+getesteten SDK. Die Version bei einem Upgrade in beiden Workflows zusammen ändern
+und Web-Build sowie Cache-Tests erneut prüfen. Neuere Flutter-Versionen ersetzen
+den bisherigen Offline-Worker durch einen Worker, der sich abmeldet; das
+Cache-Skript lässt diesen unverändert. Ein SDK-Upgrade kann deshalb die Fähigkeit
+ändern, die App ohne Netzwerk neu zu öffnen; lokale Nutzerdaten bleiben erhalten.
+
 Beide Workflows übergeben `APP_ENV`, Supabase-URL, öffentlichen Client-Key und
 den Namen der Bildbereinigung ausdrücklich. Ohne Parameter startet Flutter in
 Dev. Eine falsche Kombination aus Umgebung und Projekt-URL stoppt den App-Start.
