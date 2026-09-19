@@ -183,6 +183,10 @@ class Translations {
       'syncStatusOffline':
           'Sicherung ausstehend. Verbindung oder Cloud-Dienst nicht verfügbar; automatischer Wiederholungsversuch folgt.',
       'syncStatusPending': 'Sicherung ausstehend',
+      'syncStatusImages':
+          'Räder geladen. Einige Fotos fehlen noch; sie werden erneut geladen.',
+      'syncStatusCleanup':
+          'Räder synchronisiert. Die Bildbereinigung wird erneut versucht.',
       'accountDelete': 'Konto löschen',
       'accountDeletedBody':
           'Dein Konto wurde gelöscht. Es wird kein neues Gastkonto angelegt, bis du die App erneut nutzt.',
@@ -453,7 +457,7 @@ class Translations {
       'deleteBike': 'Bike löschen',
       'deleteBikeTitle': 'Bike löschen?',
       'deleteBikeBody':
-          'Möchtest du das Bike wirklich löschen? Alle Setups gehen unwiderruflich verloren.',
+          'Möchtest du das Bike mit seinen Setups löschen? Zugehörige Fotos werden nach der Synchronisierung ebenfalls gelöscht, sofern kein anderes Bike sie benötigt. Ältere Cloud-Versionen bleiben ohne diese Fotos wiederherstellbar.',
 
       // Allgemein
       'required': 'Pflichtfeld',
@@ -645,6 +649,9 @@ class Translations {
       'syncStatusOffline':
           'Backup pending. Connection or cloud service unavailable; retrying automatically.',
       'syncStatusPending': 'Backup pending',
+      'syncStatusImages':
+          'Bikes loaded. Some photos are still unavailable and will be retried.',
+      'syncStatusCleanup': 'Bikes synced. Image cleanup will be retried.',
       'accountDelete': 'Delete account',
       'accountDeletedBody':
           'Your account has been deleted. No new guest account is created until you start again.',
@@ -912,7 +919,7 @@ class Translations {
       'deleteBike': 'Delete Bike',
       'deleteBikeTitle': 'Delete Bike?',
       'deleteBikeBody':
-          'Do you really want to delete this bike? All setups will be lost permanently.',
+          'Delete this bike and its setups? Its photos will also be deleted after syncing unless another bike needs them. Older cloud versions can still be restored without these photos.',
 
       // Allgemein
       'required': 'Required',

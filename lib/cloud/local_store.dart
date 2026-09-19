@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'sync_documents.dart';
 import 'erase_images.dart';
+import 'guest_import.dart';
 import 'package:uuid/uuid.dart';
 
 /// One transactional record contains both user data and its sync baseline.
@@ -271,6 +272,7 @@ class LocalStore extends ChangeNotifier {
                 'mode': intent['guestChoice'],
               };
               if (intent['guestChoice'] == 'import') {
+                final guest = guestImportPayload(previous['payload'] as Json);
                 final ids = <String, String>{};
                 void collect(Object? value) {
                   if (value is Map) {
@@ -285,7 +287,7 @@ class LocalStore extends ChangeNotifier {
                   }
                 }
 
-                collect(previous['payload']);
+                collect(guest);
                 Object? remap(Object? value) {
                   if (value is String) return ids[value] ?? value;
                   if (value is List) return value.map(remap).toList();
@@ -298,7 +300,7 @@ class LocalStore extends ChangeNotifier {
                   return value;
                 }
 
-                final imported = remap(previous['payload']) as Map;
+                final imported = remap(guest) as Map;
                 for (final field in ['bikes', 'catalog']) {
                   (next!['payload'][field] as List).addAll(
                     imported[field] as List,

@@ -1,3 +1,7 @@
 [functions.delete-account]
 # The handler validates the user JWT itself, including signature and issuer.
 verify_jwt = false
+
+[functions.cleanup-bike-images]
+# Signature, issuer, expiry and the current user are checked by the handler.
+verify_jwt = false

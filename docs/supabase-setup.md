@@ -12,7 +12,10 @@ Datenbankpasswort in die Flutter-App übernehmen.
    `supabase/migrations/202609150001_accounts_and_sync.sql` einfügen.
 3. **Run** ausführen. Das Skript legt Tabellen, private Bildablage,
    Zugriffsregeln und die Funktion für versionsgeprüfte Schreibzugriffe an.
-4. In Authentication anonyme Anmeldung aktivieren. Google anschließend wie
+4. Die Folgemigrationen für Kontolöschung, Gastwechsel und
+   [Bildbereinigung](bike-image-cleanup.md) einschließlich der dort genannten
+   Edge Functions einrichten.
+5. In Authentication anonyme Anmeldung aktivieren. Google anschließend wie
    in Abschnitt 2 beschrieben einrichten; E-Mail-Anmeldung ist dafür nicht nötig.
 
 Die Tabellen brauchen keine manuelle Bearbeitung. Direkte Schreibzugriffe
@@ -77,9 +80,11 @@ Lokale automatisierte Tests ersetzen den Test gegen das echte Projekt nicht.
 - Konto-Selbstlöschung, Apple-Anmeldung und automatisierte externe
   Betreiber-Backups sind noch nicht Bestandteil dieser ersten Version.
   Vor öffentlicher Veröffentlichung Kontolöschung und Betreiber-Backups ergänzen.
-- Der lokale Versionsbestand und verwaiste Bilder werden noch nicht automatisch
-  bereinigt. Speicherverbrauch überwachen; vor einer Bereinigung Referenzen aus
-  der Cloud-Historie berücksichtigen. Nicht pauschal anonyme Accounts löschen.
+- Nicht mehr benötigte Cloud-Bilder werden nach dem Sync bereinigt; gemeinsam
+  verwendete Fotos und Fotos in der Historie aktiver Räder bleiben erhalten.
+  Gelöschte Räder sind aus der Cloud-Historie ohne ihre eigenen Fotos wiederherstellbar.
+  Details und Einrichtung: [Bildbereinigung](bike-image-cleanup.md).
+  Der lokale Versionsbestand wird weiterhin nicht automatisch bereinigt.
 
 ## Vor öffentlicher Veröffentlichung
 

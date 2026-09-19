@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:bike_setup_tracker/cloud/cloud_provider.dart';
 import 'package:bike_setup_tracker/cloud/local_store.dart';
 import 'package:bike_setup_tracker/cloud/sync_documents.dart';
+import 'package:bike_setup_tracker/data/demo_bikes.dart';
+import 'package:crypto/crypto.dart';
 import 'package:bike_setup_tracker/models/bike.dart';
 import 'package:bike_setup_tracker/providers/bike_provider.dart';
 import 'package:bike_setup_tracker/providers/theme_provider.dart';
@@ -26,8 +28,14 @@ Json bike(String id, [String model = 'Original']) => Bike(
 class FakeCloud {
   final rows = <String, Json>{};
   final images = <String, List<int>>{};
+  final history = <String, List<Json>>{};
+  final retiredImages = <String>{};
+  bool failImageCleanup = false;
+  int imageCleanupCalls = 0;
   Completer<void>? uploadStarted;
   Completer<void>? releaseUpload;
+  Completer<void>? imageDownloadStarted;
+  Completer<void>? releaseImageDownload;
   bool failNextUploadResponse = false;
   bool anonymousAuth = false;
   bool passwordUpdated = false;
@@ -62,6 +70,33 @@ class FakeCloud {
       request: request,
     );
     final path = request.url.path;
+    if (path == '/functions/v1/cleanup-bike-images') {
+      imageCleanupCalls++;
+      if (failImageCleanup) return json({'error': 'image_delete_failed'}, 500);
+      final candidates = <String>{};
+      for (final entry in history.entries) {
+        if (rows[entry.key]?['payload'] != null) continue;
+        for (final old in entry.value) {
+          final image = old.remove('imagePath');
+          if (image is String && image.startsWith('cloud:')) {
+            candidates.add(image.substring(6));
+          }
+        }
+      }
+      final retained = <Object?>{
+        for (final row in rows.values)
+          if (row['payload'] is Map) row['payload']['imagePath'],
+        for (final versions in history.values)
+          for (final old in versions) old['imagePath'],
+      };
+      for (final name in candidates) {
+        if (!retained.contains('cloud:$name')) {
+          images.remove(name);
+          retiredImages.add(name);
+        }
+      }
+      return json({'complete': true});
+    }
     if (path == '/functions/v1/delete-account') {
       final body = jsonDecode(request.body) as Map;
       if (body['action'] == 'finish_guest') {
@@ -128,6 +163,12 @@ class FakeCloud {
         return json({'Key': 'bike-images/$key'});
       }
       if (images.containsKey(key)) {
+        if (imageDownloadStarted != null) {
+          if (!imageDownloadStarted!.isCompleted) {
+            imageDownloadStarted!.complete();
+          }
+          await releaseImageDownload!.future;
+        }
         return http.Response.bytes(images[key]!, 200, request: request);
       }
       return json({'message': 'Missing image', 'statusCode': '404'}, 404);
@@ -170,6 +211,19 @@ class FakeCloud {
       }
       if ((old?['revision'] ?? 0) != body['p_expected_revision']) {
         return json({'message': 'SYNC_CONFLICT', 'code': 'P0001'}, 409);
+      }
+      final image = body['p_payload'] is Map
+          ? body['p_payload']['imagePath']
+          : null;
+      if (image is String &&
+          image.startsWith('cloud:') &&
+          retiredImages.contains(image.substring(6))) {
+        return json({'message': 'IMAGE_RETIRED', 'code': 'P0001'}, 409);
+      }
+      if (old?['payload'] is Map) {
+        history
+            .putIfAbsent(key, () => [])
+            .add(cloneJson(old!['payload'] as Json));
       }
       rows[key] = {
         'document_id': key,
@@ -310,7 +364,9 @@ void main() {
       await cloud.deleteAccount();
       expect(theme.background, ThemeProvider.defaultBackground);
       expect(theme.accent.toARGB32(), ThemeProvider.defaultAccent.toARGB32());
-      final restoredTheme = ThemeProvider(await SharedPreferences.getInstance());
+      final restoredTheme = ThemeProvider(
+        await SharedPreferences.getInstance(),
+      );
       expect(restoredTheme.background, ThemeProvider.defaultBackground);
       expect(
         restoredTheme.accent.toARGB32(),
@@ -584,6 +640,232 @@ void main() {
     );
   });
 
+  Future<void> googleIntent(String kind, {bool sourceAnonymous = true}) =>
+      store.mutate((state) {
+        state['googleIntent'] = {
+          'id': 'attempt-1',
+          'kind': kind,
+          'sourceOwner': state['owner'],
+          'sourceAnonymous': sourceAnonymous,
+          'createdAt': DateTime.now().microsecondsSinceEpoch,
+        };
+      });
+
+  const photo = 'data:image/png;base64,AQIDBA==';
+
+  test(
+    'photo upload with lost document response survives restart without a duplicate or conflict',
+    () async {
+      await initialize([
+        {...bike('a'), 'imagePath': photo},
+      ]);
+      server.failNextUploadResponse = true;
+      await cloud.sync();
+      final name = server.images.keys.single;
+      cloud.dispose();
+      cloud = CloudProvider(
+        store,
+        bikes,
+        client: server.client,
+        startAutomatically: false,
+      );
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(cloud.conflicts, isEmpty);
+      expect(server.images.keys.toList(), [name]);
+      expect(server.rows['bike:a']!['revision'], 1);
+    },
+  );
+
+  test(
+    'missing photo retains bike, loads following bikes and retries photo',
+    () async {
+      await initialize();
+      final bytes = UriData.parse(photo).contentAsBytes();
+      final name = 'user-1/${sha256.convert(bytes)}';
+      server.rows['bike:a'] = {
+        'document_id': 'bike:a',
+        'revision': 1,
+        'payload': {...bike('a'), 'imagePath': 'cloud:$name'},
+      };
+      server.rows['bike:b'] = {
+        'document_id': 'bike:b',
+        'revision': 1,
+        'payload': bike('b'),
+      };
+      await cloud.sync();
+      expect(bikes.bikes.map((bike) => bike.id), containsAll(['a', 'b']));
+      expect(cloud.status, 'images');
+      expect(
+        bikes.bikes.firstWhere((bike) => bike.id == 'a').imagePath,
+        'cloud:$name',
+      );
+      expect(server.rows['bike:a']!['revision'], 1);
+      // Retain the unresolved reference across an application restart.
+      cloud.dispose();
+      cloud = CloudProvider(
+        store,
+        bikes,
+        client: server.client,
+        startAutomatically: false,
+      );
+      server.images[name] = bytes;
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(
+        UriData.parse(
+          bikes.bikes.firstWhere((bike) => bike.id == 'a').imagePath!,
+        ).contentAsBytes(),
+        bytes,
+      );
+      expect(server.rows['bike:a']!['revision'], 1);
+    },
+  );
+
+  test('absent remote row cannot silently delete a synced bike', () async {
+    await initialize([bike('a')]);
+    await cloud.sync();
+    server.rows.remove('bike:a');
+    await cloud.sync();
+    expect(bikes.bikes.single.id, 'a');
+    expect(cloud.lastError.toString(), contains('REMOTE_DOCUMENT_MISSING'));
+    expect(store.state['base']['bike:a']['revision'], 1);
+  });
+
+  test('photo retry cannot overwrite an edit made during download', () async {
+    await initialize();
+    final bytes = UriData.parse(photo).contentAsBytes();
+    final name = 'user-1/${sha256.convert(bytes)}';
+    server.rows['bike:a'] = {
+      'document_id': 'bike:a',
+      'revision': 1,
+      'payload': {...bike('a'), 'imagePath': 'cloud:$name'},
+    };
+    await cloud.sync();
+    server.images[name] = bytes;
+    server.imageDownloadStarted = Completer<void>();
+    server.releaseImageDownload = Completer<void>();
+    final retry = cloud.sync();
+    await server.imageDownloadStarted!.future;
+    bikes.updateBike(
+      bikes.bikes.single.copyWith(model: 'Edited while loading'),
+    );
+    await store.flush();
+    server.releaseImageDownload!.complete();
+    await retry;
+    expect(bikes.bikes.single.model, 'Edited while loading');
+    await cloud.sync();
+    expect(server.rows['bike:a']!['payload']['model'], 'Edited while loading');
+    expect(bikes.bikes.single.imagePath, startsWith('data:image/'));
+    expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+  });
+
+  test(
+    'unreadable local photo does not stop other cloud bikes from loading',
+    () async {
+      await initialize([
+        {...bike('a'), 'imagePath': 'missing-directory/photo.jpg'},
+      ]);
+      server.rows['bike:z'] = {
+        'document_id': 'bike:z',
+        'revision': 1,
+        'payload': bike('z'),
+      };
+      await cloud.sync();
+      expect(bikes.bikes.map((bike) => bike.id), containsAll(['a', 'z']));
+      expect(cloud.lastError, isNotNull);
+      expect(server.rows['bike:a'], isNull);
+    },
+  );
+
+  test(
+    'delete photo retries after failure and survives provider restart',
+    () async {
+      await initialize([
+        {...bike('a'), 'imagePath': photo},
+      ]);
+      await cloud.sync();
+      expect(server.images, hasLength(1));
+      bikes.deleteBike('a');
+      server.failImageCleanup = true;
+      await cloud.sync();
+      expect(server.rows['bike:a']!['payload'], isNull);
+      expect(server.images, hasLength(1));
+      expect(cloud.status, 'cleanup');
+      cloud.dispose();
+      cloud = CloudProvider(
+        store,
+        bikes,
+        client: server.client,
+        startAutomatically: false,
+      );
+      server.failImageCleanup = false;
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(server.images, isEmpty);
+      expect(server.history['bike:a']!.single['imagePath'], isNull);
+      expect(bikes.bikes, isEmpty);
+    },
+  );
+
+  test(
+    'shared photo survives first deletion; reimport uses a fresh object',
+    () async {
+      await initialize([
+        {...bike('a'), 'imagePath': photo},
+        {...bike('b'), 'imagePath': photo},
+      ]);
+      await cloud.sync();
+      final oldName = server.images.keys.single;
+      bikes.deleteBike('a');
+      await cloud.sync();
+      expect(server.images, hasLength(1));
+      bikes.deleteBike('b');
+      await cloud.sync();
+      expect(server.images, isEmpty);
+      bikes.addBike(Bike.fromMap({...bike('c'), 'imagePath': photo}));
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(server.images.keys.single, isNot(oldName));
+    },
+  );
+
+  test(
+    'Google guest import omits untouched demo but preserves custom bikes',
+    () async {
+      await initialize([createDemoBikes().single.toMap(), bike('own')]);
+      await cloud.sync();
+      await googleIntent('login');
+      await store.mutate((state) {
+        state['googleIntent']['guestTicket'] = 'guest-ticket';
+        state['googleIntent']['guestChoice'] = 'import';
+      });
+      server.googleAuth = true;
+      await server.client.auth.signInWithPassword(
+        email: 'second@example.com',
+        password: 'password',
+      );
+      server.rows.clear();
+      server.rows['bike:3'] = {
+        'document_id': 'bike:3',
+        'revision': 1,
+        'payload': createDemoBikes().single.toMap(),
+      };
+      await cloud.sync();
+      // A second pass includes the newly downloaded bike in the shared order.
+      await cloud.sync();
+      expect(cloud.status, 'synced', reason: '${cloud.lastError}');
+      expect(bikes.bikes, hasLength(2));
+      expect(
+        bikes.bikes.where((bike) => bike.model == 'Supreme V5'),
+        hasLength(1),
+      );
+      expect(bikes.bikes.where((bike) => bike.brand == 'Test'), hasLength(1));
+      await cloud.sync();
+      expect(bikes.bikes, hasLength(2));
+    },
+  );
+
   test(
     'anonymous email upgrade keeps ownership and existing cloud documents',
     () async {
@@ -619,17 +901,6 @@ void main() {
     await store.switchOwner('user-1');
     expect(await store.savedWorkspaces(), isNotEmpty);
   });
-
-  Future<void> googleIntent(String kind, {bool sourceAnonymous = true}) =>
-      store.mutate((state) {
-        state['googleIntent'] = {
-          'id': 'attempt-1',
-          'kind': kind,
-          'sourceOwner': state['owner'],
-          'sourceAnonymous': sourceAnonymous,
-          'createdAt': DateTime.now().microsecondsSinceEpoch,
-        };
-      });
 
   test(
     'Google linking preserves UID, bikes and cloud revision after redirect',

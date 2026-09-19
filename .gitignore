@@ -33,6 +33,9 @@ migrate_working_dir/
 /build/
 /coverage/
 
+# Isolated database test runtime and temporary tool caches.
+/.tmp/
+
 # Symbolication related
 app.*.symbols
 

@@ -336,6 +336,8 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   String statusText(String status) => switch (status) {
+    'images' => Translations.get(languageCode, 'syncStatusImages'),
+    'cleanup' => Translations.get(languageCode, 'syncStatusCleanup'),
     'google_waiting' => Translations.get(
       languageCode,
       'syncStatusGoogleWaiting',

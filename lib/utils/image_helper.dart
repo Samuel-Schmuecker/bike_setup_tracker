@@ -31,7 +31,9 @@ class ImageHelper {
   }
 
   static String getDisplayImagePath(String? customPath, String category) {
-    if (customPath != null && customPath.isNotEmpty) {
+    if (customPath != null &&
+        customPath.isNotEmpty &&
+        !customPath.startsWith('cloud:')) {
       return customPath;
     }
     return getDefaultImageForCategory(category);
@@ -61,6 +63,7 @@ class ImageHelper {
   // Gibt das fertige Image-Widget zurück
   static Widget buildImage(String path, {BoxFit fit = BoxFit.cover}) {
     try {
+      if (path.startsWith('cloud:')) return _buildErrorPlaceholder();
       if (path.startsWith('data:image')) {
         final base64Str = path.split(',').last;
         return Image.memory(
@@ -91,6 +94,9 @@ class ImageHelper {
 
   // Gibt den ImageProvider zurück
   static ImageProvider getImageProvider(String path) {
+    if (path.startsWith('cloud:')) {
+      return const AssetImage('assets/images/trail.png');
+    }
     if (path.startsWith('data:image')) {
       final base64Str = path.split(',').last;
       return MemoryImage(base64Decode(base64Str));

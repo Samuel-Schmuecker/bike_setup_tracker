@@ -61,6 +61,8 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
           prefs.getBool('hasSeenBackupReminder') == true ||
           !bikes.bikes.any((bike) => bike.id != '3'))
         return;
+      final cloud = context.read<CloudProvider?>();
+      if (cloud != null && !cloud.shouldSuggestAccountBackup) return;
       final languageCode = context.read<LanguageProvider>().currentLanguage;
       final openBackup = await showDialog<bool>(
         context: context,
@@ -520,6 +522,12 @@ class _HomeScreenState extends State<HomeScreen> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final cloud = context.watch<CloudProvider?>();
+    // Recheck once session restoration or an account operation has finished.
+    if (cloud?.shouldSuggestAccountBackup == true) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _checkBackupReminder(),
+      );
+    }
     if (cloud?.googleIssue == null) _shownGoogleIssue = null;
     if (cloud?.googleIssue != null &&
         cloud?.googleIssue != _shownGoogleIssue &&

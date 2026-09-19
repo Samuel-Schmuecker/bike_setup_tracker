@@ -16,6 +16,7 @@ import 'local_store.dart';
 import 'sync_documents.dart';
 import 'oauth_return.dart';
 import 'google_auth_error.dart';
+import 'guest_import.dart';
 
 class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   CloudProvider(
@@ -76,12 +77,26 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   String status = 'pending';
   Object? lastError;
   StackTrace? lastErrorStack;
+  bool _imageDownloadFailed = false;
   final Map<String, Json> conflicts = {};
   Json? _observedPayload;
   final Map<String, String> _uploaded = {};
   final Map<String, String> _downloaded = {};
   User? get user => _client?.auth.currentUser;
   bool get anonymous => user?.isAnonymous ?? true;
+
+  /// Only suggest linking a known guest account. A missing user can mean that
+  /// a saved session is still being restored, especially on another device.
+  bool get shouldSuggestAccountBackup =>
+      user != null &&
+      anonymous &&
+      !googleLinked &&
+      !googlePending &&
+      !busy &&
+      !accountOperation &&
+      !sessionUnavailable &&
+      !cloudPaused &&
+      !deletionPending;
   String? get email => user?.email;
   bool get canSync => bikes.storageError == null;
   bool get cloudPaused => store.state['cloudPaused'] == true;
@@ -195,6 +210,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
     busy = true;
     lastError = null;
+    _imageDownloadFailed = false;
     status = 'syncing';
     _emit();
     try {
@@ -241,80 +257,138 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
               : a.compareTo(b),
         );
       for (final key in keys) {
-        if (_disposed || user?.id != uid) return;
-        final captured = local[key];
-        final portable = await _toCloud(key, captured, uid);
-        final baseline = base[key] as Map?;
-        final row = remote[key];
-        final action = decideSync(
-          _documentValue(key, baseline?['payload']),
-          portable,
-          _documentValue(key, row?['payload']),
-        );
-        if (action == SyncAction.conflict) {
-          conflicts[key] = row ?? {'revision': 0, 'payload': null};
-          continue;
-        }
-        Json? accepted = row;
-        Object? downloaded;
-        if (action == SyncAction.upload) {
-          accepted = Map<String, dynamic>.from(
-            await client
-                    .rpc(
-                      'save_bike_document',
-                      params: {
-                        'p_document_id': key,
-                        'p_expected_revision': baseline?['revision'] ?? 0,
-                        'p_payload': portable,
-                      },
-                    )
-                    .setHeader('Authorization', authorization)
-                as Map,
-          );
-        } else if (action == SyncAction.download) {
-          downloaded = await _fromCloud(key, row?['payload'], uid);
-        }
-        // Never replace an edit made while the network request was in flight.
+        if (_disposed) return;
         if (user?.id != uid) throw StateError('SESSION_MISSING');
-        var applied = false;
-        await store.mutate((state) {
-          if (state['owner'] != uid) throw StateError('SESSION_MISSING');
-          final current = documentsFromPayload(state['payload'] as Json);
-          if (action == SyncAction.download) {
-            if (!sameJson(current[key], captured) &&
-                !(key == 'order' &&
-                    state['editVersion'] == snapshot['editVersion'])) {
-              return;
-            }
-            current[key] = downloaded;
-            state['payload'] = payloadFromDocuments(current);
-            applied = true;
+        try {
+          final captured = local[key];
+          final baseline = base[key] as Map?;
+          final row = remote[key];
+          final portable = await _toCloud(
+            key,
+            captured,
+            uid,
+            remoteValue: row?['payload'],
+          );
+          // Only an explicit tombstone means deletion. A missing row must not
+          // silently erase a previously synchronized local bike.
+          if (row == null && (baseline?['revision'] as num? ?? 0) > 0) {
+            throw StateError('REMOTE_DOCUMENT_MISSING');
           }
-          (state['base'] as Json)[key] = {
-            'revision': accepted?['revision'] ?? 0,
-            'payload': _documentValue(key, accepted?['payload']),
-          };
-        });
-        if (applied) bikes.applyStoredPayload();
+          final action = decideSync(
+            _documentValue(key, baseline?['payload']),
+            portable,
+            _documentValue(key, row?['payload']),
+          );
+          if (action == SyncAction.conflict) {
+            conflicts[key] = row ?? {'revision': 0, 'payload': null};
+            continue;
+          }
+          Json? accepted = row;
+          Object? downloaded;
+          final hydrateImage =
+              captured is Map &&
+              (captured['imagePath'] as String? ?? '').startsWith('cloud:');
+          if (action == SyncAction.upload) {
+            accepted = Map<String, dynamic>.from(
+              await client
+                      .rpc(
+                        'save_bike_document',
+                        params: {
+                          'p_document_id': key,
+                          'p_expected_revision': baseline?['revision'] ?? 0,
+                          'p_payload': portable,
+                        },
+                      )
+                      .setHeader('Authorization', authorization)
+                  as Map,
+            );
+          }
+          if (action == SyncAction.download || hydrateImage) {
+            downloaded = await _fromCloud(
+              key,
+              accepted?['payload'],
+              uid,
+              allowUnavailableImage: true,
+            );
+          }
+          // Never replace an edit made while the network request was in flight.
+          if (user?.id != uid) throw StateError('SESSION_MISSING');
+          var applied = false;
+          await store.mutate((state) {
+            if (state['owner'] != uid) throw StateError('SESSION_MISSING');
+            final current = documentsFromPayload(state['payload'] as Json);
+            if (action == SyncAction.download || hydrateImage) {
+              if (!sameJson(current[key], captured) &&
+                  !(key == 'order' &&
+                      state['editVersion'] == snapshot['editVersion'])) {
+                return;
+              }
+              current[key] = downloaded;
+              state['payload'] = payloadFromDocuments(current);
+              applied = true;
+            }
+            (state['base'] as Json)[key] = {
+              'revision': accepted?['revision'] ?? 0,
+              'payload': _documentValue(key, accepted?['payload']),
+            };
+          });
+          if (applied) bikes.applyStoredPayload();
+        } catch (error, stack) {
+          if (user?.id != uid || _invalidSession(error)) rethrow;
+          lastError ??= error;
+          lastErrorStack = stack;
+          if (error.toString().contains('IMAGE_UPLOAD_REQUIRED') ||
+              error.toString().contains('IMAGE_RETIRED')) {
+            _uploaded.clear();
+          }
+        }
       }
       // A fresh comparison catches edits queued during this pass.
       final end = store.state;
       final docs = documentsFromPayload(end['payload'] as Json);
       var pending = false;
       for (final key in {...docs.keys, ...(end['base'] as Json).keys}) {
-        final portable = await _toCloud(key, docs[key], uid);
-        if (!sameJson(
-          portable,
-          _documentValue(key, (end['base'][key] as Map?)?['payload']),
-        )) {
+        try {
+          final portable = await _toCloud(key, docs[key], uid);
+          if (!sameJson(
+            portable,
+            _documentValue(key, (end['base'][key] as Map?)?['payload']),
+          )) {
+            pending = true;
+          }
+        } catch (error, stack) {
           pending = true;
+          lastError ??= error;
+          lastErrorStack = stack;
         }
       }
       status = conflicts.isNotEmpty
           ? 'conflict'
+          : lastError != null
+          ? (_imageDownloadFailed ? 'images' : _errorStatus(lastError!))
           : pending
           ? 'pending'
           : 'synced';
+      if (status == 'synced' || status == 'images') {
+        // Retry server-side cleanup after offline deletions, restarts or a
+        // lost response. The server checks references across all devices.
+        try {
+          if (user?.id != uid) throw StateError('SESSION_MISSING');
+          final result = await client.functions.invoke(
+            'cleanup-bike-images',
+            headers: {'Authorization': authorization},
+          );
+          if (result.data is! Map || result.data['complete'] != true) {
+            throw StateError('IMAGE_CLEANUP_PENDING');
+          }
+          _uploaded.clear();
+          _downloaded.clear();
+        } catch (error, stack) {
+          lastError = error;
+          lastErrorStack = stack;
+          status = 'cleanup';
+        }
+      }
       if (status == 'synced') {
         await store.mutate(
           (state) =>
@@ -356,11 +430,22 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   Object? _documentValue(String key, Object? value) =>
       value ?? (key == 'library' || key == 'order' ? <dynamic>[] : null);
 
-  Future<Object?> _toCloud(String key, Object? value, String uid) async {
+  Future<Object?> _toCloud(
+    String key,
+    Object? value,
+    String uid, {
+    Object? remoteValue,
+  }) async {
     if (!key.startsWith('bike:') || value == null) return value;
     final bike = cloneJson(value as Json);
     final path = bike['imagePath'] as String?;
     if (path == null || path.isEmpty || path.startsWith('assets/')) return bike;
+    if (path.startsWith('cloud:')) {
+      if (!path.startsWith('cloud:$uid/')) {
+        throw const FormatException('Invalid image owner');
+      }
+      return bike;
+    }
     final cacheKey = '$uid:$path';
     var object = _uploaded[cacheKey];
     if (object == null) {
@@ -371,13 +456,22 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         throw StateError('Image exceeds 5 MB');
       }
       final hash = sha256.convert(bytes).toString();
-      object = '$uid/$hash';
+      // A retired object name is never reused: a delayed cleanup request must
+      // not delete a newly uploaded copy of the same photograph.
+      object = '$uid/${const Uuid().v4()}/$hash';
       final savedImage =
           ((store.state['base'] as Json)[key] as Map?)?['payload'];
-      if (savedImage is Map && savedImage['imagePath'] == 'cloud:$object') {
-        _uploaded[cacheKey] = object;
-        bike['imagePath'] = 'cloud:$object';
-        return bike;
+      // A previous write can have committed before its response was lost.
+      // Reuse the fetched cloud reference after restart to avoid a false conflict.
+      for (final candidate in [remoteValue, savedImage]) {
+        final savedPath = candidate is Map ? candidate['imagePath'] : null;
+        if (savedPath is String &&
+            savedPath.startsWith('cloud:$uid/') &&
+            savedPath.split('/').last == hash) {
+          _uploaded[cacheKey] = savedPath.substring(6);
+          bike['imagePath'] = savedPath;
+          return bike;
+        }
       }
       final mime = path.startsWith('data:')
           ? UriData.parse(path).mimeType
@@ -404,28 +498,42 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     return bike;
   }
 
-  Future<Object?> _fromCloud(String key, Object? value, String uid) async {
+  Future<Object?> _fromCloud(
+    String key,
+    Object? value,
+    String uid, {
+    bool allowUnavailableImage = false,
+  }) async {
     if (!key.startsWith('bike:') || value == null) return value;
     final bike = cloneJson(Map<String, dynamic>.from(value as Map));
     final path = bike['imagePath'] as String?;
     if (path != null && path.startsWith('cloud:')) {
-      final object = path.substring(6);
-      if (!object.startsWith('$uid/')) {
-        throw const FormatException('Invalid image owner');
-      }
-      var data = _downloaded[object];
-      if (data == null) {
-        final bytes = await _client!.storage
-            .from('bike-images')
-            .download(object);
-        if (sha256.convert(bytes).toString() != object.split('/').last) {
-          throw const FormatException('Image integrity check failed');
+      try {
+        final object = path.substring(6);
+        if (!object.startsWith('$uid/')) {
+          throw const FormatException('Invalid image owner');
         }
-        data = 'data:image/jpeg;base64,${base64Encode(bytes)}';
-        _downloaded[object] = data;
+        var data = _downloaded[object];
+        if (data == null) {
+          final bytes = await _client!.storage
+              .from('bike-images')
+              .download(object);
+          if (sha256.convert(bytes).toString() != object.split('/').last) {
+            throw const FormatException('Image integrity check failed');
+          }
+          data = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+          _downloaded[object] = data;
+        }
+        bike['imagePath'] = data;
+        _uploaded['$uid:$data'] = object;
+      } catch (error, stack) {
+        if (!allowUnavailableImage) rethrow;
+        // Keep both the bike and its image reference. Retry the photo on the
+        // next sync instead of hiding the bike or uploading an empty image.
+        _imageDownloadFailed = true;
+        lastError ??= error;
+        lastErrorStack = stack;
       }
-      bike['imagePath'] = data;
-      _uploaded['$uid:$data'] = object;
     }
     return bike;
   }
@@ -665,7 +773,7 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
   }) => _auth((client) async {
     final oldOwner = store.owner;
     final guestWorkspace = anonymous ? store.payload : null;
-    final guest = importGuest ? await exportBackup() : null;
+    final guest = importGuest ? guestImportPayload(await exportBackup()) : null;
     await store.backup('before-sign-in');
     await client.auth.signInWithPassword(
       email: email.trim(),
@@ -808,7 +916,14 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
     final result = cloneJson(payload);
     for (final bike in result['bikes'] as List) {
       final path = bike['imagePath'] as String?;
-      if (path != null &&
+      if (path != null && path.startsWith('cloud:')) {
+        final resolved = await _fromCloud(
+          'bike:${bike['id']}',
+          bike,
+          store.owner!,
+        );
+        bike['imagePath'] = (resolved as Map)['imagePath'];
+      } else if (path != null &&
           path.isNotEmpty &&
           !path.startsWith('assets/') &&
           !path.startsWith('data:')) {
