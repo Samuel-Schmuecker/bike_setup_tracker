@@ -54905,7 +54905,7 @@ if(b==null?b2!=null:b!==b2){b=A.a2("SESSION_MISSING")
 throw A.h(b)}b=l.ax
 b===$&&A.a()
 s=46
-return A.f(b.aNH("cleanup-bike-images",A.a9(["Authorization",j],c6,c6)),$async$el)
+return A.f(b.aNH("super-function",A.a9(["Authorization",j],c6,c6)),$async$el)
 case 46:b7=f1
 if(!c9.b(b7.a)||!J.c(J.bG(b7.a,"complete"),!0)){b=A.a2("IMAGE_CLEANUP_PENDING")
 throw A.h(b)}d3.Y(0)
