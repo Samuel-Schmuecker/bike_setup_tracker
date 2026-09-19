@@ -397,7 +397,9 @@ class CloudProvider extends ChangeNotifier with WidgetsBindingObserver {
         );
       }
       if (googlePending && status == 'synced') status = 'google_waiting';
-      if (status == 'synced' && guestCleanupPending) {
+      // Target data is fully synchronized in either state. Unrelated image
+      // maintenance must not prevent completing an already prepared transfer.
+      if ((status == 'synced' || status == 'cleanup') && guestCleanupPending) {
         try {
           final response = await client.functions.invoke(
             'delete-account',

@@ -1083,6 +1083,47 @@ void main() {
     },
   );
 
+  for (final choice in ['import', 'discard']) {
+    test('guest $choice completes despite unavailable image cleanup', () async {
+      await switchGuestWithChoice(choice);
+      server.failImageCleanup = true;
+      server.failGuestDeletion = true;
+      await cloud.sync();
+      expect(cloud.status, 'cleanup');
+      expect(server.guestDeletionCalls, 1);
+      expect(cloud.guestCleanupPending, isTrue);
+      expect(cloud.guestCleanupError, isNotNull);
+      expect(await store.savedWorkspaces(), isNotEmpty);
+      final copiedIds = bikes.bikes.map((bike) => bike.id).toList();
+      for (final id in copiedIds) {
+        expect(server.rows['bike:$id']?['payload'], isNotNull);
+      }
+
+      server.failGuestDeletion = false;
+      await cloud.sync();
+      expect(server.guestDeletionCalls, 2);
+      expect(cloud.guestCleanupPending, isFalse);
+      expect(cloud.guestCleanupError, isNull);
+      expect(await store.savedWorkspaces(), isEmpty);
+      expect(bikes.bikes.map((bike) => bike.id), copiedIds);
+      expect(store.owner, 'user-2');
+      expect(server.deletionCalls, 0);
+    });
+  }
+
+  test(
+    'failed guest upload still blocks deletion when cleanup is unavailable',
+    () async {
+      await switchGuestWithChoice('import');
+      server.failImageCleanup = true;
+      server.failNextUploadResponse = true;
+      await cloud.sync();
+      expect(server.guestDeletionCalls, 0);
+      expect(cloud.guestCleanupPending, isTrue);
+      expect(await store.savedWorkspaces(), isNotEmpty);
+    },
+  );
+
   test(
     'guest import completion survives restart without importing twice',
     () async {
