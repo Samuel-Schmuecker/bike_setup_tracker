@@ -7,6 +7,9 @@ A new Flutter project.
 Die Einrichtung von Dev/Main, den beiden Supabase-Projekten und den
 Deployments ist in [docs/environments.md](docs/environments.md) beschrieben.
 
+Die automatische Supabase-Sicherung und die benötigten GitHub-Secrets sind in
+[docs/backups.md](docs/backups.md) beschrieben.
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.
