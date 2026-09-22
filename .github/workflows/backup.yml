@@ -1,0 +1,51 @@
+name: Backup Supabase DB & Storage
+
+on:
+  schedule:
+    # Jeden Sonntag um 03:00 UTC
+    - cron: '0 3 * * 0'
+  workflow_dispatch: {}   # erlaubt manuelles Starten über den Actions-Tab
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supabase CLI installieren
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Datenbank-Dump erstellen
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p backup
+          supabase db dump --db-url "$DB_URL" -f backup/db.sql
+
+      - name: AWS CLI konfigurieren und Storage-Bucket spiegeln
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.SUPABASE_S3_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SUPABASE_S3_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.SUPABASE_S3_REGION }}
+        run: |
+          mkdir -p backup/bike-images
+          aws s3 sync s3://bike-images backup/bike-images \
+            --endpoint-url "${{ secrets.SUPABASE_S3_ENDPOINT }}"
+
+      - name: Backup ins separate Backup-Repo pushen
+        env:
+          BACKUP_REPO_PAT: ${{ secrets.BACKUP_REPO_PAT }}
+        run: |
+          # <dein-github-username> durch deinen tatsächlichen GitHub-Usernamen ersetzen
+          git clone "https://x-access-token:${BACKUP_REPO_PAT}@github.com/Samuel-Schmuecker/bike-setup-tracker-backups.git" backup-repo
+
+          rm -rf backup-repo/latest
+          mkdir -p backup-repo/latest
+          cp -r backup/* backup-repo/latest/
+
+          cd backup-repo
+          git config user.name "backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          git add .
+          git commit -m "Backup $(date +%Y-%m-%d)" || echo "Keine Änderungen seit letztem Backup"
+          git push
