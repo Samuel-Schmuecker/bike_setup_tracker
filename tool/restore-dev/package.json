@@ -1,0 +1,8 @@
+{
+  "name": "bike-tracker-dev-restore",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test restore.test.mjs" },
+  "dependencies": { "pg": "8.23.0", "@supabase/supabase-js": "2.99.1" },
+  "devDependencies": { "@electric-sql/pglite": "0.5.8" }
+}
