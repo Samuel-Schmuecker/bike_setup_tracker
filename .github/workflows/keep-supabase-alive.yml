@@ -2,8 +2,8 @@ name: Keep Supabase Alive
 
 on:
   schedule:
-    # Jeden Montag um 03:00 UTC – anpassbar, z.B. alle 3 Tage für Sicherheitsmarge
-    - cron: '0 3 * * 1'
+    # Vier echte Datenbankabfragen pro Tag (UTC).
+    - cron: '17 */6 * * *'
   workflow_dispatch: # manuelles Triggern zum Testen
 
 jobs:
@@ -11,16 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
-          response=$(curl -sS -o response.txt -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/bike_documents?select=document_id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}")
+          set -euo pipefail
+          : "${SUPABASE_URL:?Missing SUPABASE_URL secret}"
+          : "${SUPABASE_ANON_KEY:?Missing SUPABASE_ANON_KEY secret}"
+          response=$(curl -sS --connect-timeout 10 --max-time 30 -o response.txt -w "%{http_code}" \
+            "${SUPABASE_URL%/}/rest/v1/keepalive_probe?select=id&id=eq.1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}")
 
           echo "Supabase responded with HTTP $response"
           cat response.txt
           echo
 
-          if [ "$response" -ge 400 ]; then
+          if [ "$response" != "200" ]; then
             echo "::error::Supabase ping failed with status $response"
+            exit 1
+          fi
+          if ! jq -e '. == [{"id": 1}]' response.txt > /dev/null; then
+            echo "::error::Keepalive probe row missing or unexpected response"
             exit 1
           fi
