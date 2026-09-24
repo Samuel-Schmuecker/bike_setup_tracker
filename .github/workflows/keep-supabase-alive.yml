@@ -1,0 +1,23 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Jeden Montag um 03:00 UTC – anpassbar, z.B. alle 3 Tage für Sicherheitsmarge
+    - cron: '0 3 * * 1'
+  workflow_dispatch: # manuelles Triggern zum Testen
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/bike_documents?select=id&limit=1" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+          echo "Supabase responded with HTTP $response"
+          if [ "$response" -ge 400 ]; then
+            echo "::error::Supabase ping failed with status $response"
+            exit 1
+          fi
