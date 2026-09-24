@@ -3,6 +3,8 @@
 class Translations {
   static const Map<String, Map<String, String>> texts = {
     'de': {
+      'photoSelectionError':
+          'Das Foto konnte nicht geladen werden. Bitte prüfe die Fotoberechtigung und versuche es erneut.',
       'languageName': 'Deutsch',
       'bikeCategoryEnduro': 'Enduro',
       'bikeCategoryTrail': 'Trail',
@@ -483,6 +485,8 @@ class Translations {
       'gotIt': 'Los geht\'s!',
     },
     'en': {
+      'photoSelectionError':
+          'The photo could not be loaded. Please check photo permissions and try again.',
       'languageName': 'English',
       'bikeCategoryEnduro': 'Enduro',
       'bikeCategoryTrail': 'Trail',

@@ -107,30 +107,47 @@ class _AddBikeScreenState extends State<AddBikeScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 70,
-    );
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+        requestFullMetadata: false,
+      );
 
-    if (pickedFile != null) {
-      if (kIsWeb) {
-        final bytes = await pickedFile.readAsBytes();
-        final base64Image = base64Encode(bytes);
-        setState(() {
-          _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
-        });
-      } else {
-        final directory = await getApplicationDocumentsDirectory();
-        final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
-        final savedImagePath = '${directory.path}/$fileName';
-        await File(pickedFile.path).copy(savedImagePath);
-        setState(() {
-          _selectedImagePath = savedImagePath;
-        });
+      if (pickedFile != null) {
+        if (kIsWeb) {
+          final bytes = await pickedFile.readAsBytes();
+          final base64Image = base64Encode(bytes);
+          if (!mounted) return;
+          setState(() {
+            _selectedImagePath = 'data:image/jpeg;base64,$base64Image';
+          });
+        } else {
+          final directory = await getApplicationDocumentsDirectory();
+          final fileName = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+          final savedImagePath = '${directory.path}/$fileName';
+          await File(pickedFile.path).copy(savedImagePath);
+          if (!mounted) return;
+          setState(() {
+            _selectedImagePath = savedImagePath;
+          });
+        }
       }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Translations.get(
+              context.read<LanguageProvider>().currentLanguage,
+              'photoSelectionError',
+            ),
+          ),
+        ),
+      );
     }
   }
 

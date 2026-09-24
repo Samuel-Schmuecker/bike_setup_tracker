@@ -1,10 +1,17 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val signingProperties = Properties()
+val signingPropertiesFile = rootProject.file("key.properties")
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.inputStream().use { signingProperties.load(it) }
 }
 
 android {
@@ -19,20 +26,28 @@ android {
 
     defaultConfig {
         applicationId = "com.example.bike_setup_tracker"
-        // HIER SIND DIE FIXES:
-        minSdk = 24  // Mindestens Android 5.0 (Viel sicherer für moderne Apps)
-        targetSdk = 34 // Aktuelles Android 14 (Sagt Google Play Protect: Wir sind aktuell!)
-        // compileSdkVersion = 34 // Manchmal auch compileSdk 34 genannt
+        minSdk = 24 // Android 7.0
+        targetSdk = 36 // Google Play requirement for new releases from August 2026.
         
         versionCode = flutter.versionCode
         versionName =flutter.versionName
     }
 
+    signingConfigs {
+        if (signingPropertiesFile.exists()) {
+            create("release") {
+                keyAlias = signingProperties.getProperty("keyAlias")
+                keyPassword = signingProperties.getProperty("keyPassword")
+                storeFile = file(signingProperties.getProperty("storeFile"))
+                storePassword = signingProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Without local signing credentials, produce an unsigned artifact.
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 }

@@ -1,0 +1,6 @@
+{
+  "APP_ENV": "production",
+  "SUPABASE_URL": "https://iwmrlwouyfpmizzirmby.supabase.co",
+  "SUPABASE_PUBLISHABLE_KEY": "sb_publishable_PJ45Vu6e1aRdKN8bJGIMAQ_hvCrmmyW",
+  "SUPABASE_IMAGE_CLEANUP_FUNCTION": "cleanup-bike-images"
+}

@@ -2,6 +2,9 @@
 
 A new Flutter project.
 
+Die Android-/iOS-Prüfung, offene Release-Voraussetzungen und Build-Befehle stehen
+in [docs/mobile-release-review.md](docs/mobile-release-review.md).
+
 ## Entwicklung und Produktion
 
 Die Einrichtung von Dev/Main, den beiden Supabase-Projekten und den
