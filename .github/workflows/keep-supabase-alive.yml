@@ -12,8 +12,8 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" \
-            "${{ secrets.SUPABASE_URL }}/rest/v1/bike_documents?select=id&limit=1" \
+          response=$(curl -s -o response.txt -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/bike_documents?select=document_id&limit=1
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
           echo "Supabase responded with HTTP $response"
