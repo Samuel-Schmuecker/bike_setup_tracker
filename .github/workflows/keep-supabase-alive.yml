@@ -6,10 +6,21 @@ on:
     - cron: '17 */6 * * *'
   workflow_dispatch: # manuelles Triggern zum Testen
 
+permissions:
+  contents: write
+
+concurrency:
+  group: supabase-keepalive-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   ping-supabase:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
       - name: Ping Supabase REST API
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -34,3 +45,17 @@ jobs:
             echo "::error::Keepalive probe row missing or unexpected response"
             exit 1
           fi
+
+      - name: Log ping (keeps repo active)
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p .keepalive
+          echo "$(date -u +'%Y-%m-%dT%H:%M:%SZ') - ping OK" >> .keepalive/log.txt
+          git config user.name "keepalive-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- .keepalive/log.txt
+          git commit -m "chore: supabase keepalive ping"
+          git pull --rebase origin "$TARGET_BRANCH"
+          git push origin "HEAD:$TARGET_BRANCH"
