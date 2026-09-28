@@ -13,6 +13,7 @@ import '../../providers/bike_provider.dart';
 import '../../widgets/setup_card.dart';
 import '../../widgets/add_setup_card.dart';
 import 'setup_detail_screen.dart';
+import 'setup_comparison_screen.dart';
 import '../../utils/image_helper.dart';
 import '../../widgets/image_toolbar_contrast.dart';
 import '../../services/onboarding_tour_service.dart';
@@ -35,6 +36,35 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
   String get bikeId => widget.bikeId;
   List<TrailSetup>? _draftSetups;
   bool get _editing => _draftSetups != null;
+  bool _comparing = false;
+  final Set<String> _selectedSetups = {};
+
+  Future<void> _toggleComparison(String id) async {
+    setState(() {
+      if (!_selectedSetups.remove(id) && _selectedSetups.length < 2) {
+        _selectedSetups.add(id);
+      }
+    });
+    if (_selectedSetups.length != 2) return;
+    final bike = context.read<BikeProvider>().bikes.firstWhere(
+      (b) => b.id == bikeId,
+    );
+    final selected = _selectedSetups
+        .map((id) => bike.setups.firstWhere((s) => s.id == id))
+        .toList();
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SetupComparisonScreen(
+          bike: bike,
+          setupA: selected[0],
+          setupB: selected[1],
+        ),
+      ),
+    );
+    if (mounted) setState(() => _selectedSetups.remove(selected[1].id));
+  }
+
   final _setupTourKey = GlobalKey(debugLabel: 'tour-setup-card');
 
   @override
@@ -212,6 +242,22 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.compare_arrows),
+                title: Text(Translations.get(lang, 'compareSetups')),
+                enabled: bike.setups.length >= 2 && !touring,
+                onTap: bike.setups.length < 2 || touring
+                    ? null
+                    : () {
+                        Navigator.pop(ctx);
+                        setState(() {
+                          _selectedSetups
+                            ..clear()
+                            ..add(setup.id);
+                          _comparing = true;
+                        });
+                      },
               ),
               ListTile(
                 leading: const Icon(Icons.edit_note),
@@ -397,9 +443,10 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
 
     final setups = _draftSetups ?? bike.orderedSetups;
     return PopScope(
-      canPop: !_editing,
+      canPop: !_editing && !_comparing,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop && _editing) _finishOrdering();
+        if (!didPop && _comparing) setState(() => _comparing = false);
       },
       child: Scaffold(
         body: CustomScrollView(
@@ -417,7 +464,22 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                 pinned: true,
                 centerTitle: false,
                 actions: [
-                  if (_editing) ...[
+                  if (_comparing) ...[
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      tooltip: Translations.get(lang, 'cancel'),
+                      onPressed: () => setState(() => _comparing = false),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Center(
+                        child: Text(
+                          '${Translations.get(lang, 'compareSetups')} (${_selectedSetups.length}/2)',
+                          style: TextStyle(color: iconColor),
+                        ),
+                      ),
+                    ),
+                  ] else if (_editing) ...[
                     IconButton(
                       icon: const Icon(Icons.close),
                       tooltip: Translations.get(lang, 'cancel'),
@@ -591,7 +653,26 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                   );
                   return Container(
                     key: ValueKey('setup-${setup.id}'),
-                    child: !_editing
+                    child: _comparing
+                        ? Row(
+                            children: [
+                              Checkbox(
+                                value: _selectedSetups.contains(setup.id),
+                                onChanged:
+                                    _selectedSetups.contains(setup.id) ||
+                                        _selectedSetups.length < 2
+                                    ? (_) => _toggleComparison(setup.id)
+                                    : null,
+                              ),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _toggleComparison(setup.id),
+                                  child: AbsorbPointer(child: card),
+                                ),
+                              ),
+                            ],
+                          )
+                        : !_editing
                         ? card
                         : ReorderableDelayedDragStartListener(
                             index: index,
@@ -634,7 +715,7 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                 ),
               ),
             ),
-            if (!_editing)
+            if (!_editing && !_comparing)
               SliverToBoxAdapter(
                 child: AddSetupCard(onTap: () => _onAddSetupTap(context, bike)),
               ),

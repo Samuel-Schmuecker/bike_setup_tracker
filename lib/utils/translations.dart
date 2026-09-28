@@ -3,6 +3,14 @@
 class Translations {
   static const Map<String, Map<String, String>> texts = {
     'de': {
+      'compareSetups': 'Vergleichen',
+      'comparisonAll': 'Alle Werte anzeigen',
+      'comparisonSwap': 'Setups tauschen',
+      'comparisonDifferenceOne': '1 Unterschied',
+      'comparisonDifferenceCount': '{count} Unterschiede',
+      'comparisonEmpty': 'Keine Unterschiede in den Parametern.',
+      'comparisonDirection': 'Differenz: Setup B − Setup A',
+      'comparisonParameter': 'Parameter',
       'photoSelectionError':
           'Das Foto konnte nicht geladen werden. Bitte prüfe die Fotoberechtigung und versuche es erneut.',
       'languageName': 'Deutsch',
@@ -485,6 +493,14 @@ class Translations {
       'gotIt': 'Los geht\'s!',
     },
     'en': {
+      'compareSetups': 'Compare',
+      'comparisonAll': 'Show all values',
+      'comparisonSwap': 'Swap setups',
+      'comparisonDifferenceOne': '1 difference',
+      'comparisonDifferenceCount': '{count} differences',
+      'comparisonEmpty': 'No parameter differences.',
+      'comparisonDirection': 'Difference: Setup B − Setup A',
+      'comparisonParameter': 'Parameter',
       'photoSelectionError':
           'The photo could not be loaded. Please check photo permissions and try again.',
       'languageName': 'English',

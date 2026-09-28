@@ -76,6 +76,7 @@ class SetupCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Row(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
@@ -152,8 +153,10 @@ class SetupCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Wrap(
+                spacing: 12,
+                runSpacing: 8,
+                crossAxisAlignment: WrapCrossAlignment.end,
                 children: [
                   buildValueBox(
                     'assets/icons/fork.svg',
@@ -161,7 +164,6 @@ class SetupCard extends StatelessWidget {
                     _formatNum(setup.forkPsi),
                     forkUnitStr,
                   ),
-                  const SizedBox(width: 12),
                   // Setzt den korrekten String & Einheit ein
                   buildValueBox(
                     'assets/icons/shock.svg',
@@ -169,8 +171,8 @@ class SetupCard extends StatelessWidget {
                     shockValStr,
                     shockUnitStr,
                   ),
-                  const Spacer(),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         Translations.get(lang, 'details'),
