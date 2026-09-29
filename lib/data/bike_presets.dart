@@ -216,7 +216,7 @@ const shockRockshoxSIDLuxeUltimate = (
 
 BikeParameters _params(ForkProfile fork, ShockProfile shock) => BikeParameters(
       forkPsi: fork.psi,
-      forkOtt: fork.ott,
+      forkOtt: fork.ott, legacyFork: fork.ott,
       forkHsc: fork.hsc,
       forkLsc: fork.lsc,
       forkHsr: fork.hsr,

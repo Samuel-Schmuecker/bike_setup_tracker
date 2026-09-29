@@ -62,7 +62,12 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
         ),
       ),
     );
-    if (mounted) setState(() => _selectedSetups.remove(selected[1].id));
+    if (mounted) {
+      setState(() {
+        _comparing = false;
+        _selectedSetups.clear();
+      });
+    }
   }
 
   final _setupTourKey = GlobalKey(debugLabel: 'tour-setup-card');
@@ -534,7 +539,9 @@ class _BikeDetailScreenState extends State<BikeDetailScreen> {
                               '${bike.travelFront} mm ${Translations.get(lang, 'front')}',
                             ),
                             buildTravelChip(
-                              'assets/icons/shock.svg',
+                              bike.availableParameters?.shockIsCoil == true
+                                  ? 'assets/icons/shock.svg'
+                                  : 'assets/icons/air_shock.svg',
                               '${bike.travelRear} mm ${Translations.get(lang, 'rear')}',
                             ),
                           ],

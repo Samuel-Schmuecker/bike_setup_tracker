@@ -378,7 +378,10 @@ class SetupDetailPageState extends State<SetupDetailPage> {
       ...?setup.customParameters?.ranges,
     };
     String unitFor(String key, String fallback) =>
-        params.unitOverrides[key] ?? fallback;
+        (key == 'forkOtt' && params.legacyFork) ||
+            (key == 'tirePressure' && params.legacyTires)
+        ? ''
+        : params.unitOverrides[key] ?? fallback;
 
     final colorScheme = Theme.of(context).colorScheme;
     final lang = context.watch<LanguageProvider>().currentLanguage;
@@ -852,7 +855,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              unitFor('tirePressure', 'bar/PSI'),
+                              unitFor('tirePressure', 'bar'),
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
@@ -1045,21 +1048,52 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                     ),
                   ),
                 ),
-              if (params.forkOtt)
+              if (params.forkNegative)
                 buildTile(
-                  'forkOtt',
-                  Translations.get(lang, 'negativeChamberShort'),
-                  _formatNum(setup.forkOtt),
-                  unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
+                  'forkNegative',
+                  Translations.get(lang, 'negativeChamber'),
+                  _formatNum(setup.forkNegative),
+                  unitFor('forkNegative', 'PSI'),
                   () => showStepperModal(
-                    'forkOtt',
-                    componentField('fork', 'negativeChamberShort'),
-                    unitFor('forkOtt', Translations.get(lang, 'unitPsiClicks')),
-                    _formatNum(setup.forkOtt),
+                    'forkNegative',
+                    componentField('fork', 'negativeChamber'),
+                    unitFor('forkNegative', 'PSI'),
+                    _formatNum(setup.forkNegative),
                     false,
                     5,
                     (v, n) => handleSave(
-                      componentField('fork', 'negativeChamberShort'),
+                      componentField('fork', 'negativeChamber'),
+                      _formatNum(setup.forkNegative),
+                      v,
+                      n,
+                      setup.copyWith(forkNegative: _parseDouble(v)),
+                    ),
+                  ),
+                ),
+              if (params.forkOtt)
+                buildTile(
+                  'forkOtt',
+                  Translations.get(
+                    lang,
+                    params.legacyFork ? 'legacyForkValue' : 'ott',
+                  ),
+                  _formatNum(setup.forkOtt),
+                  unitFor('forkOtt', Translations.get(lang, 'unitClicks')),
+                  () => showStepperModal(
+                    'forkOtt',
+                    componentField(
+                      'fork',
+                      params.legacyFork ? 'legacyForkValue' : 'ott',
+                    ),
+                    unitFor('forkOtt', Translations.get(lang, 'unitClicks')),
+                    _formatNum(setup.forkOtt),
+                    false,
+                    1,
+                    (v, n) => handleSave(
+                      componentField(
+                        'fork',
+                        params.legacyFork ? 'legacyForkValue' : 'ott',
+                      ),
                       _formatNum(setup.forkOtt),
                       v,
                       n,
@@ -1212,7 +1246,9 @@ class SetupDetailPageState extends State<SetupDetailPage> {
           categoryHeader(
             'shock',
             Translations.get(lang, 'shock'),
-            svgPath: 'assets/icons/shock.svg',
+            svgPath: params.shockIsCoil
+                ? 'assets/icons/shock.svg'
+                : 'assets/icons/air_shock.svg',
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -1472,7 +1508,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                     () => showStepperModal(
                       '',
                       Translations.get(lang, 'frontTirePressure'),
-                      unitFor('tirePressure', 'bar/PSI'),
+                      unitFor('tirePressure', 'bar'),
                       _formatNum(setup.frontPressure),
                       false,
                       0.1,
@@ -1508,7 +1544,7 @@ class SetupDetailPageState extends State<SetupDetailPage> {
                     () => showStepperModal(
                       '',
                       Translations.get(lang, 'rearTirePressure'),
-                      unitFor('tirePressure', 'bar/PSI'),
+                      unitFor('tirePressure', 'bar'),
                       _formatNum(setup.rearPressure),
                       false,
                       0.1,

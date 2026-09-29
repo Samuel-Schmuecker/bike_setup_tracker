@@ -113,7 +113,10 @@ class CustomSetupCategory {
 class BikeParameters {
   // Fork
   final bool forkPsi;
-  final bool forkOtt; // Negative Chamber / OTT
+  final bool forkOtt;
+  final bool forkNegative;
+  final bool legacyFork;
+  final bool legacyTires;
   final bool forkHsc;
   final bool forkLsc;
   final bool forkHsr; // High-Speed Rebound
@@ -145,6 +148,9 @@ class BikeParameters {
   BikeParameters({
     this.forkPsi = true,
     this.forkOtt = false,
+    this.forkNegative = false,
+    this.legacyFork = false,
+    this.legacyTires = false,
     this.forkHsc = false,
     this.forkLsc = true,
     this.forkHsr = false,
@@ -175,6 +181,9 @@ class BikeParameters {
     return BikeParameters(
       forkPsi: forkPsi,
       forkOtt: forkOtt,
+      forkNegative: forkNegative,
+      legacyFork: legacyFork,
+      legacyTires: legacyTires,
       forkHsc: forkHsc,
       forkLsc: forkLsc,
       forkHsr: forkHsr,
@@ -204,6 +213,10 @@ class BikeParameters {
     return {
       'forkPsi': forkPsi,
       'forkOtt': forkOtt,
+      'forkNegative': forkNegative,
+      'legacyFork': legacyFork,
+      'legacyTires': legacyTires,
+      'parameterVersion': 2,
       'forkHsc': forkHsc,
       'forkLsc': forkLsc,
       'forkHsr': forkHsr,
@@ -233,6 +246,19 @@ class BikeParameters {
     return BikeParameters(
       forkPsi: map['forkPsi'] ?? true,
       forkOtt: map['forkOtt'] ?? false,
+      forkNegative: map['forkNegative'] ?? false,
+      legacyFork:
+          map['legacyFork'] == true ||
+          (map['parameterVersion'] == null && map['forkOtt'] == true),
+      legacyTires:
+          map['legacyTires'] == true ||
+          (map['parameterVersion'] == null &&
+              (map['tires'] ?? true) == true &&
+              !const [
+                'bar',
+                'PSI',
+                'kPa',
+              ].contains((map['unitOverrides'] as Map?)?['tirePressure'])),
       forkHsc: map['forkHsc'] ?? false,
       forkLsc: map['forkLsc'] ?? true,
       forkHsr: map['forkHsr'] ?? false,

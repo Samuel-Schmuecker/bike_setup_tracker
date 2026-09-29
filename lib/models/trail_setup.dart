@@ -36,6 +36,7 @@ class TrailSetup {
   // Fork
   final double? forkPsi;
   final double? forkOtt;
+  final double? forkNegative;
   final int? forkHsc;
   final int? forkLsc;
   final int? forkHsr;
@@ -72,6 +73,7 @@ class TrailSetup {
     this.categoryOrder = const [],
     this.forkPsi,
     this.forkOtt,
+    this.forkNegative,
     this.forkHsc,
     this.forkLsc,
     this.forkHsr,
@@ -104,6 +106,7 @@ class TrailSetup {
     List<String>? categoryOrder,
     double? forkPsi,
     double? forkOtt,
+    double? forkNegative,
     int? forkHsc,
     int? forkLsc,
     int? forkHsr,
@@ -135,6 +138,7 @@ class TrailSetup {
       categoryOrder: categoryOrder ?? this.categoryOrder,
       forkPsi: forkPsi ?? this.forkPsi,
       forkOtt: forkOtt ?? this.forkOtt,
+      forkNegative: forkNegative ?? this.forkNegative,
       forkHsc: forkHsc ?? this.forkHsc,
       forkLsc: forkLsc ?? this.forkLsc,
       forkHsr: forkHsr ?? this.forkHsr,
@@ -160,6 +164,23 @@ class TrailSetup {
     );
   }
 
+  TrailSetup resolveLegacyFork(bool negative) {
+    if (!negative) return this;
+    final map = toMap();
+    map['forkNegative'] = forkNegative ?? forkOtt;
+    map['forkOtt'] = null;
+    map['fieldOrders'] = fieldOrders.map(
+      (key, order) => MapEntry(
+        key,
+        order
+            .map((id) => id == 'forkOtt' ? 'forkNegative' : id)
+            .toSet()
+            .toList(),
+      ),
+    );
+    return TrailSetup.fromMap(map);
+  }
+
   // Datenspeicherung
   Map<String, dynamic> toMap() {
     return {
@@ -169,6 +190,7 @@ class TrailSetup {
       'categoryOrder': categoryOrder,
       'forkPsi': forkPsi,
       'forkOtt': forkOtt,
+      'forkNegative': forkNegative,
       'forkHsc': forkHsc,
       'forkLsc': forkLsc,
       'forkHsr': forkHsr,
@@ -212,6 +234,7 @@ class TrailSetup {
       // Safe Parsing für Zahlen:
       forkPsi: (map['forkPsi'] as num?)?.toDouble(),
       forkOtt: (map['forkOtt'] as num?)?.toDouble(),
+      forkNegative: (map['forkNegative'] as num?)?.toDouble(),
       forkHsc: (map['forkHsc'] as num?)?.toInt(),
       forkLsc: (map['forkLsc'] as num?)?.toInt(),
       forkHsr: (map['forkHsr'] as num?)?.toInt(),

@@ -53,7 +53,7 @@ class BikeProvider extends ChangeNotifier {
           ),
         )
         .toList();
-    _bikes = bikes;
+    _bikes = bikes.map(resolveDemoNegativeChamber).toList();
     _customFieldCatalog = catalog;
     notifyListeners();
   }
@@ -133,6 +133,17 @@ class BikeProvider extends ChangeNotifier {
             .whereType<Map>()
             .map((map) => Bike.fromMap(Map<String, dynamic>.from(map)))
             .toList();
+        final resolvedDemoBikes = _bikes
+            .map(resolveDemoNegativeChamber)
+            .toList();
+        final demoChanged = List.generate(
+          _bikes.length,
+          (i) => !identical(_bikes[i], resolvedDemoBikes[i]),
+        ).any((changed) => changed);
+        if (demoChanged) {
+          _bikes = resolvedDemoBikes;
+          await saveToDevice();
+        }
         if (prefs.getBool('demo_ohlins_ranges_v1') != true) {
           _bikes = _bikes.map((bike) {
             if (bike.id != '3' ||
@@ -456,11 +467,24 @@ class BikeProvider extends ChangeNotifier {
     saveToDevice(); // AUTO-SAVE
   }
 
-  void updateBikeParameters(String bikeId, BikeParameters parameters) {
+  void updateBikeParameters(
+    String bikeId,
+    BikeParameters parameters, {
+    bool legacyToNegative = false,
+  }) {
     final index = _bikes.indexWhere((bike) => bike.id == bikeId);
     if (index != -1) {
       final bike = _bikes[index];
-      _bikes[index] = bike.copyWith(availableParameters: parameters);
+      _bikes[index] = bike.copyWith(
+        availableParameters: parameters,
+        setups: bike.setups.map((setup) {
+          if (setup.customParameters != null ||
+              bike.availableParameters?.legacyFork != true) {
+            return setup;
+          }
+          return setup.resolveLegacyFork(legacyToNegative);
+        }).toList(),
+      );
       notifyListeners();
       saveToDevice(); // AUTO-SAVE
     }

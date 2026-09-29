@@ -32,7 +32,7 @@ void main() {
     expect(rows.firstWhere((r) => r.id == 'forkLsc').delta, '▼ −2 Klicks');
     expect(
       rows.firstWhere((r) => r.id == 'frontPressure').delta,
-      '▲ +0.1 bar/PSI',
+      '▲ +0.1 bar',
     );
     expect(rows.firstWhere((r) => r.id == 'shockPsi').delta, isNull);
     expect(rows.firstWhere((r) => r.id == 'forkLsr').changed, isFalse);
@@ -70,12 +70,12 @@ void main() {
         ),
       ),
     );
-    expect(find.text('▲ +3'), findsOneWidget);
+    expect(find.text('▲ +3 PSI'), findsOneWidget);
     expect(find.text('1 Unterschied'), findsOneWidget);
     await tester.tap(find.byTooltip('Setups tauschen'));
     await tester.pumpAndSettle();
-    expect(find.text('▽ −3'), findsOneWidget);
-    expect(find.text('▲ +3'), findsNothing);
+    expect(find.text('▽ −3 PSI'), findsOneWidget);
+    expect(find.text('▲ +3 PSI'), findsNothing);
     expect(find.text('1 Unterschied'), findsOneWidget);
     expect(find.text('LSC'), findsNothing);
     await tester.tap(find.byType(Switch));
@@ -84,7 +84,7 @@ void main() {
     expect(find.text('1 Unterschied'), findsOneWidget);
     await tester.tap(find.byTooltip('Setups tauschen'));
     await tester.pumpAndSettle();
-    expect(find.text('▲ +3'), findsOneWidget);
+    expect(find.text('▲ +3 PSI'), findsOneWidget);
     expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
     expect(tester.takeException(), isNull);
   });
@@ -116,9 +116,15 @@ void main() {
         tester.widget<Checkbox>(find.byType(Checkbox).at(0)).value,
         isTrue,
       );
-      await tester.tap(find.text('Setup 1'));
+      await tester.tap(find.byType(Checkbox).at(1));
       await tester.pumpAndSettle();
       expect(find.byType(SetupComparisonScreen), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(BikeDetailScreen), findsOneWidget);
+      expect(find.byType(SetupComparisonScreen), findsNothing);
+      expect(find.byType(Checkbox), findsNothing);
+      expect(find.byIcon(Icons.add), findsWidgets);
       expect(tester.takeException(), isNull);
     },
   );

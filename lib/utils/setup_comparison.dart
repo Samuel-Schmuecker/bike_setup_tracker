@@ -87,6 +87,7 @@ List<SetupComparisonRow> buildSetupComparison(
       for (final suffix in [
         'Psi',
         'Ott',
+        'Negative',
         'Rate',
         'Preload',
         'Hsc',
@@ -105,7 +106,8 @@ List<SetupComparisonRow> buildSetupComparison(
           continue;
         final label = switch (suffix) {
           'Psi' => tr('mainShort'),
-          'Ott' => tr('negativeChamberShort'),
+          'Ott' => tr(params.legacyFork ? 'legacyForkValue' : 'ott'),
+          'Negative' => tr('negativeChamber'),
           'Rate' => tr('springRate'),
           'Preload' => tr('preload'),
           'Tokens' => tr('tokensShort'),
@@ -113,19 +115,22 @@ List<SetupComparisonRow> buildSetupComparison(
         };
         final unit = switch (suffix) {
           'Psi' => 'PSI',
-          'Ott' => tr('unitPsiClicks'),
+          'Ott' => tr('unitClicks'),
+          'Negative' => 'PSI',
           'Rate' => 'lbs/in',
           'Preload' => tr('unitTurns'),
           'Tokens' => tr('unitPieces'),
           _ => tr('unitClicks'),
         };
         add(
-          id,
+          params.legacyFork && id == 'forkOtt' ? 'legacyFork' : id,
           category,
           tr(category),
           label,
           stored[id],
-          params.unitOverrides[id] ?? unit,
+          params.legacyFork && id == 'forkOtt'
+              ? ''
+              : params.unitOverrides[id] ?? unit,
         );
       }
     }
@@ -145,7 +150,9 @@ List<SetupComparisonRow> buildSetupComparison(
           tr('tires'),
           tr('${side}TirePressure'),
           stored['${side}Pressure'],
-          params.unitOverrides['tirePressure'] ?? 'bar/PSI',
+          params.legacyTires
+              ? ''
+              : params.unitOverrides['tirePressure'] ?? 'bar',
         );
       }
     }

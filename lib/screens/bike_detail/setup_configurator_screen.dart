@@ -137,6 +137,10 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     super.dispose();
   }
 
+  bool _forkNegative = false;
+  bool _legacyFork = false, _legacyTires = false;
+  bool _legacyToNegative = false;
+  bool _hadLegacyFork = false;
   bool _forkPsi = true, _forkOtt = false, _forkHsc = false, _forkLsc = true;
   bool _forkHsr = false, _forkLsr = true, _forkTokens = false, _forkHbo = false;
   bool _shockIsCoil = false;
@@ -178,6 +182,10 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     if (p != null) {
       _forkPsi = p.forkPsi;
       _forkOtt = p.forkOtt;
+      _forkNegative = p.forkNegative;
+      _legacyFork = p.legacyFork;
+      _hadLegacyFork = p.legacyFork;
+      _legacyTires = p.legacyTires;
       _forkHsc = p.forkHsc;
       _forkLsc = p.forkLsc;
       _forkHsr = p.forkHsr;
@@ -222,6 +230,9 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     return BikeParameters(
       forkPsi: _forkPsi,
       forkOtt: _forkOtt,
+      forkNegative: _forkNegative,
+      legacyFork: _legacyFork,
+      legacyTires: _legacyTires,
       forkHsc: _forkHsc,
       forkLsc: _forkLsc,
       forkHsr: _forkHsr,
@@ -257,6 +268,19 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
   }
 
   void _saveAndContinue() {
+    if (_legacyFork || _legacyTires) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            Translations.get(
+              context.read<LanguageProvider>().currentLanguage,
+              'resolveLegacyFirst',
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     final params = _currentParameters();
 
     final provider = context.read<BikeProvider>();
@@ -267,11 +291,16 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
       final setup = bike.setups.firstWhere((s) => s.id == widget.setupId);
       provider.updateSetup(
         widget.bikeId,
-        setup.copyWith(customParameters: params),
+        (_hadLegacyFork ? setup.resolveLegacyFork(_legacyToNegative) : setup)
+            .copyWith(customParameters: params),
       );
     } else {
       // --- MODUS B: Das gesamte Bike anpassen ---
-      provider.updateBikeParameters(widget.bikeId, params);
+      provider.updateBikeParameters(
+        widget.bikeId,
+        params,
+        legacyToNegative: _legacyToNegative,
+      );
     }
 
     if (widget.isEditing) {
@@ -737,10 +766,28 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
         lang: lang,
         initialUnit: _unitOverrides[key] ?? defaultUnit,
         defaultUnit: defaultUnit,
+        units:
+            [
+              'forkPsi',
+              'forkNegative',
+              'shockPsi',
+              'tirePressure',
+            ].contains(key)
+            ? const ['PSI', 'bar', 'kPa']
+            : key == 'shockRate'
+            ? const ['lbs/in', 'N/mm']
+            : key.endsWith('Tokens')
+            ? [Translations.get(lang, 'unitPieces')]
+            : key == 'shockPreload'
+            ? [Translations.get(lang, 'unitTurns')]
+            : [Translations.get(lang, 'unitClicks')],
       ),
     );
     if (unit == null || unit.isEmpty || !mounted) return;
-    setState(() => _unitOverrides[key] = unit);
+    setState(() {
+      _unitOverrides[key] = unit;
+      if (key == 'tirePressure') _legacyTires = false;
+    });
   }
 
   Widget _parameterSwitch({
@@ -750,6 +797,21 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
     required String unitKey,
     required String defaultUnit,
   }) {
+    final unresolved =
+        (unitKey == 'forkOtt' && _legacyFork) ||
+        (unitKey == 'tirePressure' && _legacyTires);
+    if (unitKey == 'forkOtt' && _legacyFork) {
+      title = Translations.get(
+        context.read<LanguageProvider>().currentLanguage,
+        'legacyForkValue',
+      );
+    }
+    if (unitKey == 'tirePressure' && _legacyTires) {
+      title = Translations.get(
+        context.read<LanguageProvider>().currentLanguage,
+        'assignLegacyTires',
+      );
+    }
     return _parameterGroup(
       enabled: value,
       children: [
@@ -759,12 +821,22 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
           child: SwitchListTile(
             key: unitKey == 'forkPsi' ? _parameterTourKey : null,
             title: Text(title),
-            subtitle: Text(_unitOverrides[unitKey] ?? defaultUnit),
+            subtitle: Text(
+              unresolved ? '—' : _unitOverrides[unitKey] ?? defaultUnit,
+            ),
+            secondary: IconButton(
+              tooltip: Translations.get(
+                context.read<LanguageProvider>().currentLanguage,
+                'changeUnit',
+              ),
+              icon: const Icon(Icons.straighten),
+              onPressed: () => _editUnit(unitKey, defaultUnit),
+            ),
             value: value,
             onChanged: onChanged,
           ),
         ),
-        if (value && unitKey != 'tirePressure')
+        if (value && unitKey != 'tirePressure' && !unresolved)
           _rangeControl(unitKey, title, _unitOverrides[unitKey] ?? defaultUnit),
       ],
     );
@@ -802,6 +874,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
         !const {
           'forkPsi',
           'forkOtt',
+          'forkNegative',
           'shockPsi',
           'shockRate',
           'shockPreload',
@@ -933,12 +1006,65 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                     unitKey: 'forkPsi',
                     defaultUnit: 'PSI',
                   ),
+                  if (_legacyFork)
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: Translations.get(lang, 'assignLegacyFork'),
+                      ),
+                      items: ['ott', 'negativeChamber']
+                          .map(
+                            (key) => DropdownMenuItem(
+                              value: key,
+                              child: Text(Translations.get(lang, key)),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (target) => setState(() {
+                        _legacyToNegative = target == 'negativeChamber';
+                        _legacyFork = false;
+                        _forkOtt = !_legacyToNegative;
+                        _forkNegative = _legacyToNegative;
+                        if (_legacyToNegative) {
+                          if (_ranges.containsKey('forkOtt')) {
+                            _ranges['forkNegative'] = _ranges.remove('forkOtt');
+                          }
+                          if (_rangeOverrides.containsKey('forkOtt')) {
+                            _rangeOverrides['forkNegative'] = _rangeOverrides
+                                .remove('forkOtt');
+                          }
+                          if (widget.setupId != null &&
+                              _ranges.containsKey('forkNegative')) {
+                            _rangeOverrides.putIfAbsent(
+                              'forkNegative',
+                              () => _ranges['forkNegative'],
+                            );
+                          }
+                          final unit = _unitOverrides.remove('forkOtt');
+                          _unitOverrides['forkNegative'] =
+                              const ['PSI', 'bar', 'kPa'].contains(unit)
+                              ? unit!
+                              : 'PSI';
+                        } else {
+                          _unitOverrides['forkOtt'] = Translations.get(
+                            lang,
+                            'unitClicks',
+                          );
+                        }
+                      }),
+                    ),
                   _parameterSwitch(
-                    title: Translations.get(lang, 'ottNeg'),
+                    title: Translations.get(lang, 'negativeChamber'),
+                    value: _forkNegative,
+                    onChanged: (v) => setState(() => _forkNegative = v),
+                    unitKey: 'forkNegative',
+                    defaultUnit: 'PSI',
+                  ),
+                  _parameterSwitch(
+                    title: Translations.get(lang, 'ott'),
                     value: _forkOtt,
                     onChanged: (v) => setState(() => _forkOtt = v),
                     unitKey: 'forkOtt',
-                    defaultUnit: Translations.get(lang, 'unitPsiClicks'),
+                    defaultUnit: Translations.get(lang, 'unitClicks'),
                   ),
                   _parameterSwitch(
                     title: Translations.get(lang, 'hsc'),
@@ -997,7 +1123,9 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
               buildSection(
                 storageKey: 'shock-section',
                 title: Translations.get(lang, 'shockSettings'),
-                svgPath: 'assets/icons/shock.svg',
+                svgPath: _shockIsCoil
+                    ? 'assets/icons/shock.svg'
+                    : 'assets/icons/air_shock.svg',
                 children: [
                   Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -1116,7 +1244,7 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
                     value: _tires,
                     onChanged: (v) => setState(() => _tires = v),
                     unitKey: 'tirePressure',
-                    defaultUnit: 'bar/PSI',
+                    defaultUnit: 'bar',
                   ),
                   ..._customFieldControls(
                     'tires',
@@ -1186,9 +1314,11 @@ class _SetupConfiguratorScreenState extends State<SetupConfiguratorScreen> {
 }
 
 class _UnitEditDialog extends StatefulWidget {
+  final List<String> units;
   const _UnitEditDialog({
     required this.lang,
     required this.initialUnit,
+    required this.units,
     required this.defaultUnit,
   });
 
@@ -1201,12 +1331,18 @@ class _UnitEditDialog extends StatefulWidget {
 }
 
 class _UnitEditDialogState extends State<_UnitEditDialog> {
+  static const _customUnit = '__custom_unit__';
+  late String _selectedUnit;
   late final TextEditingController _controller;
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialUnit);
+    final predefined = widget.units.contains(widget.initialUnit);
+    _selectedUnit = predefined ? widget.initialUnit : _customUnit;
+    _controller = TextEditingController(
+      text: predefined ? '' : widget.initialUnit,
+    );
   }
 
   @override
@@ -1216,7 +1352,9 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
   }
 
   void _submit() {
-    final unit = _controller.text.trim();
+    final unit = _selectedUnit == _customUnit
+        ? _controller.text.trim()
+        : _selectedUnit;
     if (unit.isEmpty) return;
     Navigator.pop(context, unit);
   }
@@ -1227,15 +1365,40 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       scrollable: true,
       title: Text(Translations.get(widget.lang, 'changeUnit')),
-      content: TextField(
-        controller: _controller,
-        autofocus: true,
-        textInputAction: TextInputAction.done,
-        decoration: InputDecoration(
-          labelText: Translations.get(widget.lang, 'unit'),
-          hintText: widget.defaultUnit,
-        ),
-        onSubmitted: (_) => _submit(),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: _selectedUnit,
+            decoration: InputDecoration(
+              labelText: Translations.get(widget.lang, 'unit'),
+            ),
+            items: [
+              for (final unit in widget.units)
+                DropdownMenuItem(value: unit, child: Text(unit)),
+              DropdownMenuItem(
+                value: _customUnit,
+                child: Text(Translations.get(widget.lang, 'customUnit')),
+              ),
+            ],
+            onChanged: (unit) {
+              if (unit != null) setState(() => _selectedUnit = unit);
+            },
+          ),
+          if (_selectedUnit == _customUnit) ...[
+            const SizedBox(height: 16),
+            TextField(
+              controller: _controller,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: Translations.get(widget.lang, 'customUnit'),
+              ),
+              textInputAction: TextInputAction.done,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _submit(),
+            ),
+          ],
+        ],
       ),
       actions: [
         TextButton(
@@ -1243,7 +1406,10 @@ class _UnitEditDialogState extends State<_UnitEditDialog> {
           child: Text(Translations.get(widget.lang, 'defaultValue')),
         ),
         FilledButton(
-          onPressed: _submit,
+          onPressed:
+              _selectedUnit == _customUnit && _controller.text.trim().isEmpty
+              ? null
+              : _submit,
           child: Text(Translations.get(widget.lang, 'save')),
         ),
       ],

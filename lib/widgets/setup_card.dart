@@ -166,7 +166,9 @@ class SetupCard extends StatelessWidget {
                   ),
                   // Setzt den korrekten String & Einheit ein
                   buildValueBox(
-                    'assets/icons/shock.svg',
+                    isCoil
+                        ? 'assets/icons/shock.svg'
+                        : 'assets/icons/air_shock.svg',
                     Translations.get(lang, 'shock'),
                     shockValStr,
                     shockUnitStr,

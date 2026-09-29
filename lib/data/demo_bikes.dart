@@ -16,7 +16,7 @@ List<Bike> createDemoBikes() => [
       ranges: demoOhlinsRanges,
       unitOverrides: const {'shockHsc': 'Stufe'},
       forkPsi: true,
-      forkOtt: true,
+      forkNegative: true,
       forkHsc: true,
       forkLsc: true,
       forkLsr: true,
@@ -40,7 +40,7 @@ List<Bike> createDemoBikes() => [
         id: 's4',
         name: 'Bikepark Setup',
         forkPsi: 110.0,
-        forkOtt: 210.0,
+        forkNegative: 210.0,
         forkHsc: 3,
         forkLsc: 10,
         forkLsr: 8,
@@ -78,7 +78,7 @@ List<Bike> createDemoBikes() => [
         id: 's5',
         name: 'Nass & Wurzeln',
         forkPsi: 100.0,
-        forkOtt: 210.0,
+        forkNegative: 210.0,
         forkHsc: 2,
         forkLsc: 7,
         forkLsr: 9,
@@ -96,3 +96,57 @@ List<Bike> createDemoBikes() => [
     ],
   ),
 ];
+
+/// Resolve the known demo's old chamber values without touching user bikes or
+/// configurations whose chamber type has already been chosen.
+Bike resolveDemoNegativeChamber(Bike bike) {
+  if (bike.id != '3' ||
+      bike.brand != 'Commencal' ||
+      bike.model != 'Supreme V5') {
+    return bike;
+  }
+  BikeParameters resolve(BikeParameters parameters) {
+    final map = parameters.toMap();
+    map['forkOtt'] = false;
+    map['forkNegative'] = true;
+    map['legacyFork'] = false;
+    final units = Map<String, String>.of(parameters.unitOverrides);
+    final previousUnit = units.remove('forkOtt');
+    units.putIfAbsent(
+      'forkNegative',
+      () => const ['PSI', 'bar', 'kPa'].contains(previousUnit)
+          ? previousUnit!
+          : 'PSI',
+    );
+    map['unitOverrides'] = units;
+    final ranges = Map<String, dynamic>.from(map['ranges'] as Map);
+    if (ranges.containsKey('forkOtt')) {
+      final previousRange = ranges.remove('forkOtt');
+      ranges.putIfAbsent('forkNegative', () => previousRange);
+    }
+    map['ranges'] = ranges;
+    return BikeParameters.fromMap(map);
+  }
+
+  final inheritedLegacy = bike.availableParameters?.legacyFork == true;
+  if (!inheritedLegacy &&
+      !bike.setups.any((setup) => setup.customParameters?.legacyFork == true)) {
+    return bike;
+  }
+  return bike.copyWith(
+    availableParameters: inheritedLegacy
+        ? resolve(bike.availableParameters!)
+        : bike.availableParameters,
+    setups: bike.setups.map((setup) {
+      final custom = setup.customParameters;
+      if (custom?.legacyFork == true) {
+        return setup
+            .resolveLegacyFork(true)
+            .copyWith(customParameters: resolve(custom!));
+      }
+      return custom == null && inheritedLegacy
+          ? setup.resolveLegacyFork(true)
+          : setup;
+    }).toList(),
+  );
+}

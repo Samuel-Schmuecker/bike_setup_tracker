@@ -92,39 +92,34 @@ class _SetupComparisonScreenState extends State<SetupComparisonScreen> {
         'rearPressure' => tr('rear'),
         _ => row.label,
       };
-      final unit = row.a.unit == row.b.unit ? row.a.unit : '';
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Wrap(
           spacing: 4,
           runSpacing: 2,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(label, style: theme.textTheme.bodyMedium),
-            if (unit.isNotEmpty)
-              Text(
-                '· $unit',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-          ],
+          children: [Text(label, style: theme.textTheme.bodyMedium)],
         ),
       );
     }
 
     String compactDelta(SetupComparisonRow row) {
       final delta = row.delta!.replaceFirst('▼', '▽');
-      return row.b.unit.isEmpty
-          ? delta
-          : delta.substring(0, delta.length - row.b.unit.length - 1);
+      return delta;
+    }
+
+    String unitWithoutDelta(SetupComparisonRow row) {
+      if (row.a.unit == row.b.unit) {
+        return row.a.unit.isEmpty ? '—' : '— ${row.a.unit}';
+      }
+      return 'A: ${row.a.unit.isEmpty ? '—' : row.a.unit}\nB: ${row.b.unit.isEmpty ? '—' : row.b.unit}';
     }
 
     Widget valueCell(ComparisonValue value, {required bool sharedUnit}) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 10),
         child: Text(
-          sharedUnit ? ComparisonValue(value.value, '').display : value.display,
+          ComparisonValue(value.value, '').display,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
@@ -133,9 +128,35 @@ class _SetupComparisonScreenState extends State<SetupComparisonScreen> {
     }
 
     Widget categoryIcon(String category) {
+      final isCoilA =
+          (setupA.customParameters ?? widget.bike.availableParameters)
+              ?.shockIsCoil ==
+          true;
+      final isCoilB =
+          (setupB.customParameters ?? widget.bike.availableParameters)
+              ?.shockIsCoil ==
+          true;
+      if (category == 'shock' && isCoilA != isCoilB) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final isCoil in [isCoilA, isCoilB])
+              SvgPicture.asset(
+                isCoil
+                    ? 'assets/icons/shock.svg'
+                    : 'assets/icons/air_shock.svg',
+                width: 20,
+                height: 20,
+                colorFilter: ColorFilter.mode(accent, BlendMode.srcIn),
+              ),
+          ],
+        );
+      }
       final asset = switch (category) {
         'fork' => 'assets/icons/fork.svg',
-        'shock' => 'assets/icons/shock.svg',
+        'shock' => isCoilA
+            ? 'assets/icons/shock.svg'
+            : 'assets/icons/air_shock.svg',
         _ => null,
       };
       return SizedBox(
@@ -327,7 +348,7 @@ class _SetupComparisonScreenState extends State<SetupComparisonScreen> {
                                   alignment: Alignment.centerLeft,
                                   child: row.delta == null
                                       ? Text(
-                                          '—',
+                                          unitWithoutDelta(row),
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                                 color: colors.onSurfaceVariant,
