@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320" fill="none">
+  <title>Fahrrad-Luftdämpfer mit Ausgleichsbehälter</title>
+  <g stroke="#111111" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M96 55V33A15 15 0 0 1 126 33V55"/>
+    <path d="M126 39H176V76H143M145 58H176"/>
+    <path d="M152 76L148 96V145Q148 151 154 151H172Q178 151 178 145V96L174 76M148 98H178"/>
+    <path d="M156 151V162H170V151"/>
+    <path d="M91 55H131Q141 55 141 66V187Q141 198 131 204H91Q81 198 81 187V66Q81 55 91 55Z"/>
+    <path d="M81 78H141M81 184H141"/>
+    <path d="M94 94V163" stroke-width="4"/>
+    <path d="M81 99H70V113H81M70 103H65V109H70"/>
+    <path d="M94 204V216H128V204M101 216V266M121 216V266"/>
+    <path d="M99 242H123" stroke-width="4"/>
+    <path d="M100 266H122L126 282A15 15 0 0 1 96 282Z"/>
+    <circle cx="111" cy="283" r="5" stroke-width="4"/>
+  </g>
+</svg>
